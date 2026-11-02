@@ -33,6 +33,13 @@ the lyrics, whatever it does sing: the step fails, and the song is deleted so th
 makes it again rather than timing the same song. Lines marked not sung are left out of the
 count: the videos never show them.
 
+Lines the aligner cannot hear: MMS hears no letters in a chorus Lyria sings as a stack of voices (the five songs
+of Nov 1: their verses read back nearly word for word, their choruses as blank). With nothing to go on, the
+aligner crammed a chorus's lines into a second or two, and the singer sang on for 6 to 15 s over no line, the
+hook cut ending with them. So where lines the aligner did not hear (LOW_SCORE) are crammed (SQUEEZED_S) before
+GAP_S of singing with no line, they are spread over themselves and that singing, each word in proportion to its
+letters (by_the_singing). The report's `spread` and the summary line name them.
+
 The narration as read: a Gemini narration is held to its lines as the song is to its lyrics. When the
 aligner cannot hear more than MISMATCH_SHARE of them, the voice did not read what was written (it
 skipped or cut short the text), so the step fails and the narration is deleted, and the retry reads it
@@ -87,6 +94,16 @@ QUIET_DB = 30.0
 LOUD_PERCENTILE = 95
 FRAME_S = 0.05
 MISMATCH_SHARE = 0.5  # more than this share of the lines sung differently: the song is not its lyrics
+# Spreading unheard lines over the singing (by_the_singing): a frame within SINGING_DB of the loud singing is sung (a
+# Lyria song's vocals between sections sit 30 to 38 dB down, at QUIET_DB's edge); GAP_S of singing between two
+# lines is singing with no line (a breath, a held note and its tail took up to 2 s between verse lines); no singing for
+# PAUSE_S parts the song, so no line is spread across an instrumental break; and an unheard line sung in under
+# SQUEEZED_S a word was crammed (on Nov 1 the first crammed line of each run took 0.11 to 0.26 s a word, the unheard
+# lines found where they are sung 0.3 s and more).
+SINGING_DB = 20.0
+GAP_S = 2.0
+PAUSE_S = 2.0
+SQUEEZED_S = 0.28
 SAMPLE_RATE = 16000
 CHUNK_S = 30  # the aligner hears a longer window this much at a time (_emission)
 CONTEXT_S = 5  # with this much of the audio either side of each piece
@@ -357,14 +374,15 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     planned_ms = sum(s["duration_ms"] for s in plan["sections"])
     scale = length * 1000 / planned_ms if planned_ms else 1.0  # the song can run a little long or short
 
-    levels = vocal_levels(vocals) if plan.get("sections_pinned", True) else None
+    levels = vocal_levels(vocals)
+    pinned = plan.get("sections_pinned", True)
     skipped = left_out(plan, texts)
     lines, scores = [], {}
     for section in windows(plan):
         start = section["start_ms"] * scale / 1000
         end = min(length, (section["start_ms"] + section["duration_ms"]) * scale / 1000)
         previous = lines[-1].end if lines else 0.0
-        if levels is not None and sung_seconds(levels, start, end) < SUNG_S:
+        if pinned and levels is not None and sung_seconds(levels, start, end) < SUNG_S:
             at = round(max(end, previous), 3)
             for line_id in section["line_ids"]:
                 lines.append(_unsung(line_id, texts, at))
@@ -398,10 +416,83 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
         if score is not None and score > scores[line.line_id]:
             lines[k], scores[line.line_id] = again, score
             realigned.append(line.line_id)
+    spread = by_the_singing(lines, scores, levels)
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
     if aligning is not None:
         _log_local(job, "song alignment", MMS_MODEL, aligning)
-    return timing, {**song_report(timing, texts, scores), "realigned": realigned}
+    return timing, {**song_report(timing, texts, scores), "realigned": realigned, "spread": spread}
+
+
+def by_the_singing(lines: list[TimedLine], scores: dict[str, float | None], levels: list[float] | None) -> list[str]:
+    """Spread the lines the aligner did not hear over the singing they leave with no line (the module's docstring),
+    in place; the ids of the sung lines it moved. The lines it heard, and each pause of PAUSE_S, stay where they are
+    and part the song into stretches. In a stretch where two lines have GAP_S of singing between them, the lines from
+    the first one crammed (under SQUEEZED_S a word) to the last such gap are spread over the stretch up to that gap's
+    end: the aligner crams what it cannot hear right after what it last heard, and finds its place again by the next
+    line it hears (the five songs of Nov 1). Singing with no line and no crammed line before it is left: Lyria is
+    asked for echoes of the hook, and a line it did not hear but placed at a pace that sings stays where it is."""
+    import numpy as np
+
+    if levels is None:
+        return []
+    sung = np.asarray(levels) >= -SINGING_DB
+
+    def heard(line: TimedLine) -> bool:
+        return (scores.get(line.line_id) or 0.0) >= LOW_SCORE
+
+    def crammed(line: TimedLine) -> bool:  # sung (it has a score), in under SQUEEZED_S a word
+        return scores.get(line.line_id) is not None and line.end - line.start < SQUEEZED_S * len(line.words)
+
+    quiet = np.diff(np.concatenate([[0], (~sung).astype(np.int8), [0]]))
+    pauses = [(a + b) / 2 * FRAME_S for a, b in zip(np.flatnonzero(quiet == 1), np.flatnonzero(quiet == -1))
+              if (b - a) * FRAME_S >= PAUSE_S]
+    end = len(sung) * FRAME_S
+    fixed = sorted([(line.start, line.end) for line in lines if heard(line)] + [(t, t) for t in pauses] + [(end, end)])
+    moved, reach = [], 0.0
+    for (_, done), (t1, _) in zip([(0.0, 0.0), *fixed], fixed):
+        reach = max(reach, done)
+        group = [k for k, line in enumerate(lines) if not heard(line) and reach <= (line.start + line.end) / 2 < t1]
+        if not group:
+            continue
+        t0 = max(reach, lines[group[0] - 1].end if group[0] else 0.0)
+        t1 = min(t1, lines[group[-1] + 1].start if group[-1] + 1 < len(lines) else t1)
+        marks = [t0, *(t for k in group for t in (lines[k].start, lines[k].end)), t1]
+        gaps = [i for i, (a, b) in enumerate(zip(marks[::2], marks[1::2]))  # gap i is the one before group[i]
+                if sung[int(a / FRAME_S):int(b / FRAME_S)].sum() * FRAME_S >= GAP_S]
+        last = gaps[-1] if gaps else 0
+        first = next((i for i in range(last) if crammed(lines[group[i]])), None)
+        if first is not None:  # from the first line crammed to the last gap's end
+            moved += _spread(lines, group[first:last], lines[group[first - 1]].end if first else t0,
+                             marks[2 * last + 1], sung)
+    return moved
+
+
+def _spread(lines: list[TimedLine], ks: list[int], t0: float, t1: float, sung) -> list[str]:
+    """Lines `ks` spread, in place, over the singing between t0 and t1, each word over as many of its frames as its
+    share of the letters; a line not sung, or a word the aligner cannot spell, at no length. The ids of those sung."""
+    import numpy as np
+
+    f0 = int(np.ceil(t0 / FRAME_S))
+    frames = np.flatnonzero(sung[f0:int(t1 / FRAME_S)]) + f0
+    words = [(k, word) for k in ks for word in lines[k].words]
+    letters = np.array([len(spoken(word.word)) if lines[k].sung else 0 for k, word in words], dtype=float)
+    if not len(frames) or not letters.sum():
+        return []
+    cuts = np.concatenate([[0.0], np.cumsum(letters)]) * len(frames) / letters.sum()
+    placed: dict[int, list[Word]] = {k: [] for k in ks}
+    at = t0
+    for (k, word), a, b, n in zip(words, cuts, cuts[1:], letters):
+        start = stop = at
+        if n:  # from its first frame to its last
+            first = min(int(a), len(frames) - 1)
+            start = max(at, frames[first] * FRAME_S)
+            stop = max(start, (frames[min(max(int(np.ceil(b)) - 1, first), len(frames) - 1)] + 1) * FRAME_S)
+        placed[k].append(Word(word=word.word, start=round(start, 3), end=round(stop, 3)))
+        at = stop
+    for k in ks:
+        lines[k] = lines[k].model_copy(update={"start": placed[k][0].start, "end": placed[k][-1].end,
+                                               "words": placed[k]})
+    return [lines[k].line_id for k in ks if lines[k].sung]
 
 
 def _unsung(line_id: str, texts: dict[str, str], at: float) -> TimedLine:
@@ -568,6 +659,8 @@ def song_notes(report: dict) -> str:
         notes.append(f"DRIFT over {DRIFT_S}s: {', '.join(report['drifting'])}")
     if report.get("realigned"):  # a report from before the repair pass has none
         notes.append(f"re-aligned alone: {', '.join(report['realigned'])}")
+    if report.get("spread"):  # nor one from before lines were spread over the singing
+        notes.append(f"spread over the singing: {', '.join(report['spread'])}")
     if report["unsure"]:
         notes.append(f"aligner unsure of {', '.join(report['unsure'])}")
     return "; ".join(notes)

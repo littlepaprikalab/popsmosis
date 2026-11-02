@@ -602,6 +602,15 @@ plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
   sung word. The report's `unsung` and the summary line name them; drift leaves them out.
   A Lyria song's sections are not pinned, so none is checked. Whether "[Intro]" makes
   Eleven Music play an instrumental lead-in is still to be tested, and costs a song.
+- **Lines the aligner cannot hear:** MMS hears no letters in a chorus Lyria sings as a stack of
+  voices (Nov 1: the five songs' verses read back nearly word for word, their choruses as blank),
+  so the aligner crammed a chorus's lines into a second or two after the last line it heard, and
+  the singer sang on for 6 to 15 s over no line, the hook cut ending with them. Lines it did not
+  hear that are crammed (under 0.28 s a word) before 2 s or more of singing with no line are now
+  spread over that singing, from the line before them to the gap's end (never across a pause of
+  2 s in the singing), each word by its share of the letters. The lines it heard stay, and so
+  does singing with no line after lines placed at a pace that sings (Lyria is asked for echoes of
+  the hook). The report's `spread` and the summary line name them.
 
 Output is a `Timing` per audio file: each line by id, with its start, end,
 `[{word, start, end}]`, and `sung` (false only for a line the song never sings).

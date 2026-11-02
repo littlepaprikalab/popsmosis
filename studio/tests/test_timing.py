@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from studio import jobs, knobs, media
-from studio.schemas import Timing, timing_problems
+from studio.schemas import TimedLine, Timing, Word, timing_problems
 from studio.steps import audio, timing
 from studio.steps.timing import spoken, timing_from_chars, words_of
 from studio.tests import sample_media
@@ -153,21 +153,26 @@ def test_silent_vocals_leave_every_section_to_the_aligner(made):
     assert report["unsung"] == [] and all(line.sung for line in timed.lines)
 
 
-def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
-    """Lyria keeps to the planned sections only roughly (an intro, a longer verse), so its
-    lines are looked for in the whole song at once rather than where each was planned."""
+def _lyria(tmp_path, monkeypatch, length):
+    """The sample job with a fake song Lyria sang, `length` seconds long."""
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
     monkeypatch.setattr(audio, "send", FakeGemini())
     monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type, kind="song": data)
-    monkeypatch.setattr(audio, "duration", lambda path: 41.0)  # longer than the 30.1s planned
+    monkeypatch.setattr(audio, "duration", lambda path: length)
     job = tmp_path / "sample"
     job.mkdir()
-    bundle = sample_media.bundle()
-    jobs.write(job / "bundle.json", bundle)
+    jobs.write(job / "bundle.json", sample_media.bundle())
     jobs.keep_studio_settings(job, {"song": {"provider": "gemini"}})  # as an admin sets it on /admin/studio
     audio.run(job)
+    return job
 
+
+def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
+    """Lyria keeps to the planned sections only roughly (an intro, a longer verse), so its
+    lines are looked for in the whole song at once rather than where each was planned."""
+    job = _lyria(tmp_path, monkeypatch, 41.0)  # longer than the 30.1s planned
+    bundle = sample_media.bundle()
     calls = []
     vocals = _sung(41.0, quiet=[(0.0, 10.0, 0.0)])  # Lyria's own 10 s intro: no chunk was planned for it
     timed, report = timing.song_timing(job, bundle, align=even_aligner(calls), vocals=vocals)
@@ -198,17 +203,8 @@ def test_the_lines_lyria_says_it_left_out_are_found_in_its_own_text():
 def test_a_line_lyria_left_out_is_not_sung_and_the_rest_are_aligned_without_it(tmp_path, monkeypatch):
     """Round 17's kidney song stopped after its last chorus, as its own text said; the aligner, asked for the
     outro too, crammed seven lines into the song's last seven seconds, flashed in the band and never sung."""
-    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
-    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    monkeypatch.setattr(audio, "send", FakeGemini())
-    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type, kind="song": data)
-    monkeypatch.setattr(audio, "duration", lambda path: 30.0)
-    job = tmp_path / "sample"
-    job.mkdir()
+    job = _lyria(tmp_path, monkeypatch, 30.0)
     bundle = sample_media.bundle()
-    jobs.write(job / "bundle.json", bundle)
-    jobs.keep_studio_settings(job, {"song": {"provider": "gemini"}})
-    audio.run(job)
     plan_file = job / audio.plan_path("song")
     plan = json.loads(plan_file.read_text())
     *sung, last = bundle.lyrics
@@ -301,6 +297,80 @@ def test_a_line_with_no_room_between_its_neighbours_stays_as_it_was(made):
     assert len(calls) == 7
     assert report["unsure"] == ["c1-1"] and report["realigned"] == []
     assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
+
+
+def test_a_chorus_the_aligner_cannot_hear_is_spread_over_its_singing(tmp_path, monkeypatch):
+    """Nov 1's five Lyria songs: MMS hears no letters in a stacked-voice chorus, so the aligner crammed its lines
+    into a second after the verse it heard, and the singer sang on over no line until the next line it heard."""
+    job = _lyria(tmp_path, monkeypatch, 30.0)
+    bundle = sample_media.bundle()
+    texts = {line.id: line.text for line in bundle.lyrics}
+
+    def align(window, words):
+        if len(words) < 30:  # a line heard again alone: no surer
+            return [(i * 0.05, (i + 1) * 0.05, 0.05) for i in range(len(words))]
+        heard = [(1.0 + i * 0.5, 1.4 + i * 0.5, 0.9) for i in range(11)]  # the verse, v1-1 and v1-2
+        crammed = [(6.6 + i * 0.11, 6.7 + i * 0.11, 0.05) for i in range(10)]  # c1-1 and v2-1, in 1.1 s
+        return heard + crammed + [(16.0 + i * 0.5, 16.4 + i * 0.5, 0.9) for i in range(len(words) - 21)]
+
+    timed, report = timing.song_timing(job, bundle, align=align, vocals=_sung(30.0))
+    assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
+    verse, chorus, verse2, after = (timed.line(i) for i in ("v1-2", "c1-1", "v2-1", "c2-1"))
+    assert report["spread"] == ["c1-1", "v2-1"] and report["unsure"] == ["c1-1", "v2-1"]
+    assert "spread over the singing: c1-1, v2-1" in timing.song_notes(report)
+    assert (verse.end, after.start) == (6.4, 16.0)  # the lines it heard stay where they are
+    # From the line it heard before them to the next, each word over its share of the letters.
+    assert chorus.start == pytest.approx(verse.end, abs=timing.FRAME_S) and chorus.end == verse2.start
+    assert verse2.end == pytest.approx(after.start, abs=timing.FRAME_S)
+    letters = [len(spoken(w)) for i in ("c1-1", "v2-1") for w, _, _ in words_of(texts[i])]
+    seconds = [w.end - w.start for line in (chorus, verse2) for w in line.words]
+    assert seconds == pytest.approx([n * (after.start - verse.end) / sum(letters) for n in letters], abs=0.06)
+
+
+def _lines(*spans):
+    """Lines a, b, c... over these (start, end) spans, each four words on an even beat."""
+    lines = []
+    for k, (start, end) in enumerate(spans):
+        step = (end - start) / 4
+        lines.append(TimedLine(line_id="abcdefgh"[k], start=start, end=end, words=[
+            Word(word=w, start=round(start + i * step, 3), end=round(start + (i + 1) * step, 3))
+            for i, w in enumerate(["Sodium", "out", "potassium", "in"])]))
+    return lines
+
+
+def _levels(seconds, silent=()):
+    """Vocal levels (dB) singing throughout, but for the silent (start, end) stretches."""
+    levels = np.zeros(round(seconds / timing.FRAME_S))
+    for start, end in silent:
+        levels[round(start / timing.FRAME_S):round(end / timing.FRAME_S)] = -60.0
+    return levels.tolist()
+
+
+def test_unheard_lines_at_a_pace_that_sings_stay_and_a_pause_ends_a_spread():
+    # Singing with no line after lines it did not hear but placed at a singing pace: an echo of the hook, kept.
+    lines = _lines((0.0, 2.0), (2.0, 4.0), (4.0, 6.0), (10.0, 12.0))
+    assert timing.by_the_singing(lines, {"a": 0.9, "b": 0.1, "c": 0.1, "d": 0.9}, _levels(14.0)) == []
+    assert [(line.start, line.end) for line in lines] == [(0.0, 2.0), (2.0, 4.0), (4.0, 6.0), (10.0, 12.0)]
+    # Crammed lines are spread up to the pause after them (an instrumental break); the line after it stays.
+    lines = _lines((0.0, 2.0), (2.0, 2.5), (2.5, 3.0), (12.0, 14.0), (14.0, 16.0))
+    scores = {"a": 0.9, "b": 0.1, "c": 0.1, "d": 0.1, "e": 0.9}
+    assert timing.by_the_singing(lines, scores, _levels(16.0, silent=[(7.0, 11.0)])) == ["b", "c"]
+    assert [(line.start, line.end) for line in lines] == [(0.0, 2.0), (2.0, 4.5), (4.5, 7.0), (12.0, 14.0),
+                                                           (14.0, 16.0)]
+    # Silent vocals: nothing to place them by.
+    lines = _lines((0.0, 2.0), (2.0, 2.5), (8.0, 10.0))
+    assert timing.by_the_singing(lines, {"a": 0.9, "b": 0.1, "c": 0.9}, None) == []
+
+
+def test_a_line_not_sung_among_lines_spread_stays_at_no_length_in_its_place():
+    lines = _lines((0.0, 2.0), (2.0, 2.4), (2.4, 2.4), (2.4, 2.8), (10.0, 12.0))
+    lines[2] = lines[2].model_copy(update={"sung": False})
+    scores = {"a": 0.9, "b": 0.1, "c": None, "d": 0.1, "e": 0.9}
+    assert timing.by_the_singing(lines, scores, _levels(12.0)) == ["b", "d"]
+    b, c, d = lines[1:4]
+    assert (b.start, b.end, d.start, d.end) == (2.0, 6.0, 6.0, 10.0)
+    assert not c.sung and c.start == c.end == 6.0 and all(w.start == w.end == 6.0 for w in c.words)
+    Timing(audio="audio/song.mp3", duration=12.0, lines=lines)  # in order, every word inside its line
 
 
 def test_the_step_writes_both_timings_and_reports_drift(made, monkeypatch):
