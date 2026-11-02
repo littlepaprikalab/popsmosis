@@ -1988,3 +1988,18 @@ def test_an_arrows_track_is_black_on_white_with_its_head_and_painted_labels_are_
     assert painted_label_boxes(picture) == [(60.0, 40.0, 200.0, 70.0)]
     picture[48:62, 70:190:6] = 255  # a white patch with no writing is no label
     assert painted_label_boxes(picture) == []
+
+
+def test_an_everyday_thing_a_flow_carries_rides_as_its_emoji_and_science_keeps_its_symbols():
+    # The owner, Nov 2: "money" rode its arrow as a plain dot.
+    from studio.render import primitives as p
+
+    assert p.kind_of("money") == p.kind_of("taxes") == p.kind_of("borrowed money") == "icon"
+    assert p.icon_of("Taxes") == "money" and p.icon_of("bread") == "bread" and p.icon_of("votes") == "votes"
+    assert p.kind_of("H⁺") == "symbol" and p.kind_of("water") == "water" and p.kind_of("glucose") == "sugar"
+    assert all((p.ICON_DIR / f"{name}.png").is_file() for name in set(p.ICON_WORDS.values()))
+    pixels = np.zeros((80, 80, 4), np.uint8)
+    surface = skia.Surface(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
+    p.draw_kind(surface.getCanvas(), (40.0, 40.0), "#FFD166", "money", 1.0)
+    shown = pixels[30:50, 30:50, :3].reshape(-1, 3)
+    assert (shown.max(1) - shown.min(1) > 60).any()  # the bag's own colours, not a flat disc

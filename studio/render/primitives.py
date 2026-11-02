@@ -456,8 +456,42 @@ SUGARS = {"glucose", "sugar", "sugars", "sucrose", "fructose", "galactose", "lac
 WATER = {"water"}
 
 
+# Everyday things a flow carries, drawn as their emoji rather than a dot: "money" riding an arrow read as a plain dot
+# (the owner, Nov 2). Rendered once from Noto Color Emoji (icons/NOTICE); science keeps its symbols and shapes.
+ICON_DIR = Path(__file__).resolve().parent / "icons"
+ICON_WORDS = {
+    **dict.fromkeys(("money", "cash", "taxes", "tax", "loans", "loan", "wages", "payments", "payment", "funds",
+                     "revenue", "profit", "profits", "income", "debt", "spending"), "money"),
+    **dict.fromkeys(("coins", "coin", "gold", "silver"), "coins"),
+    **dict.fromkeys(("bread", "food", "grain", "wheat", "flour"), "bread"),
+    **dict.fromkeys(("goods", "products", "exports", "imports", "supplies", "cargo"), "goods"),
+    **dict.fromkeys(("votes", "vote", "ballots"), "votes"),
+    **dict.fromkeys(("letters", "letter", "messages", "message", "mail"), "letters"),
+    "news": "news",
+    **dict.fromkeys(("people", "workers", "voters", "migrants", "settlers", "citizens", "buyers", "sellers",
+                     "customers", "consumers"), "people"),
+    **dict.fromkeys(("soldiers", "troops", "army"), "soldiers"),
+    "oil": "oil",
+}
+_ICONS: dict[str, skia.Image] = {}
+
+
+def icon_of(label: str) -> str | None:
+    """The icon a flow carrying `label` is drawn as ("borrowed money": money), or None."""
+    words = label.strip().lower().split()
+    return (ICON_WORDS.get(" ".join(words)) or ICON_WORDS.get(words[-1])) if words else None
+
+
+def _icon(name: str) -> skia.Image:
+    if name not in _ICONS:
+        _ICONS[name] = skia.Image.MakeFromEncoded(skia.Data.MakeWithCopy((ICON_DIR / f"{name}.png").read_bytes()))
+    return _ICONS[name]
+
+
 def kind_of(label: str) -> str:
-    """How a particle carrying `label` is drawn: "sugar", "water", "symbol" or "dot"."""
+    """How a particle carrying `label` is drawn: "icon", "sugar", "water", "symbol" or "dot"."""
+    if icon_of(label):
+        return "icon"
     if carried(label):  # short enough to print on the particle itself: "H⁺", "H₂O", "ATP"
         return "symbol"
     plain = label.strip().lower()
@@ -494,6 +528,13 @@ def draw_kind(canvas: skia.Canvas, at: tuple[float, float], color: str, label: s
         draw_marker(canvas, at, color, label, alpha, size)
         return
     r = PARTICLE_R * size
+    if kind == "icon":  # its emoji on a white disc, so it reads on any picture
+        canvas.drawCircle(at[0], at[1], 2.0 * r, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, 0.92 * alpha)))
+        side = 3.2 * r  # a picture of a thing reads only bigger than a dot
+        canvas.drawImageRect(_icon(icon_of(label)), skia.Rect.MakeXYWH(at[0] - side / 2, at[1] - side / 2, side, side),
+                             skia.SamplingOptions(skia.FilterMode.kLinear, skia.MipmapMode.kLinear),
+                             skia.Paint(Alphaf=alpha))
+        return
     canvas.drawPath(_kind_path(kind, at[0], at[1], r),
                     skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2 * HALO * size,
                                Color=with_alpha(0xFFFFFFFF, alpha)))
