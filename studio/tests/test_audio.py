@@ -286,10 +286,9 @@ def test_the_prompt_says_which_sections_are_rapped():
     # The owner, Nov 2: three songs whose styles said "rapped verses" came back sung all through, the prompt's line
     # saying "Sing the lines in order".
     assert audio.delivery(["upbeat pop, 112 bpm"]) == ""  # singing the lyrics in order goes without saying
-    assert audio.delivery(["Latin pop, easygoing rapped verses, a catchy sung chorus, 100 bpm"]) == (
-        "Rap every verse, spoken on the beat, not sung; sing the chorus.")
-    assert audio.delivery(["teen pop, a sung first verse and a rapped second verse"]).startswith("Rap the second verse,")
-    assert audio.delivery(["dance-pop, short sung verses and a rapped bridge"]).startswith("Rap the bridge,")
+    assert audio.delivery(["Latin pop, easygoing rapped verses, a catchy sung chorus, 100 bpm"]) == "Rap every verse."
+    assert audio.delivery(["teen pop, a sung first verse and a rapped second verse"]) == "Rap the second verse."
+    assert audio.delivery(["dance-pop, short sung verses and a rapped bridge"]) == "Rap the bridge."
     assert all(checks.RAPPED_VERSES.search(style) and "Rap every verse" in audio.delivery([style])
                for style in styles.SONG_STYLES)
 
