@@ -87,12 +87,30 @@ def write_script(prompt: str, brief: str, ask, images=(), job: Path | None = Non
         if job is not None:
             write(job / RECORD, {"script": None, "why": str(e)})
         return None
+    script = numbered(script)
     problem = _problem(script)
     if problem:
         print(f"script: none, the bundle is written without one: {problem}", file=sys.stderr)
     if job is not None:  # follow() adds what the bundle kept of it
         write(job / RECORD, {"script": script.model_dump(), **({"why": problem} if problem else {})})
     return None if problem else script
+
+
+FACT_ID = re.compile(r"f[1-9][0-9]*")
+
+
+def numbered(script: Script) -> Script:
+    """The script with its facts numbered f1, f2, ... in order, unless each already has an id of that form of its
+    own. Muse Wonder gave all four facts the id "[generated]" (Nov 2). The bundle numbered them itself, so it no
+    longer kept the script's facts (follow()) and the early audit was thrown away; a bundle that copied the ids would
+    be refused for them, and the audit, which corrects a fact by its id, would give all four one text. Nothing else in
+    a script names a fact, so the numbers are safe to give."""
+    ids = [f.id for f in script.facts]
+    if len(set(ids)) == len(ids) and all(FACT_ID.fullmatch(i) for i in ids):
+        return script
+    print(f"script: its facts' ids were {ids}, so they are numbered f1 to f{len(ids)}", file=sys.stderr)
+    return script.model_copy(update={"facts": [f.model_copy(update={"id": f"f{k}"})
+                                               for k, f in enumerate(script.facts, start=1)]})
 
 
 def _problem(script: Script) -> str:

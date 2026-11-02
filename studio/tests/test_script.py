@@ -103,3 +103,24 @@ def test_the_script_writer_hears_there_is_no_song_only_when_there_is_none():
     without = script.system_prompt(bundle_step.LESSON_ONLY_PROMPT)
     assert "## No song for this droplet" in without and "there is no songwriter" in without
     assert "## The plan without the song" not in without  # the plan's rules are the bundle writer's
+
+
+def test_facts_that_share_an_id_are_numbered_before_the_bundle_sees_them(tmp_path):
+    # Muse Wonder gave every fact the id "[generated]" (Nov 2): the bundle would cite one id for four facts.
+    facts = [dict(f, id="[generated]") for f in bundle_data()["facts"]]
+    write(tmp_path / "request.json", Request(topic="the light reactions"))
+    ask = asking({"script": script_data(facts=facts), "bundle": bundle_data(), "narration edit": unchanged_narration})
+    bundle_step.run(tmp_path, ask=ask)
+    second = [a for a in ask.asked if a[0] == "bundle"][0][1]
+    wanted = [f"f{k}" for k in range(1, len(facts) + 1)]
+    assert [f["id"] for f in json.loads(second.split("<script>\n")[1].split("\n</script>")[0])["facts"]] == wanted
+    assert [f["id"] for f in json.loads((tmp_path / script.RECORD).read_text())["script"]["facts"]] == wanted
+
+
+def test_facts_numbered_their_own_way_keep_their_ids():
+    data = script_data()
+    kept = script.numbered(script.Script.model_validate(data))
+    assert [f.id for f in kept.facts] == [f["id"] for f in data["facts"]]
+    reordered = script_data(facts=list(reversed(data["facts"])))
+    assert [f.id for f in script.numbered(script.Script.model_validate(reordered)).facts] == [
+        f["id"] for f in reversed(data["facts"])]
