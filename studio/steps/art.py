@@ -951,12 +951,18 @@ def labels_line(scene: Scene) -> str:
     since everything in a room or on a boat has a name a student would not know, and a diagram's parts have textbook
     names the lesson does not use. A science diagram has no room or furniture to name. The hook, an everyday sight,
     labels nothing (NO_LABELS): its parts' names teach nothing (Nov 1: the pump's hook labelled "Body" and "Couch"),
-    and the upright hook video cropped them."""
+    and the upright hook video cropped them.
+
+    Each name is quoted after what it labels, by the part's own look (its sam_phrase): the brown step "Privileges".
+    Given the names alone, the painter guessed where an idea drawn as a thing goes, and put "Privileges" under the
+    French Revolution's figures, not on their step; with each one placed, every label landed on its thing and was
+    spelled right, on the French Revolution and the light reactions alike (the owner's choice, Nov 2)."""
     if scene.id in EVERYDAY:
         return NO_LABELS
-    names = ", ".join(s.name for s in scene.structures)
+    labels = ", ".join(f'the {s.sam_phrase.strip()} "{s.name}"' if s.sam_phrase.strip() else f'"{s.name}"'
+                       for s in scene.structures)
     rest = "." if SCIENCE_STYLE in scene.image_prompt.lower() else ": no room, furniture or background objects."
-    return f"Label only these parts, each with exactly this name: {names}. Label nothing else{rest} {NO_SLIDE}"
+    return f"Label only: {labels}. Label nothing else{rest} {NO_SLIDE}"
 
 
 def axes_line(axes: Axes) -> str:
