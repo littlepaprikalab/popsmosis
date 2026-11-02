@@ -166,6 +166,7 @@ STREAM_GAP = 160.0  # art pixels between the particles streaming along the path,
 ROUTE_BEND = 0.25  # a hop's curve bows out by this share of its length, at its middle
 CURVE_STEPS = 24  # straight pieces a curved arrow is drawn with
 ARROW_SAMPLE = 14.0  # art pixels between the points along an arrow that labels keep clear of
+LABEL_PAD = 2.0  # art pixels around a painted label's box drawn again over the arrows with it
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
 TRAIL_GAP = 24.0  # frame pixels: a trail dot closer than this to the one before it is left out, so the dots
@@ -1449,6 +1450,29 @@ class Renderer:
         elif keep:  # the copy kept was the frame before's, as it always was: never one from an earlier rest
             self._last_background, self._background = (key, (scale, dx, dy)), None
 
+    def _painted_labels(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, ghosts: dict[str, float],
+                        spots: dict[str, float], tints: tuple, alpha: float) -> None:
+        """The labels painted on the picture (SceneArt.label_boxes), drawn again over its arrows and particles, from
+        the picture as the background drew it: on top, as the video's own labels are (Nov 2: two of the GPS
+        overview's four signals ran through its painted "Phone")."""
+        art = self.scene(scene_id)
+        boxes = art.label_boxes()
+        if not boxes:
+            return
+        _, composed = art.compose(ghosts, spots, tints)
+        scale, dx, dy = to_frame(cam, view, art)
+        paint = skia.Paint(Alphaf=alpha)
+        canvas.save()
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))
+        canvas.translate(dx, dy)
+        canvas.scale(scale, scale)
+        for x0, y0, x1, y1 in boxes:
+            canvas.save()
+            canvas.clipRect(skia.Rect.MakeLTRB(x0 - LABEL_PAD, y0 - LABEL_PAD, x1 + LABEL_PAD, y1 + LABEL_PAD))
+            canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear), paint)
+            canvas.restore()
+        canvas.restore()
+
     def _in_play(self, i: int) -> set[str] | None:
         """The parts beat i is about (LABELS_CALM); None when every label shows in full."""
         beat = self.timeline.beats[i]
@@ -1651,6 +1675,8 @@ class Renderer:
             self._glow(canvas, beat, cam, view, t, ghosts)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
+            if beat.scene in self.timeline.self_labelled:
+                self._painted_labels(canvas, beat.scene, cam, view, ghosts, spots, tints, fade)
 
         caption_alpha = 0.0
         if beat.caption:

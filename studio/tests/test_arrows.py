@@ -142,3 +142,36 @@ def test_a_move_with_copies_draws_an_arrow_from_each_copy():
         frames.append(renderer.frame(renderer.arrow_time("overview", flow)).astype(int))
     changed = (abs(frames[1] - frames[0]).sum(axis=2) > 30).sum()
     assert changed > 200  # the second arrow is drawn: a few hundred pixels or more differ
+
+
+def test_a_painted_label_is_drawn_over_an_arrow_that_crosses_it():
+    # Nov 2: two of the GPS overview's four signals ran through its painted "Phone", which read "Ph|o|ne".
+    from studio.render.renderer import LABEL_PAD, Renderer
+    from studio.schemas import Locations, Point
+
+    job = sample_media.write_job(Path(tempfile.mkdtemp()) / "sample", art=True)
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline).model_copy(update={"self_labelled": ["overview"]})
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    beat = next(b for b in timeline.beats if b.particles and list(b.particles[0].path) == HOP)
+    flow = beat.particles[0]
+    placed = PlacedArrow(scene="overview", path=HOP, carries=flow.label, start=Point(x=700, y=500),
+                         end=Point(x=900, y=450))
+    box = (760.0, 450.0, 840.0, 500.0)  # a label's box the arrow runs through (y 485 to 465 across it)
+    frames = {}
+    for name, boxes, only in (("bare", [box], ("nothing",)), ("over", [box], arrows.key("overview", flow)),
+                              ("under", [], arrows.key("overview", flow))):
+        renderer = Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[placed]))
+        renderer.scene("overview")._label_boxes = boxes  # as painted_label_boxes would find them
+        renderer.only = only
+        t = renderer.arrow_time("overview", flow)
+        frames[name] = renderer.frame(t).astype(int)
+    (fx0, fy0), (fx1, fy1) = (renderer.art_to_frame(t, box[0] + LABEL_PAD, box[1] + LABEL_PAD),
+                              renderer.art_to_frame(t, box[2] - LABEL_PAD, box[3] - LABEL_PAD))
+    inside = (slice(round(fy0) + 1, round(fy1) - 1), slice(round(fx0) + 1, round(fx1) - 1))
+
+    def changed(a, b, where=(slice(None), slice(None))) -> int:
+        return int((abs(frames[a][where] - frames[b][where]).sum(axis=2) > 30).sum())
+
+    assert changed("under", "bare", inside) > 20  # drawn under nothing, the arrow shows across the box
+    assert changed("over", "bare", inside) == 0  # the label is drawn again over it
+    assert changed("over", "bare") > 100  # and the rest of the arrow is still drawn
