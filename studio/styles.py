@@ -14,8 +14,9 @@ pop's place, which sounded the same once it rapped both verses.
 
 Neighbouring droplets never share a style (the owner, Nov 2): three of five videos in one batch had drawn the same
 teen pop from their names. A job takes the style none of the jobs made just before it took (style_for_job), and
-keeps it in the job, so a retry keeps it too. Electropop and upbeat pop were dropped the same day: one sounded like
-teen pop, the other, once it rapped its verses, like Cash in the Carrier. The scorecard still seeds each topic by its
+keeps it in the job, so a retry keeps it too. Electropop and a bouncy upbeat pop were dropped the same day: one
+sounded like teen pop, the other, once it rapped its verses, like Cash in the Carrier. The owner's style is near
+Cash in the Carrier too (both 100 bpm, a woman rapping), with warm synths and snaps for its 808s and bright hook. The scorecard still seeds each topic by its
 id (style_for), so its runs stay comparable.
 """
 
