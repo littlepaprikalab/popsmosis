@@ -25,7 +25,8 @@ endpoints as built.
 5. The page shows the droplet: both videos when they finish rendering, with the lesson
    text under them, updating in place without a reload. Until then the card shows the
    droplet's bill of materials filling in, step by step, as its progress; the text waits
-   for the videos at most 20 minutes after it is posted (README, "While a droplet is made").
+   until the videos are ready or failed, at most an hour after it is posted (README, "While a
+   droplet is made").
 6. The learner asks **follow-ups** under the droplet, and the teacher answers them on its
    next pass.
 7. Every finished droplet also appears on a public **Droplets** tab, where anyone can

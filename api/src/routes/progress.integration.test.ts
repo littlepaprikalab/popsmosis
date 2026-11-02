@@ -55,7 +55,7 @@ d('progress reports', () => {
     await app.ready();
   });
   afterAll(async () => {
-    delete process.env.LESSON_HOLD_MINUTES; // a test that holds the text sets it
+    delete process.env.LESSON_HOLD_MINUTES; // a test that shows the text at once sets it
     await prisma.$executeRawUnsafe('TRUNCATE replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
     await app.close();
     await prisma.$disconnect();
@@ -167,7 +167,8 @@ d('progress reports', () => {
     expect((await card()).answer.awaitingVideos).toBe(false); // nobody said videos follow: a text-only droplet
   });
 
-  it('shows the lesson text as soon as it is posted, with the bill filling in under it while the videos are made', async () => {
+  it('with LESSON_HOLD_MINUTES=0, shows the lesson text as soon as it is posted, with the bill filling in under it', async () => {
+    process.env.LESSON_HOLD_MINUTES = '0';
     expect((await claim()).statusCode).toBe(200);
     expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
     const answerId = (await post()).json().id;
@@ -189,8 +190,7 @@ d('progress reports', () => {
     expect(q.progress.breakdown.steps.map((s: { step: string }) => s.step)).toEqual(['request', 'bundle', 'art']);
   });
 
-  it('with LESSON_HOLD_MINUTES set, holds the lesson text back while its videos are made, then shows it with them', async () => {
-    process.env.LESSON_HOLD_MINUTES = '20';
+  it('holds the lesson text back while its videos are made, then shows it with them', async () => {
     expect((await claim()).statusCode).toBe(200);
     expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
     const answerId = (await post()).json().id;
@@ -233,8 +233,7 @@ d('progress reports', () => {
     expect((await videoReport(answerId, { attempt: 1, running: [] })).statusCode).toBe(409);
   });
 
-  it('with LESSON_HOLD_MINUTES set, shows the text without waiting for a text-only droplet, and after 20 minutes whatever the videos do', async () => {
-    process.env.LESSON_HOLD_MINUTES = '20';
+  it('shows the text without waiting for a text-only droplet, and an hour on whatever the videos do', async () => {
     expect((await claim()).statusCode).toBe(200);
     expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: false })).statusCode).toBe(204);
     const answerId = (await post()).json().id;
@@ -246,14 +245,16 @@ d('progress reports', () => {
     expect((await claimVideos(answerId)).statusCode).toBe(200);
     expect((await card()).answer.awaitingVideos).toBe(false);
 
-    // A droplet whose videos were coming: held while they render, then shown 20 minutes on whatever they do.
+    // A droplet whose videos were coming: held while they render, then shown an hour on whatever they do.
     questionId = (await prisma.question.create({ data: { userId, content: 'Osmosis' } })).id;
     expect((await claim()).statusCode).toBe(200);
     expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
     const held = (await post()).json().id;
     expect((await claimVideos(held)).statusCode).toBe(200);
     expect((await card()).answer.awaitingVideos).toBe(true);
-    await prisma.answer.update({ where: { id: held }, data: { createdAt: new Date(Date.now() - 21 * 60_000) } });
+    await prisma.answer.update({ where: { id: held }, data: { createdAt: new Date(Date.now() - 35 * 60_000) } });
+    expect((await card()).answer.awaitingVideos).toBe(true); // longer than the videos take: still held
+    await prisma.answer.update({ where: { id: held }, data: { createdAt: new Date(Date.now() - 61 * 60_000) } });
     q = await card();
     expect(q.answer.awaitingVideos).toBe(false);
     expect(q.answer.video.status).toBe('RENDERING');

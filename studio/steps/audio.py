@@ -10,7 +10,7 @@
                                   narration has none, and step 6 aligns it)
 
 Who makes the audio is an admin's setting on /admin/studio, as the claim said (the job's
-settings.json, song_provider()): elevenlabs (the default) or gemini. It picks the song's singer
+settings.json, song_provider()): gemini (the default: Lyria sings) or elevenlabs. It picks the song's singer
 and the narration's voice together, so one switch moves a droplet off a service whose quota has
 run out: ElevenLabs sings with Eleven Music and reads with its text-to-speech; Gemini sings with
 Lyria and reads with Gemini 3.8 Flash TTS (gemini_tts_model()). The singer takes the
@@ -191,9 +191,9 @@ def _current(job: Path, bundle: Bundle, kind: str) -> bool:
 
 def song_provider(job: Path) -> str:
     """Who makes the audio, the song and the narration: the admin's setting on /admin/studio as the job's last
-    claim said, else elevenlabs."""
+    claim said, else gemini (Lyria sings, Gemini TTS reads)."""
     song = jobs.studio_settings(job).get("song")
-    return (song.get("provider") if isinstance(song, dict) else None) or "elevenlabs"
+    return (song.get("provider") if isinstance(song, dict) else None) or media.DEFAULT_SONG_PROVIDER
 
 
 def _check_keys(todo: list[str], provider: str) -> None:

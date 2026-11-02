@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback, useMemo, memo, Suspense } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, memo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LightBulbIcon } from '@heroicons/react/24/outline';
@@ -22,9 +22,11 @@ import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
 import { DropletReview } from '@/components/DropletReview';
-import { Wordmark } from '@/components/Wordmark';
+import { ExampleDroplet } from '@/components/ExampleDroplet';
+import { DropletPill, Marked, SongChip } from '@/components/Highlights';
 import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
+import { topicDraft } from '@/lib/topicDraft';
 import { BRAIN_MODELS, BRAIN_OPTIONS, brainLabel, rememberedBrain, rememberBrain, type Brain } from '@/lib/brains';
 
 const PAGE_SIZE = 20;
@@ -38,6 +40,7 @@ const QUESTION_MAX = 2000;
 // The videos start rendering a few minutes after the lesson is posted (docs/PLAN.md,
 // section 5), so a lesson this new with no videos yet is watched for them too.
 const VIDEO_WATCH_MS = 15 * 60_000;
+const SIGN_IN_HREF = '/auth/callback?returnTo=%2Flearn';
 
 /**
  * A card the armed poll re-fetches: a topic with no lesson yet, a thread where a
@@ -325,7 +328,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                     {notesUrl && <TeacherNotesLink href={notesUrl} />}
                   </p>
                 )}
-                {/* Still rendering under the text (shown as soon as the lesson is posted): the bill keeps filling in under it. */}
+                {/* Still rendering after the text was shown (a second attempt, or an hour on): the bill keeps filling in under it. */}
                 {(answer.breakdown || q.progress) && (
                   <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={answer.video?.status === 'RENDERING' ? q.progress : null} />
                 )}
@@ -382,6 +385,9 @@ function LearnContent() {
   const [brain, setBrain] = useState<Brain | null>(null);
   const [defaultBrain, setDefaultBrain] = useState<Brain | null>(null); // the Studio page's, for the Default button
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  // Submit pressed signed out: the box asks them to sign in, keeping what they typed.
+  const [askSignIn, setAskSignIn] = useState(false);
+  const signInRef = useRef<HTMLAnchorElement>(null);
   const { submitting, guard } = useGuardedSubmit();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const latestSeenRef = useRef<string | null>(null);
@@ -412,7 +418,15 @@ function LearnContent() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { setLoading(false); return; }
+    if (!user) {
+      // Signed out, or just logged out: nothing of a signed-in list stays behind to show, page or poll.
+      setQuestions([]);
+      setCursor(null);
+      setHasNew(false);
+      setAgentLastSeenAt(undefined);
+      setLoading(false);
+      return;
+    }
     load();
   }, [authLoading, user, load]);
 
@@ -503,22 +517,49 @@ function LearnContent() {
     return () => io.disconnect();
   }, [cursor]);
 
-  const autoResize = () => {
+  // The box grows with what is in it: typed, brought back from before a sign-in, or cleared once sent.
+  useLayoutEffect(() => {
     const ta = textareaRef.current;
     if (ta) { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight}px`; }
+  }, [newQuestion, authLoading, unreachable]);
+
+  // A topic typed before a sign-in (or a reload) is back in the box. Back from a sign-in that Submit asked for,
+  // the page says so: it waits for Submit rather than sending itself, so nothing goes out unseen.
+  useEffect(() => {
+    const saved = topicDraft.read();
+    if (saved) setNewQuestion((current) => current || saved);
+  }, []);
+  useEffect(() => {
+    if (!user || !topicDraft.takeSignIn() || !topicDraft.read()) return;
+    showToast('You are signed in. Your topic is still in the box: press Submit to send it.', 'success');
+    textareaRef.current?.focus();
+  }, [user, showToast]);
+  // A logout empties the box too (its stored copy goes in lib/auth.tsx), for whoever uses this computer next.
+  const signedIn = useRef(false);
+  useEffect(() => {
+    if (signedIn.current && !user) { setNewQuestion(''); setAskSignIn(false); }
+    signedIn.current = !!user;
+  }, [user]);
+
+  const changeQuestion = (value: string) => {
+    setNewQuestion(value);
+    topicDraft.write(value);
   };
+
+  // Hand the keyboard to the sign-in link the moment it shows.
+  useEffect(() => { if (askSignIn) signInRef.current?.focus(); }, [askSignIn]);
 
   const handleAsk = async () => {
     const content = newQuestion.trim();
     if (content.length < QUESTION_MIN) return;
+    if (!user) { setAskSignIn(true); return; }
     try {
       await guard(async () => {
         const picked = isAdmin ? brain : null;
         const q = await api.askQuestion(content, picked);
         setQuestions((prev) => [q, ...prev]);
         if (!latestSeenRef.current || q.createdAt > latestSeenRef.current) latestSeenRef.current = q.createdAt;
-        setNewQuestion('');
-        if (textareaRef.current) textareaRef.current.style.height = 'auto';
+        changeQuestion('');
         showToast(`Topic sent${picked ? ` to ${brainLabel(picked)}` : ''}. The teacher picks it up on its next pass.`, 'success');
       });
     } catch (err) {
@@ -570,38 +611,6 @@ function LearnContent() {
 
   if (unreachable) return <ServerUnavailable onRetry={retry} />;
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
-        <div className="text-center p-8 rounded-lg max-w-md animate-fade-in"
-          style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-          <h1 className="mb-3"><Wordmark size="lg" /></h1>
-          <p className="text-sm mb-1 font-bold" style={{ color: 'var(--text-primary)' }}>
-            Droplets for learning
-          </p>
-          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-            Ask for any topic. An AI teacher makes you a short lesson, and you can ask follow-ups under it.
-          </p>
-          <Link href="/auth/callback?returnTo=%2Flearn"
-            className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors"
-            style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
-            Sign in with Google
-          </Link>
-          <p className="text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
-            The lessons the teacher makes are public, free to watch on the{' '}
-            <Link href="/droplets" className="underline hover-text">Droplets tab</Link> with no sign-in. Your requests
-            and your follow-ups stay private.
-          </p>
-          <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }} data-testid="consent">
-            Before you sign in you&rsquo;ll be asked to agree to the{' '}
-            <Link href="/terms" className="underline hover-text">Terms of Use</Link> and the{' '}
-            <Link href="/privacy" className="underline hover-text">Privacy Policy</Link>. You must be {MIN_AGE} or older.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   const canAsk = newQuestion.trim().length >= QUESTION_MIN && !submitting;
 
   return (
@@ -620,9 +629,20 @@ function LearnContent() {
 
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-wider mb-1">LEARN</h2>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Ask for any topic. The teacher makes each one a droplet, a short lesson; ask follow-ups under it to go deeper.
-        </p>
+        {user ? (
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Ask for any topic. The teacher makes each one a droplet, a short lesson; ask follow-ups under it to go deeper.
+          </p>
+        ) : (
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }} data-testid="learn-pitch">
+            {/* A line can break between a pill and the character after it, so the colon and the period are held to
+                theirs. */}
+            Ask for any topic. An AI teacher makes you a{' '}
+            <span className="whitespace-nowrap"><DropletPill />:</span> a short lesson with{' '}
+            a <Marked color="var(--accent-green)">narrated video</Marked>{' '}
+            and a <span className="whitespace-nowrap"><SongChip />.</span> Ask follow-ups under it to go deeper.
+          </p>
+        )}
         <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }} data-testid="privacy-note">
           Only you see your requests and follow-ups. Each lesson is shared with everyone on the{' '}
           <Link href="/droplets" className="underline hover-text">Droplets tab</Link>, without your name or your request.
@@ -650,7 +670,7 @@ function LearnContent() {
             rows={2}
             value={newQuestion}
             maxLength={QUESTION_MAX}
-            onChange={(e) => { setNewQuestion(e.target.value); autoResize(); }}
+            onChange={(e) => changeQuestion(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAsk(); } }}
             placeholder="A topic, e.g. ATP synthesis"
             className="flex-1 text-sm outline-none px-3 py-2 rounded resize-none"
@@ -696,6 +716,38 @@ function LearnContent() {
           <span>No personal info: the lesson will be public. Min {QUESTION_MIN} characters. Enter adds a line; Ctrl+Enter (⌘+Enter) or Submit sends.</span>
           <span>{newQuestion.length}/{QUESTION_MAX}</span>
         </p>
+        {!user && !askSignIn && (
+          <p className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }} data-testid="sign-in-to-send">
+            Look around and type a topic first: you sign in with Google only to send it.
+          </p>
+        )}
+        {!user && askSignIn && (
+          <div className="mt-3 p-3 rounded-md animate-fade-in" role="region" aria-labelledby="sign-in-to-send-title"
+            style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }} data-testid="sign-in-prompt">
+            <p id="sign-in-to-send-title" className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+              Sign in to send your topic
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+              We keep what you typed. After you sign in it is back in this box, ready to send.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <Link ref={signInRef} href={SIGN_IN_HREF} onClick={topicDraft.markSignIn}
+                className="inline-block px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition-colors"
+                style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
+                Sign in with Google
+              </Link>
+              <button type="button" onClick={() => { setAskSignIn(false); textareaRef.current?.focus(); }}
+                className="text-xs underline hover-text" style={{ color: 'var(--text-muted)' }}>
+                Not now
+              </button>
+            </div>
+            <p className="text-[10px] mt-3" style={{ color: 'var(--text-muted)' }} data-testid="consent">
+              Before you sign in you&rsquo;ll be asked to agree to the{' '}
+              <Link href="/terms" className="underline hover-text">Terms of Use</Link> and the{' '}
+              <Link href="/privacy" className="underline hover-text">Privacy Policy</Link>. You must be {MIN_AGE} or older.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Filter: an admin's view of everyone's topics, or their own */}
@@ -712,7 +764,7 @@ function LearnContent() {
         </button>
       </div>}
 
-      {hasNew && !loading && (
+      {user && hasNew && !loading && (
         <button
           onClick={load}
           className="w-full text-center text-xs font-medium py-2 px-3 rounded-md cursor-pointer transition-all duration-200 animate-slide-down hover:brightness-110 mb-4"
@@ -722,16 +774,26 @@ function LearnContent() {
         </button>
       )}
 
-      {loading ? (
+      {!user ? (
+        <div className="space-y-4">
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }} data-testid="topics-after-sign-in">
+            Your topics show here once you sign in.
+          </p>
+          <ExampleDroplet />
+        </div>
+      ) : loading ? (
         <LoadingMessage />
       ) : questions.length === 0 ? (
-        <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>
-          <p>{ownOnly ? 'You have not asked for a topic yet.' : 'No topics yet. Ask for the first one!'}</p>
-          <p className="text-xs mt-2">
-            Use the form above. The teacher picks up new topics on its next pass. Or watch what others asked for on the{' '}
-            <Link href="/droplets" className="underline hover-text">Droplets tab</Link>.
-          </p>
-        </div>
+        <>
+          <div className="text-center py-10" style={{ color: 'var(--text-muted)' }}>
+            <p>{ownOnly ? 'You have not asked for a topic yet.' : 'No topics yet. Ask for the first one!'}</p>
+            <p className="text-xs mt-2">
+              Use the form above. The teacher picks up new topics on its next pass. Or watch what others asked for on the{' '}
+              <Link href="/droplets" className="underline hover-text">Droplets tab</Link>.
+            </p>
+          </div>
+          <ExampleDroplet />
+        </>
       ) : (
         <div className="space-y-3">
           {questions.map((q, i) => (
@@ -749,7 +811,7 @@ function LearnContent() {
         </div>
       )}
 
-      {cursor && !loading && (
+      {user && cursor && !loading && (
         <div ref={sentinelRef} className="text-center mt-6" data-testid="load-more">
           <button onClick={loadMore} disabled={loadingMore}
             className="px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors"
@@ -758,7 +820,7 @@ function LearnContent() {
           </button>
         </div>
       )}
-      {!cursor && !loading && questions.length >= PAGE_SIZE && (
+      {user && !cursor && !loading && questions.length >= PAGE_SIZE && (
         <p className="text-center text-[10px] uppercase tracking-wider mt-6" style={{ color: 'var(--text-muted)' }}>End of list</p>
       )}
     </PageContainer>

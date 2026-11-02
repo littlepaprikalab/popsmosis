@@ -110,6 +110,8 @@ test.describe('play counts', () => {
   });
 
   test("the hook tile counts a share that went through and a download, each once a page view", async ({ page, request }) => {
+    // A start of the clip, as the Clips feed would send it: the ranking read here lists only droplets with one.
+    expect((await request.post(apiUrl(`/api/droplets/${S.droplet}/plays`), { data: { video: 'hook', event: 'started' } })).status()).toBe(204);
     const before = await countsOf(request, 'hook');
     // This browser's share sheet, closed without sharing.
     await page.addInitScript(() => {
@@ -135,12 +137,11 @@ test.describe('play counts', () => {
       await (await download).cancel();
     }
     await expect.poll(() => counts.sent).toEqual(['hook shared', 'hook downloaded']);
-
-    // The clip itself counts as a play of the hook.
-    await playTo(tile.getByLabel('hook clip'), 2.5);
-    await expect.poll(() => counts.sent.slice(2)).toEqual(['hook started', 'hook reached25']);
     await expect.poll(async () => added(await countsOf(request, 'hook'), before))
-      .toEqual({ started: 1, reached25: 1, reached50: 0, reached75: 0, finished: 0, shared: 1, downloaded: 1 });
+      .toEqual({ started: 0, reached25: 0, reached50: 0, reached75: 0, finished: 0, shared: 1, downloaded: 1 });
+
+    // Only the buttons: the clip plays in the Clips feed, not on the droplet's page.
+    await expect(tile.locator('video')).toHaveCount(0);
   });
 
   test('counting never holds a video up: with the API not answering, it plays to the end', async ({ page }) => {
@@ -167,8 +168,8 @@ test.describe('play counts', () => {
     status = 404;
     await playTo(page.getByLabel('lesson video'), 1);
     await expect.poll(() => counts.sent).toEqual(['song started', 'lesson started']);
-    // ...and after that this page load sends none, on this page or the next.
-    await playTo(page.getByLabel('hook clip'), 1);
+    // ...and after that this page load sends none, for the rest of that play or on the next page.
+    await playThrough(page.getByLabel('lesson video'));
     await page.getByRole('link', { name: '← All droplets' }).click();
     await expect(page).toHaveURL(/\/droplets$/);
     const card = page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' }).first();

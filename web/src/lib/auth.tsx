@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { api, isUnreachable, User } from './api';
+import { topicDraft } from '@/lib/topicDraft';
 
 interface AuthContext {
   user: User | null;
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await api.logout();
+    topicDraft.clear(); // an unsent topic is theirs: not for whoever uses this tab next
     setUser(null);
   };
 

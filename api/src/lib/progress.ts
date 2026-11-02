@@ -8,12 +8,12 @@
  * so far. The page shows it as the bill of materials filling in, one line per step: done, running or waiting, and
  * its time so far counting up while a step runs.
  *
- * The lesson text shows as soon as the lesson is posted, which the studio does the moment its fact-check passes:
- * the videos follow above it when they are done, 20 to 30 minutes later, with the bill filling in under the text
- * meanwhile. LESSON_HOLD_MINUTES (0 by default) holds the text back instead, so a learner meets the droplet
- * through its videos rather than through a text the videos then repeat: until the videos are READY or FAILED, a
- * second attempt starts (the first went quiet or was given up), or that many minutes have passed since the post,
- * whichever comes first. Each of these only ever becomes true, so a lesson once shown is never hidden again.
+ * The page holds the lesson text back while the videos are made, so a learner meets the droplet through its
+ * videos, not through a text the videos then repeat: the card shows the bill filling in instead. The text shows
+ * once the videos are READY or FAILED, once a second attempt starts (the first went quiet or was given up), or
+ * LESSON_HOLD_MINUTES after the lesson was posted (60 by default, as long as a render may go quiet before it
+ * reads as FAILED; 0 shows the text as soon as it is posted), whichever comes first. Each of these only ever
+ * becomes true, so a lesson once shown is never hidden again.
  */
 import { breakdownError, serializeBreakdown, type Breakdown } from './breakdown.js';
 import { videoStaleMinutes } from './droplet.js';
@@ -24,8 +24,8 @@ const STEP_MAX_LENGTH = 40;
 // Two at a time in practice (the art and the audio run side by side); the cap keeps a report small.
 const STEPS_MAX = 12;
 
-// The text shows at once: a learner reads the lesson while its videos are made, rather than waiting for them.
-const DEFAULT_LESSON_HOLD_MINUTES = 0;
+// The videos take 20 to 30 minutes: the hold outlasts them, so the text waits until they are READY or FAILED.
+const DEFAULT_LESSON_HOLD_MINUTES = 60;
 
 /** How long after the lesson is posted the page waits for its videos before it shows the text anyway; 0, never. */
 export function lessonHoldMinutes(): number {

@@ -10,5 +10,11 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python -m studio videos:*)",
+      "Bash(python -m studio wait:*)"
+    ]
   }
 }

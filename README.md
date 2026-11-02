@@ -15,10 +15,10 @@ The teacher does not write the lessons itself: it runs the **studio**, a Python
 pipeline in this repo, which writes each lesson, fact-checks every line and posts it.
 Today a droplet is that written lesson. Next come two videos made from the same
 fact-checked plan and diagrams: a narrated lesson and a karaoke-style lesson song, stored
-in Cloudflare R2 and shown above the text. The learner reads the text as soon as it passes the
-fact-check: while the videos are made, `/learn` shows it with the droplet's bill of materials
-filling in under it, step by step ([While a droplet is made](#while-a-droplet-is-made)), and
-puts the videos above it once they are done. Once a droplet's videos are done it is listed on the
+in Cloudflare R2 and shown above the text. The learner meets a droplet through its videos: while
+they are made, `/learn` holds the text back and shows the droplet's bill of materials filling
+in, step by step ([While a droplet is made](#while-a-droplet-is-made)), and shows the text
+with the videos once they are done. Once a droplet's videos are done it is listed on the
 public **Droplets** tab (`/droplets`), where anyone can watch it without an account, and
 anyone signed in can give it a thumbs-up and comment on it. The plan, and where the pipeline stands, is in
 [docs/PLAN.md](docs/PLAN.md).
@@ -122,10 +122,10 @@ python -m studio recover                 # take a render that died with its mach
 
 `videos` runs the media steps (`studio/media.py`): art and audio at the same time, then
 the timeline, render and upload. Who makes the audio, the song and the narration together, is
-picked on the Studio page ([Choosing the models](#choosing-the-models)): ElevenLabs (the default,
-with `ELEVENLABS_API_KEY`: Eleven Music sings, its text-to-speech reads) or Google (with
+picked on the Studio page ([Choosing the models](#choosing-the-models)): Google (the default, with
 `GEMINI_API_KEY`: Lyria 3.5 sings, Gemini 3.8 Flash TTS reads; `GEMINI_SONG_MODEL` picks another
-Lyria model, `GEMINI_TTS_VOICE` another voice). One switch moves all the audio, so a droplet is
+Lyria model, `GEMINI_TTS_VOICE` another voice) or ElevenLabs (with `ELEVENLABS_API_KEY`: Eleven
+Music sings, its text-to-speech reads). One switch moves all the audio, so a droplet is
 made when one service's quota has run out. ElevenLabs says when it read each word; Gemini does
 not, so the timing step finds the narration's words with the MMS aligner it runs on songs, and
 fails the step (and reads it again on the retry) when it cannot hear most of the lines. Switching
@@ -205,7 +205,7 @@ page and remove it, so nothing changes without anyone seeing why.
 |---|---|---|
 | Default brain: writes and fact-checks every topic no admin sent elsewhere | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
 | Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
-| Song and narration: who makes the audio | ElevenLabs: Eleven Music and its text-to-speech (credits), or Google: Lyria 3.5 ($0.08 a song) and Gemini 3.8 Flash TTS (about 4 cents a narration: $0.50 / $9 per million tokens in and out, 25 audio tokens a second; $1 / $18 from 2027) | ElevenLabs |
+| Song and narration: who makes the audio | ElevenLabs: Eleven Music and its text-to-speech (credits), or Google: Lyria 3.5 ($0.08 a song) and Gemini 3.8 Flash TTS (about 4 cents a narration: $0.50 / $9 per million tokens in and out, 25 audio tokens a second; $1 / $18 from 2027) | Google (Lyria) |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
 | Spend ceiling: the most one topic may cost in model calls, its lesson, videos and every retry together | $0 (no ceiling) to $100 | $20 (generous for the hackathon; $5 is about two and a half times the dearest topic so far) |
@@ -425,7 +425,7 @@ reads text any learner writes ([the skill file](docs/popsmosis-agent-skill.md#wh
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
-`awaitingVideos`, true while the page holds the text back for the videos (only with `LESSON_HOLD_MINUTES`, below);
+`awaitingVideos`, true while the page holds the text back for the videos (below);
 `hidden`, true when an admin took it off the Droplets tab; and `awaitingReview`, true while it waits for an admin to
 approve it. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
@@ -550,20 +550,20 @@ to come that a later one has gone past is left out; so is the post, which the le
 never has. The time so far is on the bill's folded line ("Making it · 4 of 11 steps done ·
 6.2 min · $0.53 so far") and its last line, and counts up with a running step.
 
-The lesson text shows as soon as the lesson is posted, which the studio does the moment its
-fact-check passes: the learner reads it while the videos are made, the card says they are
-rendering and its bill keeps filling in under the text, and the players appear above the text
-when they are READY (20 to 30 minutes later). `LESSON_HOLD_MINUTES` (default 0) holds the text
-back instead, so a learner meets the droplet through its videos rather than through a text the
-videos then repeat: while `awaitingVideos` is true the card shows the bill and no text, its
-badge still says BREWING, and follow-ups wait. Only a lesson whose studio said, before posting
-it, that videos follow is held, and the text shows as soon as one of these is true: the videos
-are READY or FAILED (a render gone quiet reads as FAILED), a second attempt has started, or
-`LESSON_HOLD_MINUTES` have passed since the lesson was posted. Each only ever turns true, so a
-lesson once shown is never hidden again. A lesson whose studio said no videos follow
-(`STUDIO_VIDEOS=off`, or the media steps not built here), or that was posted without saying (a
-studio older than the reports, a lesson by hand, a report that never got through), shows at
-once and stays shown when its videos start.
+The lesson text waits for the videos, so a learner meets the droplet through them rather than
+through a text the videos then repeat: while `awaitingVideos` is true the card shows the bill
+and no text, its badge still says BREWING, and follow-ups wait. Only a lesson whose studio
+said, before posting it, that videos follow is held. The text shows, with the videos above
+it, as soon as one of these is true: the videos are READY or FAILED (a render gone quiet
+reads as FAILED), a second attempt has started, or `LESSON_HOLD_MINUTES` (default 60, and
+never longer than `VIDEO_STALE_MINUTES`; 0 never waits) have passed since the lesson was
+posted, so videos that are never started cannot hold it for good. The videos take 20 to 30
+minutes, so in practice the text shows with them, or with the failure. Each only ever turns
+true, so a lesson once shown is never hidden again. A lesson whose studio said no videos
+follow (`STUDIO_VIDEOS=off`, or the media steps not built here), or that was posted without
+saying (a studio older than the reports, a lesson by hand, a report that never got through),
+shows at once and stays shown when its videos start. Past the hold, the bill under the text
+keeps filling in until the videos are done.
 
 Each report counts against a rate limit of its own (300 a minute for the agent key, beside
 the 300 its other calls have), so reports from many renders at once can never use up what

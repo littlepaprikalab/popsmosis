@@ -102,7 +102,14 @@ def job(tmp_path, monkeypatch):
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())
+    sing(job, "elevenlabs")  # most tests here fake ElevenLabs; the default is Lyria (test below)
     return job
+
+
+def test_lyria_sings_when_no_one_has_chosen(tmp_path):
+    job = tmp_path / "unset"
+    job.mkdir()
+    assert audio.song_provider(job) == "gemini"
 
 
 def test_the_song_is_one_chunk_per_section_timed_by_its_lines(job, monkeypatch):
@@ -190,7 +197,7 @@ def test_the_voice_set_on_the_studio_page_wins_over_this_machines(job, monkeypat
     fake = FakeEleven()
     monkeypatch.setattr(audio, "send", fake)
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice42")
-    jobs.keep_studio_settings(job, {"knobs": {"ELEVENLABS_VOICE_ID": "voice7"}})  # as the claim carried it
+    jobs.keep_studio_settings(job, {**jobs.studio_settings(job), "knobs": {"ELEVENLABS_VOICE_ID": "voice7"}})  # as the claim carried it
     audio.run(job)
     assert sum("/text-to-speech/voice7/with-timestamps" in url for url in fake.urls()) == 1
     assert json.loads((job / audio.plan_path("narration")).read_text())["voice_id"] == "voice7"

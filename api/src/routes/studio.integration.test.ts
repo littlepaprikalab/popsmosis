@@ -61,14 +61,14 @@ d('studio settings', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({
       brain: { default: 'claude', effort: 'high' },
-      song: { provider: 'elevenlabs' },
+      song: { provider: 'gemini' },
       art: { claude: 'gemini', meta: 'muse' },
       knobs: expect.any(Object),
       spend: { topicUsd: 20 },
       review: { required: false },
       updatedAt: null,
       defaults: {
-        brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+        brain: { default: 'claude', effort: 'high' }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
         spend: { topicUsd: 20 }, review: { required: false },
       },
       choices: {
@@ -84,7 +84,7 @@ d('studio settings', () => {
     const asTeacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
     expect(asTeacher.statusCode).toBe(200);
     expect(asTeacher.json()).toEqual({
-      brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+      brain: { default: 'claude', effort: 'high' }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
       knobs: {},
       spend: { topicUsd: 20 },
     });
@@ -169,7 +169,7 @@ d('studio settings', () => {
     const pending = await prisma.question.create({ data: { userId, content: 'ATP synthesis' } });
     const claim = () => app.inject({ method: 'POST', url: `/api/questions/${pending.id}/claim`, headers: asAgent });
     const brain = { default: 'claude', effort: 'high' };
-    const song = { provider: 'elevenlabs' };
+    const song = { provider: 'gemini' };
     expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' }, knobs: {}, spend: { topicUsd: 20 } });
     await put(adminCookie, { art: { claude: 'svg' }, knobs: { ELEVENLABS_VOICE_ID: 'Voice42' }, spend: { topicUsd: 3 } });
     const knobs = { ELEVENLABS_VOICE_ID: 'Voice42' };

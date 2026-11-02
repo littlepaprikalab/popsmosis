@@ -57,8 +57,8 @@ learner at a time, 0 for none; both generous for the hackathon. The files live i
 and on Supabase's free plan the whole database is 500 MB, so two learners at 300 MB would
 fill it: there, or after the hackathon, 20 and 60 suit better),
 `VIDEO_STALE_MINUTES` (default 60; a render that has not reported for this long reads as
-failed), `LESSON_HOLD_MINUTES` (default 0: `/learn` shows a lesson's text as soon as it is posted;
-a number of minutes holds the text back that long for its videos). All of these but
+failed), `LESSON_HOLD_MINUTES` (default 60; how long after a lesson is posted `/learn` may wait for its
+videos to be READY or FAILED before it shows the text anyway, 0 shows it at once). All of these but
 `DATABASE_POOL_SIZE` and `ATTACHMENT_RETENTION_DAYS` are knobs: an admin can set them on
 `/admin/studio` instead, with no redeploy, and a value set there wins (README, "Knobs").
 

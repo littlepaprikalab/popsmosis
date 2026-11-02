@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import PageContainer from '@/components/PageContainer';
 import { Wordmark } from '@/components/Wordmark';
+import { DropletPill, Marked, Pill, SongChip, ink } from '@/components/Highlights';
 import { HeartIcon, PlayIcon } from '@heroicons/react/24/solid';
 
 export const metadata: Metadata = {
@@ -10,10 +11,6 @@ export const metadata: Metadata = {
 };
 
 const card = { background: 'var(--bg-secondary)', border: '1px solid var(--border)' } as const;
-const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
-// An accent for small text: blended toward the text colour, so it darkens in the light theme and lightens in the dark
-// one, enough to read at 4.5:1 in both (yellow needs the most).
-const ink = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, var(--text-primary))`;
 
 interface Shot { src: string; alt: string }
 
@@ -104,6 +101,15 @@ const SITES: Site[] = [
       + 'personality analysis.',
     shot: { src: '/about/totalsparks.webp', alt: 'The Total Sparks AI home page' },
   },
+  {
+    name: 'The Crossroads Oracle',
+    url: 'https://crossroads.littlepaprikalab.com',
+    tagline: 'Tarot for when you can’t decide',
+    about: 'It started with going in circles over where to eat. Type your question and your two choices, draw a '
+      + 'crossroads spread, and Paprika, an AI tarot reader, weighs each path. There’s also a three-card reading, a '
+      + 'card for the day, and plain-spoken meanings for all 78 cards.',
+    shot: { src: '/about/crossroads.webp', alt: 'A reading for dinner, the ramen place or the taco truck: three cards drawn for the ramen place and the start of what they say' },
+  },
 ];
 
 /** Who makes POPsmosis, then the other apps and sites from the same maker, with links to get them. */
@@ -130,9 +136,10 @@ export default function AboutPage() {
             Making them was
             a <Marked color="var(--accent-pink)">pain in the tush</Marked>, with pictures that came out wrong and
             content that needed checking line by line, and the <Pill color="var(--accent-purple)">#metahackathon</Pill> was
-            a good excuse to fix that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson
+            a good excuse to fix that. Ask for any topic and an AI teacher makes you
+            a <span className="whitespace-nowrap"><DropletPill />,</span> a short lesson
             with a <Marked color="var(--accent-green)">narrated video</Marked> and
-            a <SongChip />. It
+            a <span className="whitespace-nowrap"><SongChip />.</span> It
             checks <strong style={{ color: 'var(--text-primary)' }}>every line and every picture</strong> first, and
             shares the droplet on the <Link href="/droplets" className="underline"
             style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from. I
@@ -170,55 +177,6 @@ export default function AboutPage() {
         </div>
       </section>
     </PageContainer>
-  );
-}
-
-/** A word as a pill: tinted rather than solid, so it sits beside the POPsmosis chip without copying it. */
-function Pill({ color, children }: { color: string; children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-[0.3em] whitespace-nowrap align-middle leading-none rounded-full font-bold"
-      style={{
-        fontSize: '0.75rem',
-        padding: '0.3em 0.7em',
-        color: ink(color, 85),
-        background: tint(color, 14),
-        border: `1px solid ${tint(color, 45)}`,
-      }}>
-      {children}
-    </span>
-  );
-}
-
-/** "droplet" as a pill in the brand aqua, with the drop from the Droplets heading. */
-function DropletPill() {
-  return (
-    <Pill color="var(--accent-brand)">
-      <svg aria-hidden="true" viewBox="18 10 28 42" style={{ height: '1em', width: 'auto', marginLeft: '-0.15em' }}>
-        <path d="M32 12.5C32 12.5 20.3 28 20.3 38a11.7 11.7 0 0 0 23.4 0C43.7 28 32 12.5 32 12.5Z" fill="currentColor" />
-      </svg>
-      droplet
-    </Pill>
-  );
-}
-
-/** "song" on the wordmark's chip, white on the same aqua as POP: the POP in POPsmosis is the song. */
-function SongChip() {
-  return (
-    <span className="inline-block whitespace-nowrap align-middle leading-none"
-      style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.3em 0.55em', borderRadius: '0.3em', background: 'var(--brand-chip)', color: '#ffffff' }}>
-      song
-    </span>
-  );
-}
-
-/** A highlighter stroke across the lower half of the words. */
-function Marked({ color, children }: { color: string; children: React.ReactNode }) {
-  return (
-    <mark style={{
-      color: 'var(--text-primary)',
-      background: `linear-gradient(transparent 55%, ${tint(color, 50)} 55%)`,
-      padding: '0 0.1em',
-    }}>{children}</mark>
   );
 }
 
@@ -273,17 +231,25 @@ function SiteCard({ site }: { site: Site }) {
         <p className="text-xs mb-3" style={{ color: ink('var(--accent-purple)', 85) }}>{site.tagline}</p>
         <p className="text-sm leading-relaxed mb-4 flex-1" style={{ color: 'var(--text-secondary)' }}>{site.about}</p>
         <div>
-          <OutLink href={site.url} label={`Visit ${site.name} at ${host}`}>{host}</OutLink>
+          <OutLink href={site.url} label={`Visit ${site.name} at ${host}`}>{breakable(host)}</OutLink>
         </div>
       </div>
     </article>
   );
 }
 
+/** A site's host that may wrap after its subdomain (crossroads. / littlepaprikalab.com), so on a narrow phone it breaks there. */
+function breakable(host: string): React.ReactNode {
+  const labels = host.split('.');
+  if (labels.length <= 2) return host;
+  return <>{labels.slice(0, -2).join('.')}.<wbr />{labels.slice(-2).join('.')}</>;
+}
+
 function OutLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
   return (
+    // max-w-full and break-words keep a button inside its card even when a phone's larger text makes a line too long
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
-      className="inline-block px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110"
+      className="inline-block max-w-full break-words px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110"
       style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
       {children} ↗
     </a>

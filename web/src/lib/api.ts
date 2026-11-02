@@ -357,8 +357,8 @@ export interface Answer {
   awaitingReview?: boolean; // READY, and off the Droplets tab until an admin has looked at it; absent from an older API
   replies: Reply[];
   awaitingAgent: boolean;
-  // True while the page holds the lesson text back until its videos are done (at most 20 minutes after the
-  // lesson was posted); absent from an API older than this page, which shows the text at once.
+  // True while the page holds the lesson text back until its videos are READY or FAILED (at most an hour after
+  // the lesson was posted); absent from an API older than this page, which shows the text at once.
   awaitingVideos?: boolean;
 }
 
@@ -500,6 +500,12 @@ export interface Droplet extends DropletCard {
   content: string; // the lesson, markdown
   lyrics: { section: string; text: string }[];
 }
+
+/**
+ * The droplet the Learn page shows as an example (app/learn/example/route.ts): what its card draws, and nothing that
+ * differs by viewer (likes, comments), so the web server can hand every visitor the same copy.
+ */
+export type DropletExample = Pick<Droplet, 'id' | 'title' | 'course' | 'topic' | 'excerpt' | 'content' | 'video' | 'tags' | 'createdAt'>;
 
 /**
  * One video's play counts on a droplet (api/src/lib/plays.ts): totals, nothing about who watched. Each step counts

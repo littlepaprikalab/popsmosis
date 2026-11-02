@@ -88,7 +88,7 @@ def unavailable(job: Path | None = None, studio: dict | None = None) -> str | No
     settings = jobs.studio_settings(job) if job else studio or {}
     problem = brain.retired_problem() or brain.settings_problem() or brain.art_problem(settings.get("art"))
     song = settings.get("song") if isinstance(settings.get("song"), dict) else {}
-    lyria = not media.lesson_only(job) and song.get("provider") == "gemini"  # the lesson alone has no song
+    lyria = not media.lesson_only(job) and (song.get("provider") or media.DEFAULT_SONG_PROVIDER) == "gemini"  # the lesson alone has no song
     if not problem and lyria and not os.environ.get("GEMINI_API_KEY"):
         problem = ("the song needs GEMINI_API_KEY: Lyria sings it (an admin can pick ElevenLabs on /admin/studio)")
     if problem:
