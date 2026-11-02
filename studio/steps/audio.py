@@ -345,8 +345,9 @@ def gemini_song_model() -> str:
 
 
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
-    """Lyria's prompt: the style, what to avoid and the lyrics, section by section (its instructions apart from
-    its lyrics, as Google advises), and where each section is planned to fall. No length and no timings: the
+    """Lyria's prompt: the style and the lyrics, section by section (its instructions apart from its lyrics, as
+    Google advises), and where each section is planned to fall. Nothing to avoid since Nov 2 (the owner); the
+    composition plan, ElevenLabs', still has its list. No length and no timings: the
     singer takes the time the lines need, and step 6 finds them. Until round 17 it also asked for a length, a
     timed structure, every word exactly as written with no ad-libs or repeats, and clear upfront vocals; every
     instruction asked for diction and none for music, and the songs came back recited."""
@@ -355,7 +356,6 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     head = []
     if music.positive_styles:  # a free-form style may end on its own full stop
         head.append(f"Style: {', '.join(style.rstrip(' .') for style in with_diction(music.positive_styles))}.")
-    head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in with_avoid(music.negative_styles, music.positive_styles))}.")
     head.append("Sing the lines in order, section by section. Backing vocals and echoes of the hook are welcome.")
     lyrics = [f"[{p['section'].title()}]\n" + "\n".join(p["lines"]) for p in planned]
     return "\n".join(head) + "\n\nLyrics:\n" + "\n\n".join(lyrics), _placed(planned)

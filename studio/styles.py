@@ -38,19 +38,19 @@ SPLIT_THE_WATER = ("bright pop with hip-hop verses, rapped verses, big sing-alon
 SONG_STYLES = (
     "upbeat pop with hip-hop verses, rapped verses, catchy sung chorus, clear female vocal, warm synths, finger "
     "snaps, 100 bpm",
-    "K-pop with rapped verses traded between male group vocals, a melodic sung pre-chorus, a big catchy sung "
+    "K-pop with rapped verses traded between male group vocals, a catchy sung pre-chorus, a big catchy sung "
     "chorus, punchy synth bass, crisp claps, 100 bpm",
     "laid-back R&B with smooth rapped verses, warm electric piano, deep round bass, soft finger snaps, smooth sung "
     "chorus with stacked harmonies, 92 bpm",
-    "indie-pop with rapped verses, warm male vocal, strummed acoustic guitar, handclaps, gang vocals on the sung "
-    "chorus, bright and breezy, 110 bpm",
+    "indie-pop with rapped verses, warm male vocal, strummed acoustic guitar, handclaps, stacked harmonies on the "
+    "sung chorus, bright and breezy, 110 bpm",
     "Latin pop with a light dembow groove, rapped verses, clear male vocal, plucked guitar, handclaps, catchy sung "
     "chorus, 96 bpm",
     "dance-pop with a four-on-the-floor beat, rapped verses, energetic female vocal, bright plucked synths, "
     "handclaps, sing-along chorus, 112 bpm",
     CASH_IN_THE_CARRIER,
-    "K-pop electro-pop with tight vocal comping; confident androgynous female lead, clipped melodic phrasing, rap-sung "
-    "verses, soaring chorus, group shouts on parenthetical echoes; stacked string synths, bright synth stabs, punchy "
+    "K-pop electro-pop with tight vocal comping; confident androgynous female lead, clipped catchy phrasing, rap-sung "
+    "verses, soaring chorus, backing vocals on parenthetical echoes; stacked string synths, bright synth stabs, punchy "
     "electro beat, trap hi-hats in verses, four-on-the-floor chorus, half-time bridge with bass and claps; driving "
     "130 BPM feel, clear diction",
 )

@@ -79,6 +79,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     _check_lyric_style(data, problems)
     _check_key_lines(data, problems)
     problems += _check_tempo(bundle, data["music"])
+    problems += _check_voice(data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
 
 
@@ -1073,6 +1074,27 @@ def _check_builds_up(data: dict, canon: dict[str, str], problems: list) -> None:
             continue
         kept.append({"carries": build["carries"], "region": region})
     data["builds_up"] = kept
+
+
+# No song is shouted (the owner, Nov 2): the writer kept adding shouted gang vocals to its choruses. Each becomes
+# backing vocals. And how a sung part goes is "catchy", never "melodic" (the owner, Nov 2).
+VOICE_SWAPS = ((re.compile(r"\b(?:shouted\s+)?gang\s+vocals?\b|\bgroup\s+shouts?\b|\bshouts\b", re.I), "backing vocals"),
+               (re.compile(r"\bshouted\s+", re.I), ""),
+               (re.compile(r"\bmelodic\b", re.I), "catchy"))
+
+
+def _check_voice(music: dict) -> list[Problem]:
+    """The styles without shouting, and "catchy" for "melodic" (VOICE_SWAPS)."""
+    styles = []
+    for style in music["positive_styles"]:
+        for pattern, instead in VOICE_SWAPS:
+            style = pattern.sub(instead, style)
+        styles.append(style)
+    if styles == music["positive_styles"]:
+        return []
+    music["positive_styles"] = styles
+    return [Problem(line_id="music", rule="song-style", repaired=True,
+                    detail="the style asks for no shouted vocals, and catchy rather than melodic singing")]
 
 
 def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:

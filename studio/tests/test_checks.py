@@ -527,6 +527,20 @@ def test_a_process_needs_two_stages_or_more():
     assert staging("synthase") == (["", "", ""], [("scene:synthase", "stages", True)])  # an ordinary scene
 
 
+def test_no_song_is_shouted_and_its_sung_parts_are_catchy():
+    # The owner, Nov 2: "please don't have shouted vocals", and "catchy" instead of "melodic".
+    data = bundle_data()
+    data["music"]["positive_styles"] = ["Bright teen pop with a melodic sung first verse; a warm alto that rises into "
+                                        "stacked harmonies and shouted gang vocals on the chorus, light gang vocals "
+                                        "doubling the title line, group shouts on the echoes, 104 bpm"]
+    bundle, report = checks.review(Bundle.model_validate(data))
+    [style] = bundle.music.positive_styles
+    assert style == ("Bright teen pop with a catchy sung first verse; a warm alto that rises into stacked harmonies and "
+                     "backing vocals on the chorus, light backing vocals doubling the title line, backing vocals on "
+                     "the echoes, 104 bpm")
+    assert any(p.rule == "song-style" and p.repaired for p in report.problems)
+
+
 def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours_differ():
     from studio.styles import SONG_STYLES, style_for
 

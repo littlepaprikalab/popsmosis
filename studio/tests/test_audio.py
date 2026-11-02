@@ -293,10 +293,11 @@ def test_gemini_sings_the_song_from_one_prompt_and_reads_the_narration(job, monk
     assert headers["x-goog-api-key"] == "gemini-key" and "xi-api-key" not in headers
     assert body["generationConfig"] == {"responseModalities": ["AUDIO", "TEXT"]}
     prompt = body["contents"][0]["parts"][0]["text"]
-    # the style, what to avoid and the lyrics: no length and no timings, so the singer takes the time it needs
-    assert prompt.startswith(f"Style: upbeat pop, 112 bpm, {audio.DICTION}.\nAvoid: mumbled vocals, "
-                             "long instrumental intro, explicit lyrics.\nSing the lines in order, section "
+    # the style and the lyrics: nothing to avoid (the owner, Nov 2), no length and no timings, so the singer takes
+    # the time it needs
+    assert prompt.startswith(f"Style: upbeat pop, 112 bpm, {audio.DICTION}.\nSing the lines in order, section "
                              "by section. Backing vocals and echoes of the hook are welcome.\n\nLyrics:\n")
+    assert "Avoid" not in prompt
     assert "Length" not in prompt and "Structure" not in prompt and "0:0" not in prompt
     assert prompt.endswith("Lyrics:\n[Verse]\nLight lands on the thylakoid\nEach electron hand-off pumps a proton"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Verse]\nOnly b6f pumps them in"

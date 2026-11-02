@@ -315,13 +315,12 @@ explanation left to the narration.
 - `music.positive_styles`: one entry, the sound briefed the way a producer would, in a few
   flowing clauses, never a list of tags: the genre and how the verses are delivered, the
   production's texture, the tempo and feel of the beat, the voice (its timbre, and how it
-  moves into the chorus), what leads and what accents: "Bright pop with melodic sung verses;
+  moves into the chorus), what leads and what accents: "Bright pop with rapped verses and a catchy sung chorus;
   sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat; shimmering
   synths lead, claps accent the beat", with a voice of your own for this topic. Concrete sounds ("a
-  warm Rhodes", "an 808 that slides", "gang vocals on the hook") beat adjectives ("catchy",
-  "educational"). The verses are sung with a melody, unless the learner asks for rap or the
-  style raps them, or raps one section (a rapped second verse, a rapped bridge): rap that
-  section then, and only that one, and say so in the style. A
+  warm Rhodes", "an 808 that slides", "stacked harmonies on the hook") beat adjectives ("upbeat",
+  "educational"). The verses are rapped, and the style says so, unless the learner asks for them sung,
+  or for one section rapped (a rapped second verse, a rapped bridge): sing the rest then. A
   rapped line follows every rule a sung one does (a lyric with its rhyme and beat, one idea,
   one term at most, never a sentence of the lesson recited); it only runs longer. The chorus
   is always sung.
@@ -347,7 +346,7 @@ explanation left to the narration.
     this sense.
   - **A younger audience** gets the current pop they play themselves, never a children's
     song or "playful" pop, which comes back a classroom jingle: bright, with a big
-    sing-along chorus, a clear lead vocal and sung verses.
+    sing-along chorus and a clear lead vocal.
   - Never name an artist, band or song: the music generator refuses them.
 - `music.negative_styles`: short things to avoid, a list, such as what the learner said
   they did not want; [] for none.
