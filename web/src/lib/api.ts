@@ -502,6 +502,12 @@ export interface Droplet extends DropletCard {
 }
 
 /**
+ * The droplet the Learn page shows as an example (app/learn/example/route.ts): what its card draws, and nothing that
+ * differs by viewer (likes, comments), so the web server can hand every visitor the same copy.
+ */
+export type DropletExample = Pick<Droplet, 'id' | 'title' | 'course' | 'topic' | 'excerpt' | 'content' | 'video' | 'tags' | 'createdAt'>;
+
+/**
  * One video's play counts on a droplet (api/src/lib/plays.ts): totals, nothing about who watched. Each step counts
  * the plays that got that far, so none is above the one before it. shared and downloaded: the hook tile's buttons.
  */
