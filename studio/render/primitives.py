@@ -1166,6 +1166,9 @@ POSTIT_GLUE = 0xFFF5D25A  # the strip along its top, a shade darker, where it st
 POSTIT_FONT = 21.0
 POSTIT_PAD = 14.0
 POSTIT_TEXT_W = 210.0  # the widest a line of its note runs, frame pixels
+# A red "!" badge before a note's first line: a correction of the picture, not a label (the owner, Nov 2).
+POSTIT_ISSUE = 0xFFD93025
+POSTIT_BADGE = 0.95  # its diameter, in the note's font size
 POSTIT_TILT = -2.0  # degrees: stuck on by hand
 POSTIT_LINES = 4
 POSTIT_CURL = 18.0  # frame pixels: its top-right corner curls up this far down and in (the owner, Nov 1)
@@ -1177,7 +1180,8 @@ def postit_size(note: str, font_size: float = POSTIT_FONT) -> tuple[float, float
     f = font("SemiBold", font_size)
     lines = wrap(note, f, POSTIT_TEXT_W)[:POSTIT_LINES] or [""]
     width = max(text_width(f, line) for line in lines)
-    return max(width, 3 * font_size) + 2 * POSTIT_PAD, len(lines) * font_size * 1.3 + 2 * POSTIT_PAD + 6
+    badge = font_size * (POSTIT_BADGE + 0.4)  # the "!" badge and its gap, before every line
+    return max(width, 3 * font_size) + badge + 2 * POSTIT_PAD, len(lines) * font_size * 1.3 + 2 * POSTIT_PAD + 6
 
 
 def draw_postit(canvas: skia.Canvas, rect: Rect, note: str, alpha: float, font_size: float = POSTIT_FONT) -> None:
@@ -1228,8 +1232,14 @@ def draw_postit(canvas: skia.Canvas, rect: Rect, note: str, alpha: float, font_s
                                      MaskFilter=skia.MaskFilter.MakeBlur(skia.kNormal_BlurStyle, 2.5)))
     canvas.drawPath(fold, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_UNDERSIDE, alpha)))
     line_h = font_size * 1.3
+    radius = font_size * POSTIT_BADGE / 2
+    cx, cy = x0 + POSTIT_PAD + radius, y0 + 6 + POSTIT_PAD + 0.5 * line_h
+    canvas.drawCircle(cx, cy, radius, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_ISSUE, alpha)))
+    mark = font("Bold", font_size * 0.8)
+    draw_text(canvas, "!", cx - text_width(mark, "!") / 2, cy + font_size * 0.28, mark, with_alpha(0xFFFFFFFF, alpha))
+    left = x0 + POSTIT_PAD + font_size * (POSTIT_BADGE + 0.4)
     for k, line in enumerate(lines):
-        draw_text(canvas, line, x0 + POSTIT_PAD, y0 + 6 + POSTIT_PAD + (k + 0.78) * line_h, f, with_alpha(INK, alpha))
+        draw_text(canvas, line, left, y0 + 6 + POSTIT_PAD + (k + 0.78) * line_h, f, with_alpha(INK, alpha))
     canvas.restore()
 
 
