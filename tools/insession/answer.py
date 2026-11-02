@@ -175,7 +175,7 @@ def main(argv: list[str]) -> int:
     return 2
 
 
-KINDS = ("art check", "art notes", "art flags", "locate box", "label check", "repair check", "repair")
+KINDS = ("art check", "locate box", "label check", "repair check", "repair")
 
 
 def kind(req: dict) -> str:

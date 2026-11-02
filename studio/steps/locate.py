@@ -185,9 +185,7 @@ def find_and_repair(job: Path, bundle, scene: Scene, ask):
     located, how, wrong = find_all(job, scene, ask)
 
     def check(job: Path, bundle, scene: Scene) -> art.ArtCheck:
-        return art.ArtCheck(**ask("helper", art.check_prompt(bundle, scene), art.ArtCheck,
-                                  [job / media.art_path(scene.id)], system=art.CHECK_PROMPT,
-                                  label=f"repair check {scene.id}"))
+        return art.look(job, bundle, scene, ask, f"repair check {scene.id}")[0]
 
     return located, how, wrong, repair.repair(job, bundle, scene, located, ask, check)
 
