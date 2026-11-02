@@ -278,8 +278,8 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
 # Every song asks once for clear diction, the owner's rule since Oct 31: on Lyria, which is given no timings, songs
 # came back with lines step 6 could not hear (30 of 47 in one supply-and-demand song, which was sung again). Once,
 # and only where the style does not ask already: until round 17 every instruction asked for diction and none for
-# music, and the songs came back recited.
-DICTION = "clear diction, every word easy to hear"
+# music, and the songs came back recited. Two words: "every word easy to hear" said it twice (the owner, Nov 2).
+DICTION = "clear diction"
 
 
 def with_diction(styles: list[str]) -> list[str]:
