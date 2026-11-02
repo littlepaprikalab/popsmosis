@@ -539,6 +539,14 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels."
 NO_LABELS = "No labels, title, legend, key, caption or any other writing."
 SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
+# A biology picture is asked for in Campbell Biology's look, the owner's choice (Nov 2): "the images are much better
+# looking". A style, not a figure of theirs. Added here at paint time, never in the bundle: when the brief had the
+# writer name the book, the fact-check struck it from every picture as a claim (eed1ff6). Biology is the course's, or,
+# in any other science course, a scene that draws the parts of a cell.
+CAMPBELL_STYLE = "clean Campbell Biology textbook style"
+BIOLOGY_COURSE = re.compile(r"biolog|anatomy|physiolog|life science|genetic|microbio|ecolog|botany|zoology", re.I)
+CELL_PARTS = re.compile(r"\b(?:cell membrane|organelles?|proteins?|chloroplasts?|mitochondri\w*|enzymes?|DNA|RNA"
+                        r"|ribosomes?|neurons?|chromosomes?|phospholipid\w*|bilayer|cytoplasm)\b", re.I)
 EVERYDAY = ("hook",)  # the everyday picture; no picture draws the analogy since Nov 1 (checks._no_analogy_scene)
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
@@ -918,7 +926,7 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE says why). A later
     stage `redrawn` from its first stage's picture says so first."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
-    parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
+    parts = [campbell_styled(bundle, scene.image_prompt).strip().rstrip(".") + ".", f"Colours: {colours}."]
     if loose := loose_line(bundle, scene):
         parts.append(loose)
     if scene.axes:
@@ -932,6 +940,16 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
                      + ". Make it again with these fixed.")
     parts.append(labels_line(scene))
     return " ".join(parts)
+
+
+def campbell_styled(bundle: Bundle, image_prompt: str) -> str:
+    """A science scene's prompt in Campbell Biology's style (CAMPBELL_STYLE) when the course is biology or the scene
+    draws a cell's parts; any other prompt as written."""
+    if SCIENCE_STYLE not in image_prompt.lower():
+        return image_prompt
+    if not (BIOLOGY_COURSE.search(bundle.course or "") or CELL_PARTS.search(image_prompt)):
+        return image_prompt
+    return re.sub(re.escape(SCIENCE_STYLE), CAMPBELL_STYLE, image_prompt, count=1, flags=re.I)
 
 
 def loose_line(bundle: Bundle, scene: Scene) -> str:

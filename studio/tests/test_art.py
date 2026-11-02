@@ -771,3 +771,26 @@ def test_the_picture_is_told_each_colour_in_one_everyday_word():
         Structure(name="Water", aliases=[], sam_phrase="cyan ball", color_hex="#00ACC1"),
         Structure(name="Carbon dioxide", aliases=[], sam_phrase="teal ball", color_hex="#00897B")]})
     assert "Colours: ATP synthase brown, Water cyan, Carbon dioxide teal." in art.paint_prompt(bundle, scene)
+
+
+def test_a_biology_picture_is_asked_for_in_campbell_biologys_style():
+    # The owner (Nov 2): Campbell-style pictures look much better. Added at paint time, never in the bundle, where the
+    # fact-check struck the book's name as a claim.
+    bundle = Bundle.model_validate(bundle_data())
+    science = "Educational textbook illustration of a thylakoid membrane, clean scientific style: the membrane across."
+    everyday = "Educational textbook illustration of a rowing boat, clean textbook style: the boat in the centre."
+    biology = bundle.model_copy(update={"course": "AP Biology"})
+    assert art.campbell_styled(biology, science).startswith(
+        f"Educational textbook illustration of a thylakoid membrane, {art.CAMPBELL_STYLE}:")
+    assert art.campbell_styled(biology, everyday) == everyday  # a hook or any everyday sight keeps its own style
+    physics = bundle.model_copy(update={"course": "Physics"})
+    assert art.campbell_styled(physics, "Educational textbook illustration of a circuit, clean scientific style.") == (
+        "Educational textbook illustration of a circuit, clean scientific style.")
+    # Any other science course, when the picture draws a cell's parts.
+    sixth = bundle.model_copy(update={"course": "6th grade science"})
+    assert art.CAMPBELL_STYLE in art.campbell_styled(
+        sixth, "Educational textbook illustration of a plant cell's chloroplasts, clean scientific style.")
+    scene = bundle.scenes[1].model_copy(update={"image_prompt": science})
+    assert art.CAMPBELL_STYLE in art.paint_prompt(biology, scene)
+    assert art.labels_line(scene).startswith("Label only:") and art.labels_line(scene).endswith(
+        f"Label nothing else. {art.NO_SLIDE}")  # still read as a science scene
