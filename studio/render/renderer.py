@@ -147,8 +147,10 @@ ARROW_SEEN = 0.6  # a still to look at an arrow by shows its gliding arrow this 
 # is sure now, and ions streaming through the pump look like what the textbook says. As many as the words count (three
 # Na+), else CROSS_MANY, one after another, each a little to one side of the line and wobbling, so they read as a flow.
 CROSS_S = 3.5  # seconds a particle takes to cross, on average: at 2 they looked rushed (the owner, Nov 1)
-CROSS_PACE = 0.25  # each its own pace, up to this share faster or slower, so they bunch and spread as they go
-CROSS_MANY = 3  # in flight at once when the words give no count
+# One pace for all, evenly spaced, and only as many as the way has room for (CROSS_ROOM): each at its own pace,
+# three "gas" bunched on the rocket's short nozzle, stacked on one another and popping in and out (the owner, Nov 2).
+CROSS_MANY = 3  # in flight at once when the words give no count...
+CROSS_ROOM = 1.5  # ...and the way has room for them this many particle widths apart
 CROSS_SPREAD = 12.0  # frame pixels each keeps to one side of the line, at most
 CROSS_WIGGLE = 8.0  # frame pixels each swings left and right of its place as it goes...
 CROSS_SWINGS = 1.5  # ...this many times on the way across, as a molecule jostles through
@@ -1716,9 +1718,45 @@ class Renderer:
 
     def _pill_places(self, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
                      arrows: list[Point]) -> dict[str, tuple[float, float, float, float]]:
-        """Where each reaction pill the scene shows at any time in the video goes, as its rect in frame pixels:
-        under its structure, or over it, or the same rows shifted to either side, whichever crosses the fewest
-        arrows and no other pill. Placed before the labels, which then keep clear of them, as of the arrows."""
+        """Where each reaction pill the scene shows at any time in the video goes, as its rect in frame pixels: under
+        its structure, or over it, or the same rows shifted to either side, whichever crosses the fewest arrows and no
+        other pill. The spot is chosen once for the scene, framed whole (_pill_spots), and the pill rides it as the
+        camera moves: chosen again every frame, it flipped between two spots as clear as each other as the camera
+        drifted (the owner, Nov 2: "the position of these pills should stay fixed even when the camera drifts").
+        Placed before the labels, which then keep clear of them, as of the arrows. `arrows` is unused: the spots
+        keep clear of the scene's arrows as framed whole."""
+        spots = self._pill_spots(scene_id, view)
+        places: dict[str, tuple[float, float, float, float]] = {}
+        for conv in self._scene_pills[scene_id]:
+            if conv.structure in spots:
+                places[conv.structure] = self._pill_rect(scene_id, conv, cam, view, bounds, spots[conv.structure])
+        return places
+
+    def _pill_candidates(self, scene_id: str, conv, cam: Cam, view: Rect) -> list[tuple[float, float]]:
+        """The centres a reaction pill may take beside its structure, in frame pixels, in the order they are tried."""
+        loc = self.locations.scene(scene_id).get(conv.structure)
+        scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
+        w, h = p.conversion_size(conv.text, self.layout.label_font * 1.25)
+        x = (loc.box.x0 + loc.box.x1) / 2 * scale + dx
+        below, above = loc.box.y1 * scale + dy, loc.box.y0 * scale + dy
+        gap = self.layout.label_font * 0.6
+        rows = [below + gap + h / 2, above - gap - h / 2, below + gap + 1.5 * h + 8, above - gap - 1.5 * h - 8]
+        return [(xo, yo) for xo in (x, x - 0.6 * w, x + 0.6 * w) for yo in rows]
+
+    def _pill_rect(self, scene_id: str, conv, cam: Cam, view: Rect, bounds: Rect, spot: int) -> Rect:
+        """The pill's rect at candidate `spot`, kept inside bounds."""
+        w, h = p.conversion_size(conv.text, self.layout.label_font * 1.25)
+        x, y = self._pill_candidates(scene_id, conv, cam, view)[spot]
+        cx = min(max(x, bounds[0] + w / 2), bounds[2] - w / 2)
+        cy = min(max(y, bounds[1] + h / 2), bounds[3] - h / 2)
+        return (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+
+    def _pill_spots(self, scene_id: str, view: Rect) -> dict[str, int]:
+        """Each reaction pill's spot on the scene (_pill_candidates), chosen once with the picture framed whole: the
+        one crossing the fewest arrows and no other pill, the nearest of those as clear, the first of those as near."""
+        key = ("pill spots", scene_id)
+        if key in self._through:
+            return self._through[key]
         if scene_id not in self._scene_pills:
             convs = []
             for beat in self.timeline.beats:
@@ -1726,32 +1764,30 @@ class Renderer:
                     if conv.structure not in [c.structure for c in convs]:
                         convs.append(conv)
             self._scene_pills[scene_id] = convs
+        art, m = self.scene(scene_id), self.layout.margin
+        whole = clamp_cam(Cam(art.width / 2, art.height / 2, 1.0), view, art)
+        bounds = (view[0] + m, view[1] + m, view[2] - m, view[3] - m)
+        arrows = self._arrow_points(scene_id, whole, view)
         located = self.locations.scene(scene_id)
-        scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
-        font = self.layout.label_font * 1.25
-        places: dict[str, tuple[float, float, float, float]] = {}
+        spots: dict[str, int] = {}
+        placed: list[Rect] = []
         for conv in self._scene_pills[scene_id]:
-            loc = located.get(conv.structure)
-            if loc is None:
+            if located.get(conv.structure) is None:
                 continue
-            w, h = p.conversion_size(conv.text, font)
-            x = (loc.box.x0 + loc.box.x1) / 2 * scale + dx
-            below, above = loc.box.y1 * scale + dy, loc.box.y0 * scale + dy
-            gap = self.layout.label_font * 0.6
-            rows = [below + gap + h / 2, above - gap - h / 2, below + gap + 1.5 * h + 8, above - gap - 1.5 * h - 8]
+            x, below = self._pill_candidates(scene_id, conv, whole, view)[0]
             best = None
-            for x_try, y in [(xo, yo) for xo in (x, x - 0.6 * w, x + 0.6 * w) for yo in rows]:
-                cx = min(max(x_try, bounds[0] + w / 2), bounds[2] - w / 2)
-                cy = min(max(y, bounds[1] + h / 2), bounds[3] - h / 2)
-                rect = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-                hit = 50 * sum(1 for r in places.values() if rect[0] < r[2] + 8 and r[0] < rect[2] + 8
+            for k in range(len(self._pill_candidates(scene_id, conv, whole, view))):
+                rect = self._pill_rect(scene_id, conv, whole, view, bounds, k)
+                hit = 50 * sum(1 for r in placed if rect[0] < r[2] + 8 and r[0] < rect[2] + 8
                                and rect[1] < r[3] + 8 and r[1] < rect[3] + 8)
                 hit += sum(1 for ax, ay in arrows if rect[0] - 8 < ax < rect[2] + 8 and rect[1] - 8 < ay < rect[3] + 8)
-                score = hit + 0.01 * math.dist((cx, cy), (x, below))  # nearest of the equally clear spots
-                if best is None or score < best[0]:
-                    best = (score, rect)
-            places[conv.structure] = best[1]
-        return places
+                score = hit + 0.01 * math.dist(((rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2), (x, below))
+                if best is None or score < best[0] - 1e-6:
+                    best = (score, k, rect)
+            spots[conv.structure] = best[1]
+            placed.append(best[2])
+        self._through[key] = spots
+        return spots
 
     def _axis_rect(self, side: str, spot: int, end: tuple[float, float], size: tuple[float, float]) -> Rect:
         """Where an axis name goes beside its axis's end (frame pixels): the x axis's right end, below it, past it or
@@ -2713,8 +2749,8 @@ class Renderer:
     def _draw_crossing(self, canvas: skia.Canvas, flow, line: list[Point], elapsed: float, alpha: float, on_frame,
                        t: float, count: int = 1) -> None:
         """A crossing's particles streaming along its line (art pixels) from one side of the part to the other, again and
-        again: `count` of them a cycle (CROSS_MANY when the words give none), each at its own pace (CROSS_PACE), off the
-        line by its own share of CROSS_SPREAD and swinging left and right of it on the way (CROSS_WIGGLE), fading in as
+        again: `count` of them a cycle (CROSS_MANY when the words give none, and no more than the way has room for),
+        evenly spaced at one pace, off the line by its own share of CROSS_SPREAD and swinging left and right of it on the way (CROSS_WIGGLE), fading in as
         it leaves and out as it arrives. Each particle's pace and swing are its own and fixed, so a frame depends only on
         its time."""
         shown = [on_frame(q) for q in line]
@@ -2724,10 +2760,10 @@ class Renderer:
         (x0, y0), (x1, y1) = shown[0], shown[-1]
         d = math.hypot(x1 - x0, y1 - y0) or 1.0
         nx, ny = -(y1 - y0) / d, (x1 - x0) / d  # across the way it goes
-        many = count if count > 1 else CROSS_MANY
+        many = count if count > 1 else max(1, min(CROSS_MANY, int(total / (CROSS_ROOM * _width(flow.label)))))
         for k in range(many):
-            pace, start, place = _jitter(k), _jitter(k + 17), _jitter(k + 41)
-            gone = (elapsed / (CROSS_S * (1 + CROSS_PACE * (2 * pace - 1))) + k / many + 0.2 * start) % 1.0
+            start, place = _jitter(k + 17), _jitter(k + 41)
+            gone = (elapsed / CROSS_S + k / many) % 1.0
             x, y = _along(shown, gone * total)
             side = CROSS_SPREAD * (2 * place - 1) + CROSS_WIGGLE * math.sin(2 * math.pi * (CROSS_SWINGS * gone + start))
             fade = p.clamp01(gone / CROSS_FADE) * p.clamp01((1 - gone) / CROSS_FADE)

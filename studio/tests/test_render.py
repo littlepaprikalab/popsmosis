@@ -1558,6 +1558,34 @@ def test_a_reaction_pill_rests_with_its_structures_label(job, monkeypatch):
     assert drawn[0] == pytest.approx(1.0, abs=0.02) and drawn[1] == pytest.approx(renderer_module.LABEL_REST, abs=0.02)
 
 
+def test_a_reaction_pill_keeps_its_spot_as_the_camera_drifts(job):
+    # The owner, Nov 2: "the position of these pills should stay fixed even when the camera drifts". Chosen again
+    # every frame, a pill flipped between two spots as clear as each other: 143 jumps in ten seconds of the rocket.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    pill = Converting(structure="Cytochrome b6f", text="A → B", since=timeline.beats[on[0]].t0)
+    beats = list(timeline.beats)
+    beats[on[0]] = beats[on[0]].model_copy(update={"conversions": [pill]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    art, view = renderer.scene("overview"), renderer.view("overview")
+    bounds = (view[0] - 2000, view[1] - 2000, view[2] + 2000, view[3] + 2000)  # nothing kept in: the spot alone
+    b6f = renderer.locations.scene("overview").get("Cytochrome b6f").centroid
+    first = renderer_module.Cam(art.width / 2, art.height / 2, 1.0)
+    scale, dx, dy = renderer_module.to_frame(first, view, art)
+    loc = renderer.locations.scene("overview").get("Cytochrome b6f")
+    blocker = [((loc.box.x0 + loc.box.x1) / 2 * scale + dx + u, loc.box.y1 * scale + dy + 20 + v)
+               for u in range(-30, 31, 10) for v in range(0, 40, 10)]  # something where the pill first sat, as framed
+    offsets = set()
+    for k in range(40):  # the camera drifting in and across, a hair each frame
+        cam = renderer_module.Cam(art.width / 2 + 3 * k, art.height / 2, 1.0 + k * 0.006)
+        rect = renderer._pill_places("overview", cam, view, bounds, blocker)["Cytochrome b6f"]
+        scale, dx, dy = renderer_module.to_frame(cam, view, art)
+        centre = ((rect[0] + rect[2]) / 2 - (b6f.x * scale + dx), (rect[1] + rect[3]) / 2 - (b6f.y * scale + dy))
+        offsets.add(("left" if centre[0] < -30 else "right" if centre[0] > 30 else "middle",
+                     "below" if centre[1] > 0 else "above"))
+    assert len(offsets) == 1  # the same side of its part all the way
+
+
 def test_a_flow_across_an_upright_wall_crosses_level_from_inside_the_space(job, monkeypatch):
     # Round 21's lungs put the alveolus's and the capillary's points at the top of the picture, above and below the
     # membrane's, and the gases ran up and down the capillary instead of across the membrane.
