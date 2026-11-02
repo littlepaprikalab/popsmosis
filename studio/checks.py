@@ -20,7 +20,7 @@ from collections import Counter
 from pathlib import Path
 
 from studio.jobs import write
-from studio.schemas import (BPM_TAG, LESSON_MAX_CHARS, SONG_SCENES_MAX, Bundle, CheckReport, Fact, Problem,
+from studio.schemas import (BPM_TAG, LESSON_MAX_CHARS, SONG_SCENES_MAX, PART_TAG, Bundle, CheckReport, Fact, Problem,
                             lesson_scenes_max, with_study_tags)
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
@@ -70,6 +70,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     _check_crowded(data, problems)
     _check_colours(data, problems)
     _check_aliases(data, problems)
+    _check_part_tags(data, problems)
     _check_side_by_side(data, problems)
     _check_axes(data, problems)
     _check_spins(data, canon, problems)
@@ -184,6 +185,39 @@ def _check_side_by_side(data: dict, problems: list) -> None:
             problems.append(Problem(line_id=f"scene:{scene['id']}", rule="side-by-side", repaired=False,
                                     detail=f'the picture asks for "{found.group(0)}": draw each stage as a scene of '
                                            "its own"))
+
+
+def _check_part_tags(data: dict, problems: list) -> None:
+    """Each part's tag in its scene's image_prompt (schemas.PART_TAG), where the painter is told its colour and label
+    (art.inline()). One naming the part by an alias or in another case is given its name, and one naming no part of
+    the scene, or a part tagged before, is dropped: repaired, and recorded. A part left untagged in a scene that tags
+    others is recorded: the painter is told its colour and label after the picture's words, as before tags, where it
+    can put them on the wrong thing."""
+    for scene in data["scenes"]:
+        named = {name.casefold(): s["name"] for s in scene["structures"] for name in (s["name"], *s["aliases"])}
+        tagged: list[str] = []
+        fixed: list[str] = []
+
+        def one(found: re.Match) -> str:
+            raw = found.group(1).strip()
+            name = named.get(raw.casefold())
+            if name is None or name in tagged:
+                fixed.append(f"[[{raw}]] dropped: " + ("tagged before" if name else "no part of the scene"))
+                return ""
+            tagged.append(name)
+            if raw != name:
+                fixed.append(f"[[{raw}]] as [[{name}]]")
+            return found.group(0)[:found.start(1) - found.start(0)] + name + "]]"
+
+        scene["image_prompt"] = PART_TAG.sub(one, scene["image_prompt"])
+        if fixed:
+            problems.append(Problem(line_id=f"scene:{scene['id']}", rule="part-tags", repaired=True,
+                                    detail="; ".join(fixed)))
+        untagged = [s["name"] for s in scene["structures"] if s["name"] not in tagged]
+        if untagged and tagged:  # a scene with no tags at all is painted as before tags, and was clean then
+            problems.append(Problem(line_id=f"scene:{scene['id']}", rule="part-tags", repaired=False,
+                                    detail=f"no tag for {', '.join(untagged)}: coloured and labelled after the "
+                                           "picture's words instead, where the painter can put them on the wrong thing"))
 
 
 def _check_stages(data: dict, problems: list) -> None:

@@ -665,3 +665,18 @@ def test_a_bundle_with_no_song_sends_no_lyric_style_or_song_tag_and_keys_its_key
     assert not [line for line in lines if line.kind == factcheck.TAG and line.id.startswith("song-")]
     keyed = [line.key for line in lines if line.kind == factcheck.KEY]
     assert keyed == ["keyline:core_idea", "keyline:n1", "keyline:n2"] and len(set(keyed)) == len(keyed)
+
+
+def test_a_picture_is_checked_without_its_part_tags_and_its_correction_still_goes_in():
+    tagged = "A thylakoid membrane [[Thylakoid]] in cross-section, drawn by a famous artist."
+    plain = "A thylakoid membrane in cross-section, drawn by a famous artist."
+    fixed_words = "A thylakoid membrane in cross-section."
+
+    def artist_is_wrong(text):
+        return ("UNSUPPORTED", "", fixed_words) if text == plain else supported(text)
+
+    fake = FakeChecker(artist_is_wrong)
+    report, checked = check_bundle(bundle(lambda d: d["scenes"][1].update(image_prompt=tagged)), "", fake)
+    sent = [line["text"] for line in fake.payloads[0]["lines"] if line["id"] == "scene:overview"]
+    assert sent == [plain]
+    assert report.status == "passed" and checked.scenes[1].image_prompt == fixed_words

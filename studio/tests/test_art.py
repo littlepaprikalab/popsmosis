@@ -794,3 +794,75 @@ def test_a_biology_picture_is_asked_for_in_campbell_biologys_style():
     assert art.CAMPBELL_STYLE in art.paint_prompt(biology, scene)
     assert art.labels_line(scene).startswith("Label only:") and art.labels_line(scene).endswith(
         f"Label nothing else. {art.NO_SLIDE}")  # still read as a science scene
+
+
+TAGGED = ("Educational textbook illustration of a thylakoid membrane, clean scientific style: the membrane "
+          "[[thylakoid]] across the middle, one protein complex [[Cytochrome b6f]] passing through it.")
+
+
+def test_a_tagged_part_is_coloured_and_labelled_right_after_the_words_that_describe_it():
+    # Nov 2: the airplane wing's "red arch", "yellow strip" and "grey tip", listed after the picture's words, came back
+    # as three slabs. The owner's design: each part's colour and label in place, where the words describe it.
+    bundle = Bundle.model_validate(bundle_data())
+    scene = bundle.scenes[1].model_copy(update={"image_prompt": TAGGED})
+    prompt = art.paint_prompt(bundle, scene)
+    assert prompt.startswith("Educational textbook illustration of a thylakoid membrane, ")
+    assert ('style: the membrane (green, label "Thylakoid") across the middle, one protein complex (orange, label '
+            '"Cytochrome b6f") passing through it.') in prompt
+    assert "Colours:" not in prompt and "Label only" not in prompt and "[[" not in prompt
+    assert prompt.endswith(f"{art.BOXED} Label nothing else. {art.NO_SLIDE}")
+    assert art.labels_line(scene) == f"{art.BOXED} Label nothing else. {art.NO_SLIDE}"
+
+
+def test_a_part_with_no_tag_is_still_given_its_colour_and_label_after_the_words():
+    bundle = Bundle.model_validate(bundle_data())
+    scene = bundle.scenes[1].model_copy(update={"image_prompt": TAGGED.replace(" [[Cytochrome b6f]]", "")})
+    prompt = art.paint_prompt(bundle, scene)
+    assert 'the membrane (green, label "Thylakoid") across' in prompt
+    assert prompt.endswith('Colours: Cytochrome b6f orange. Also label: the the cytochrome b6f "Cytochrome b6f". '
+                           f"{art.BOXED} Label nothing else. {art.NO_SLIDE}")
+    untagged = bundle.scenes[1]  # no tags at all: asked for as before
+    assert art.paint_prompt(bundle, untagged) == (f"{untagged.image_prompt} Colours: Thylakoid green, Cytochrome b6f "
+                                                  f"orange. {art.labels_line(untagged)}")
+    assert art.labels_line(untagged).startswith("Label only: ")
+
+
+def test_a_tag_by_an_alias_counts_and_one_naming_no_part_or_a_part_again_is_dropped():
+    bundle = Bundle.model_validate(bundle_data())
+    scene = bundle.scenes[1]
+    scene = scene.model_copy(update={
+        "image_prompt": "A membrane [[Thylakoid]] across, b6f [[b6f]] in it, a ribosome [[Ribosome]] and the membrane "
+                        "again [[THYLAKOID]].",
+        "structures": [scene.structures[0], scene.structures[1].model_copy(update={"aliases": ["b6f"]})]})
+    words, left = art.inline(scene)
+    assert words == ('A membrane (green, label "Thylakoid") across, b6f (orange, label "Cytochrome b6f") in it, a '
+                     "ribosome and the membrane again.")
+    assert left == []
+
+
+def test_the_hook_is_told_its_tagged_colours_but_labels_nothing():
+    bundle = Bundle.model_validate(bundle_data())
+    hook = bundle.scenes[0].model_copy(update={"image_prompt": "A leaf [[Thylakoid]] in the sun, clean textbook style."})
+    prompt = art.paint_prompt(bundle, hook)
+    assert prompt == f"A leaf (green) in the sun, clean textbook style. {art.NO_LABELS}"
+
+
+def test_every_reader_but_the_painter_gets_the_picture_without_its_tags():
+    bundle = Bundle.model_validate(bundle_data())
+    scene = bundle.scenes[1].model_copy(update={"image_prompt": TAGGED})
+    plain = ("Educational textbook illustration of a thylakoid membrane, clean scientific style: the membrane across "
+             "the middle, one protein complex passing through it.")
+    assert scene.described() == plain
+    tagged = bundle.model_copy(update={"scenes": [bundle.scenes[0], scene, *bundle.scenes[2:]]})
+    for prompt in (art.check_prompt(tagged, scene), art.user_prompt(tagged, scene),
+                   art.user_prompt(tagged, tagged.scenes[0])):
+        assert "[[" not in prompt
+    assert plain in art.check_prompt(tagged, scene)
+
+
+def test_a_painting_is_not_made_again_for_a_tag_alone_but_is_for_new_words():
+    # The art prompt is not in the painting's key: a prompt change never repaints a finished job. A new tag changes
+    # the scene, so it is painted again, like any other change to its words.
+    bundle = Bundle.model_validate(bundle_data())
+    scene = bundle.scenes[1]
+    assert art.key(bundle, scene) != art.key(bundle, scene.model_copy(update={"image_prompt": TAGGED}))

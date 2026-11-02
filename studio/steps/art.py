@@ -103,8 +103,8 @@ from pydantic import Field
 from studio import brain, checks, gemini, jobs, knobs, ledger, media, muse, repair, svg
 from studio.checks import colour_word
 from studio.jobs import read, write
-from studio.schemas import (Axes, Box, Bundle, Flag, Location, Locations, Scene, SceneLocations, Strict, locations_problems,
-                             stage_groups)
+from studio.schemas import (PART_TAG, Axes, Box, Bundle, Flag, Location, Locations, Scene, SceneLocations, Strict, Structure,
+                             locations_problems, stage_groups)
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "art.md").read_text(encoding="utf-8")
 MAX_TRIES = 3  # SVG drawings a scene may take
@@ -473,7 +473,7 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
     parts = [f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else ""),
              f"Audience: {bundle.audience}",
              f"Core idea: {bundle.core_idea}",
-             f"Scene: {scene.id}\nWhat it shows: {scene.image_prompt}"]
+             f"Scene: {scene.id}\nWhat it shows: {scene.described()}"]
     lines = []
     for s in scene.structures:
         also = f" (also called {', '.join(s.aliases)})" if s.aliases else ""
@@ -498,7 +498,7 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
     others = [o for o in bundle.scenes if o.id != scene.id]
     if others:
         parts.append("The video's other scenes, drawn separately; draw shared structures the same way:\n" + "\n".join(
-            f"- {o.id}: {o.image_prompt} Structures: "
+            f"- {o.id}: {o.described()} Structures: "
             + ", ".join(f"{s.name} {s.color_hex}" for s in o.structures) for o in others))
     if previous is not None:
         parts.append("Your last drawing of this scene, below, was refused:\n"
@@ -900,9 +900,16 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     name is made to agree with it (checks._recolour_image_prompts): the writer's own ("a brown ATP synthase")
     disagreed with it ("ATP synthase orange"). Short on
     purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE says why). A later
-    stage `redrawn` from its first stage's picture says so first."""
-    colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
-    parts = [campbell_styled(bundle, scene.image_prompt).strip().rstrip(".") + ".", f"Colours: {colours}."]
+    stage `redrawn` from its first stage's picture says so first.
+
+    A part the image_prompt tags (schemas.PART_TAG) has its colour and label right after the words that describe it
+    (inline()), and is left out of the Colours line and the labels line; a scene with no tags is asked for as
+    before."""
+    words, left = inline(scene)
+    colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in left)
+    parts = [campbell_styled(bundle, words).strip().rstrip(".") + "."]
+    if left or not scene.structures:
+        parts.append(f"Colours: {colours}.")
     if loose := loose_line(bundle, scene):
         parts.append(loose)
     if scene.axes:
@@ -914,8 +921,31 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
-    parts.append(labels_line(scene))
+    parts.append(labels_line(scene, left))
     return " ".join(parts)
+
+
+def inline(scene: Scene) -> tuple[str, list[Structure]]:
+    """The image_prompt with each tag ("the downwash [[Downwash]]") as its part's colour and label in place ("the
+    downwash (orange, label "Downwash")"), the label left out on the hook, which labels nothing (labels_line()); and
+    the parts it tags none of, which the Colours and labels lines give as before. A tag names a part by its name or an
+    alias, in any case; one that names none, or a part tagged before, is dropped (checks._check_part_tags repairs both in
+    the bundle). The owner's design (Nov 2): given as lists after the picture's words, each colour and label has to
+    be matched back to its part, and the airplane wing's three came back as three slabs."""
+    named = {name.casefold(): s for s in scene.structures for name in (s.name, *s.aliases)}
+    labelled = scene.id not in EVERYDAY
+    done: list[str] = []
+
+    def place(found: re.Match) -> str:
+        part = named.get(found.group(1).strip().casefold())
+        if part is None or part.name in done:
+            return ""
+        done.append(part.name)
+        colour = colour_word(part.color_hex)
+        return f' ({colour}, label "{part.name}")' if labelled else f" ({colour})"
+
+    words = PART_TAG.sub(place, scene.image_prompt).strip()
+    return words, [s for s in scene.structures if s.name not in done]
 
 
 def is_diagram(scene: Scene) -> bool:
@@ -946,7 +976,7 @@ def loose_line(bundle: Bundle, scene: Scene) -> str:
     return f"Draw no {' or '.join(loose)} particles anywhere: the video adds its own, moving."
 
 
-def labels_line(scene: Scene) -> str:
+def labels_line(scene: Scene, left: list[Structure] | None = None) -> str:
     """What the picture labels: its own parts by the lesson's names, the words the narration says, and nothing else,
     since everything in a room or on a boat has a name a student would not know, and a diagram's parts have textbook
     names the lesson does not use. A science diagram has no room or furniture to name. The hook, an everyday sight,
@@ -958,12 +988,18 @@ def labels_line(scene: Scene) -> str:
     French Revolution's figures, not on their step; with each one placed, every label landed on its thing and was
     spelled right, on the French Revolution and the light reactions alike (the owner's choice, Nov 2). Each in black
     on a small white box (BOXED): the video dims the parts not yet named, and the painter's coloured lettering looked
-    odd dimmed, where black on white still reads (the owner, Nov 2; tested on the same two pictures)."""
+    odd dimmed, where black on white still reads (the owner, Nov 2; tested on the same two pictures).
+
+    `left` are the parts the image_prompt does not tag (inline(), worked out when not given): the others are labelled
+    in place, so the line lists only these, after "Also label"; none of them, and it lists nothing."""
     if scene.id in EVERYDAY:
         return NO_LABELS
+    listed = inline(scene)[1] if left is None else left
     labels = ", ".join(f'the {s.sam_phrase.strip()} "{s.name}"' if s.sam_phrase.strip() else f'"{s.name}"'
-                       for s in scene.structures)
+                       for s in listed)
     rest = "." if SCIENCE_STYLE in scene.image_prompt.lower() else ": no room, furniture or background objects."
+    if len(listed) < len(scene.structures):
+        return (f"Also label: {labels}. " if listed else "") + f"{BOXED} Label nothing else{rest} {NO_SLIDE}"
     return f"Label only: {labels}. {BOXED} Label nothing else{rest} {NO_SLIDE}"
 
 
@@ -1002,7 +1038,7 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
             else SONG if scene.song_only else SCENE_KINDS.get(scene.id, DETAIL))
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
             + f"\nThe scene is {kind}"
-            + f"\nWhat the scene should show: {scene.image_prompt}"
+            + f"\nWhat the scene should show: {scene.described()}"
             + (f"\n{axes_line(scene.axes)} They are asked for, and are no part to find." if scene.axes else "")
             + "\nIt must show each of these:\n" + "\n".join(lines)
             + "\n\nThe lesson's facts:\n" + "\n".join(f"- {f.id}: {f.text}" for f in bundle.facts))

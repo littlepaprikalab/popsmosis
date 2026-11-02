@@ -206,11 +206,16 @@ sentences. The illustrator draws best the diagrams it already knows:
 - Name the real things, never their shapes ("Earth's northern hemisphere", not "a blue
   dome"). Place things with plain words (left, right, above, below, inside, through, tilted
   toward), each said once, never a relation such as "at right angles to".
-- Name no structure's colour: code tells the illustrator each one's from its `color_hex`. To
-  tell apart two parts of one real thing, ask for a soft tint over it ("the globe's northern
-  half softly tinted, the continents showing through"), never solid paint.
+- Tag each structure right after the words that describe it: its `name` in double
+  brackets, exactly as written ("the Moon [[Moon]] on the right, its near side facing the
+  Sun"). Code puts that part's colour and label there for the illustrator, on the thing you
+  just described; a part with no tag gets them in a list after your words, and the
+  illustrator puts them on the wrong thing. Tag each structure once, where the picture shows
+  it, and name no colour yourself: the tag gives the one from `color_hex`. To tell apart two
+  parts of one real thing, ask for a soft tint over it ("the globe's northern half
+  [[Northern hemisphere]] softly tinted, the continents showing through"), never solid paint.
 - Leave out what the lesson does not need, and never ask for text, labels, letters or
-  numbers: the art step asks for the labels itself.
+  numbers: the tags ask for the labels.
 
 Structures:
 

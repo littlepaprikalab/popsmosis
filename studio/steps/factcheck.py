@@ -58,7 +58,7 @@ from pydantic import ValidationError
 from studio import brain, checks
 from studio.jobs import read, write
 from studio.schemas import (Appeal, AuditReport, Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
-                            FactCheckReport, Request)
+                            FactCheckReport, Request, untagged)
 from studio.sentences import replace_sentences, split_sentences
 from studio.steps import songwriter
 
@@ -163,7 +163,7 @@ def public_lines(bundle: Bundle) -> list[Line]:
     """What goes out with the droplet besides its lines: the title, each picture's description, the song's style and
     what it must avoid."""
     return ([Line(TITLE, "title", title_text(bundle))]
-            + [Line(SCENE, scene.id, scene.image_prompt) for scene in bundle.scenes]
+            + [Line(SCENE, scene.id, scene.described()) for scene in bundle.scenes]
             + [Line(STYLE, str(i), style) for i, style in enumerate(bundle.music.positive_styles, 1)]
             + [Line(AVOID, str(i), style) for i, style in enumerate(bundle.music.negative_styles, 1)])
 
@@ -543,7 +543,9 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
         if d["caption"].strip() and ("caption", d["caption"].strip()) in fixes:
             d["caption"] = fixes[("caption", d["caption"].strip())]
     for scene in data["scenes"]:
-        scene["image_prompt"] = fixes.get((SCENE, scene["image_prompt"]), scene["image_prompt"])
+        # Checked without its tags (Scene.described()): a corrected picture loses them, and its parts are given
+        # their colours and labels after its words instead (art.paint_prompt).
+        scene["image_prompt"] = fixes.get((SCENE, untagged(scene["image_prompt"])), scene["image_prompt"])
     data["music"]["positive_styles"] = [fixes.get((STYLE, s), s) for s in data["music"]["positive_styles"]]
     title = fixes.get((TITLE, title_text(bundle)))
     if title:

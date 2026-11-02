@@ -75,6 +75,19 @@ def _no_axes() -> Axes:
     return Axes(x="", y="")
 
 
+# A structure's part tag in a scene's image_prompt: its name in double brackets, right after the words that describe it
+# ("the downwash [[Downwash]], a band sloping down"). The painter gets each tag as the part's colour and label in
+# place (art.paint_prompt): given as two lists after the picture's words, they fell on the wrong things (Nov 2: the
+# airplane wing's "red arch", "yellow strip" and "grey tip" came back as three slabs). Every other reader gets the
+# words without the tags (untagged()).
+PART_TAG = re.compile(r"\s*\[\[([^\[\]]*)\]\]")
+
+
+def untagged(text: str) -> str:
+    """An image_prompt's words without its tags."""
+    return PART_TAG.sub("", text).strip()
+
+
 class Scene(Strict):
     id: str
     image_prompt: str
@@ -102,6 +115,10 @@ class Scene(Strict):
     def exact(self) -> bool:
         """Drawn to scale: marked so, or a graph."""
         return self.to_scale or bool(self.axes)
+
+    def described(self) -> str:
+        """What the picture shows, in the image_prompt's words without its tags: for every reader but the painter."""
+        return untagged(self.image_prompt)
 
 
 def stage_groups(scenes: list[Scene]) -> dict[str, list[Scene]]:
@@ -525,7 +542,7 @@ class Problem(Strict):
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
                   "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy",
-                  "chorus", "head-count", "source-quote", "crowded", "colours", "alias"]
+                  "chorus", "head-count", "source-quote", "crowded", "colours", "alias", "part-tags"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
