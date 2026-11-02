@@ -576,7 +576,7 @@ def fills(view: Rect, picture: Rect) -> bool:
 # covers the picture, further out, with a line back to the ring: beside it, below, above, then at a corner. Never
 # further: notes that sat 180 pixels out, or were pushed further by the frame's edge, drew long lines across the
 # picture (the owner, Nov 2). A note whose line would still run past POSTIT_MAX_LINE, or whose every spot covers
-# the picture (POSTIT_MAX_COVER), is not shown.
+# the picture (POSTIT_MAX_COVER), goes on the scene's notice card instead.
 POSTIT_GAP = 14.0
 POSTIT_REACH = (POSTIT_GAP, 90.0)
 POSTIT_MAX_LINE = 130.0
@@ -984,6 +984,9 @@ class Renderer:
                 self._lanes.setdefault((beat.scene, tuple(flow.path), flow.label), labels.index(flow.label))
         self.keyed = any(beat.key_line for beat in timeline.beats)  # a key band only in a video with key lines
         self.brand = p.brand_size(self.layout.brand_font)
+        self._carded: dict[str, set[int]] = {}  # per scene, the flags whose note went on its card (_card_far_notes)
+        self._card_far_notes(scene_ids)
+        timeline = self.timeline
         self.plans = self._plan()
         width, height = self.layout.width, self.layout.height
         self.pixels = np.zeros((height, width, 4), np.uint8)
@@ -1423,7 +1426,7 @@ class Renderer:
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
         for flag, spot in zip(self.timeline.flags[scene_id], self._postits[scene_id]):
-            if spot is None:  # no spot near enough: left off rather than drawn far away (POSTIT_MAX_LINE)
+            if spot is None:  # on the scene's card instead (_card_far_notes)
                 continue
             box = flag.box
             label = (box.x0 * scale + dx, box.y0 * scale + dy, box.x1 * scale + dx, box.y1 * scale + dy)
@@ -1444,23 +1447,58 @@ class Renderer:
             p.draw_postit(canvas, note, flag.note, shown)
         canvas.restore()
 
-    def _place_postits(self, scene_id: str, view: Rect, bounds: Rect) -> list[tuple[int, float] | None]:
+    def _card_far_notes(self, scene_ids: set[str]) -> None:
+        """A note with no spot near what it is about over the whole scene (POSTIT_MAX_LINE), or none that leaves the
+        picture seen (POSTIT_MAX_COVER), goes on the scene's notice card instead of across the picture (the owner,
+        Nov 2): left off, a correction was lost. The card moves the picture over for it, so every scene's notes are
+        placed again in its new framing, until none moves."""
+        for _ in range(4):
+            moved = False
+            for scene_id in sorted(set(self.timeline.flags) & scene_ids):
+                view, margin = self.view(scene_id), self.layout.margin
+                bounds = (view[0] + margin, view[1] + margin, view[2] - margin, view[3] - margin - AI_TAG_FONT * 1.7 - 10)
+                spots = self._place_postits(scene_id, view, bounds, [self._whole(scene_id, view)], strict=True)
+                far = {i for i, spot in enumerate(spots) if spot is None} - self._carded.get(scene_id, set())
+                if not far:
+                    continue
+                self._carded.setdefault(scene_id, set()).update(far)
+                notes = list(self.timeline.notices.get(scene_id, []))
+                notes += [f.note for i, f in enumerate(self.timeline.flags[scene_id]) if i in far and f.note not in notes]
+                self.timeline = self.timeline.model_copy(update={"notices": {**self.timeline.notices, scene_id: notes}})
+                if scene_id not in self._beside:
+                    self._beside |= next((set(g) for g in self.timeline.stages if scene_id in g), {scene_id})
+                    moved = True
+            if self.portrait:
+                shown = [notes for scene_id, notes in self.timeline.notices.items() if scene_id in scene_ids]
+                card_h = max(self._card_height(notes) for notes in shown) + 2 * NOTICE_GAP if shown else 0.0
+                moved, self._card_h = moved or card_h != self._card_h, card_h
+            if not moved:
+                return
+
+    def _place_postits(self, scene_id: str, view: Rect, bounds: Rect, cams: list[Cam] | None = None,
+                       strict: bool = False) -> list[tuple[int, float] | None]:
         """Which side of its label's ring each flag's post-it sits on, and how far out (POSTIT_SIDES, POSTIT_REACH):
         of those, the one that covers the least of the picture (its parts and its own labels, ink_share()), no other
         post-it and no other flagged label, the nearest of those alike, over every framing the video shows the scene
         in (the whole scene, and the camera at the start, middle and end of each of its beats): the picture moves and
-        grows under a post-it that keeps its size. Chosen once, so a post-it never jumps. None for a note with no
-        spot near enough (its line past POSTIT_MAX_LINE over the whole scene) or none that leaves the picture seen
-        (POSTIT_MAX_COVER): it is left off."""
+        grows under a post-it that keeps its size. Chosen once, so a post-it never jumps. None for a note on the
+        scene's card (_card_far_notes). strict: None too for a note with no spot near enough (its line past
+        POSTIT_MAX_LINE over the whole scene) or none that leaves the picture seen (POSTIT_MAX_COVER); otherwise such
+        a note takes the nearest spot there is."""
         art = self.scene(scene_id)
-        cams = [self._whole(scene_id, view)] + [
-            plan.cam(t, view, art) for beat, plan in zip(self.timeline.beats, self.plans) if beat.scene == scene_id
-            for t in (beat.t0, (beat.t0 + beat.t1) / 2, max(beat.t0, beat.t1 - 1e-3))][:POSTIT_FRAMINGS - 1]
+        if cams is None:
+            cams = [self._whole(scene_id, view)] + [
+                plan.cam(t, view, art) for beat, plan in zip(self.timeline.beats, self.plans) if beat.scene == scene_id
+                for t in (beat.t0, (beat.t0 + beat.t1) / 2, max(beat.t0, beat.t1 - 1e-3))][:POSTIT_FRAMINGS - 1]
+        carded = self._carded.get(scene_id, set())
         flags = self.timeline.flags[scene_id]
         chosen: list[tuple[int, float] | None] = []
         for i, flag in enumerate(flags):
+            if i in carded:
+                chosen.append(None)
+                continue
             size = p.postit_size(flag.note)
-            best = None
+            best = nearest = None
             whole = cams[0]
             for k, gap in enumerate(POSTIT_REACH):
                 for side in range(len(POSTIT_SIDES)):
@@ -1479,12 +1517,15 @@ class Renderer:
                     ring = p.flag_ring((flag.box.x0 * scale + dx, flag.box.y0 * scale + dy, flag.box.x1 * scale + dx,
                                         flag.box.y1 * scale + dy))
                     reach = _line_length(_within(_postit_rect(ring, size, side, gap), bounds), ring, flag.ring)
-                    if reach > POSTIT_MAX_LINE:
-                        continue
                     score = (round(cost / len(cams), 2), k, side)
-                    if best is None or score < best[0]:
+                    if nearest is None or (reach, score) < nearest[0]:
+                        nearest = ((reach, score), (side, gap))
+                    if reach <= POSTIT_MAX_LINE and (best is None or score < best[0]):
                         best = (score, (side, gap))
-            chosen.append(best[1] if best is not None and best[0][0] <= POSTIT_MAX_COVER else None)
+            if strict:
+                chosen.append(best[1] if best is not None and best[0][0] <= POSTIT_MAX_COVER else None)
+            else:
+                chosen.append(best[1] if best is not None else nearest[1])
         return chosen
 
     def _draw_beat(self, canvas: skia.Canvas, t: float) -> None:
