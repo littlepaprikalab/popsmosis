@@ -1,6 +1,6 @@
-"""Run one scorecard topic through the whole pipeline with every Claude call answered in the session.
+"""Run one topic through the whole pipeline with every Claude call answered in the session.
 
-    python drive.py <topic-id>
+    python drive.py <job-id>     # jobs/<job-id>/request.json written first (any topic), or a scorecard topic's id
 
 The steps are the studio's own code (studio/steps/*), run in `plan` then `make` order: bundle, audit,
 factcheck, then art and locate beside audio and timing, then timeline and render (studio/videos.py, local()).
@@ -235,9 +235,12 @@ def lesson(job: Path, ask) -> bool:
     return True
 
 
-def main(topic_id: str) -> int:
-    topic = next(t for t in scorecard.load_topics() if t.id == topic_id)
-    job = jobs.ROOT / topic.id
+def main(job_id: str) -> int:
+    """A job folder with its own request.json (any topic), or a scorecard topic's id."""
+    job = jobs.ROOT / job_id
+    topic = next((t for t in scorecard.load_topics() if t.id == job_id), None)
+    if topic is None and not (job / "request.json").exists():
+        sys.exit(f"no jobs/{job_id}/request.json, and {job_id} is not a scorecard topic")
     (job / "_insession").mkdir(parents=True, exist_ok=True)
     if not (job / "request.json").exists():
         jobs.write(job / "request.json", topic.as_request())
