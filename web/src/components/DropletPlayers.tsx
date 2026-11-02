@@ -3,6 +3,7 @@
 import type { DropletTags, DropletVideos, Video } from '@/lib/api';
 import { useState } from 'react';
 
+import { Drop } from '@/components/DropletMeter';
 import { TagList } from '@/components/TagList';
 import { allTags } from '@/lib/tags';
 import { countClip, countPlays } from '@/lib/plays';
@@ -105,7 +106,7 @@ export function LessonVideos({ answerId, video, tags }: { answerId: string; vide
   if (video.status === 'RENDERING') {
     return (
       <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="videos-rendering">
-        <span className="inline-block w-1.5 h-1.5 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
+        <Drop state="now" className="w-2 h-3 shrink-0" />
         The videos are rendering… they appear here when they are done.
       </p>
     );

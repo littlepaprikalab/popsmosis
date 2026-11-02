@@ -252,10 +252,8 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
           Bill of materials
         </span>
         {making ? (
-          <span data-testid="breakdown-progress" className="flex items-center gap-1.5">
-            {rows.some((r) => r.status === 'running') && (
-              <span className="inline-block w-1.5 h-1.5 shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
-            )}
+          // No blinking mark of its own: the card shows the droplet meter (DropletMeter), or the videos' line, for that.
+          <span data-testid="breakdown-progress">
             {anyStarted ? (
               <span>
                 Making it · {done} of {rows.length} steps done
