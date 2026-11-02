@@ -319,8 +319,9 @@ explanation left to the narration.
   sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat; shimmering
   synths lead, claps accent the beat", with sounds of your own for this topic. Concrete sounds ("a
   warm Rhodes", "an 808 that slides", "stacked harmonies on the hook") beat adjectives ("upbeat",
-  "educational"). The voice stays close and natural, one clear lead singing or rapping as if to
-  a friend, in an easy range: never soaring, belted or shouted, and no group shouts. Instruments
+  "educational"). The voice stays close and natural, one clear lead: never soaring, belted or
+  shouted, and no group shouts. Its rapped verses have a confident, punchy, rhythmic flow,
+  every syllable landing on the beat; its chorus is sung in an easy range. Instruments
   make the music, never the sounds of the topic itself (whooshes, countdowns, sirens). The verses are rapped, and the style says so, unless the learner asks for them sung,
   or for one section rapped (a rapped second verse, a rapped bridge): sing the rest then. A
   rapped line follows every rule a sung one does (a lyric with its rhyme and beat, one idea,
