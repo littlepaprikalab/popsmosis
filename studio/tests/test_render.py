@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+import skia
 import pytest
 
 skia = pytest.importorskip("skia", reason="skia-python is not installed (or its libEGL is missing)")
@@ -132,6 +133,21 @@ def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     assert (lit_px[int(b6f.y), int(b6f.x)] == plain_px[int(b6f.y), int(b6f.x)]).all()
     assert lit_px[int(thylakoid.y), int(thylakoid.x)][:3].min() > plain_px[int(thylakoid.y), int(thylakoid.x)][:3].min() + 80
     assert art.compose({}, {"Cytochrome b6f": 1.0})[1] is lit  # composed once, then reused
+
+
+def test_two_spotlights_crossing_wash_the_rest_as_one_does(job):
+    # The owner, Nov 2: the labels flickered. Two half washes, one over the other, washed the rest less than one
+    # whole one, so it lifted on every line as one spotlight handed over to the next.
+    art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
+    gone = art._surface(alpha_only=True)  # a spotlight on a part off this picture: it washes all of it
+    gone.getCanvas().clear(skia.ColorWHITE)
+    art.masks = {**art.masks, "Elsewhere": art.masks["Thylakoid"]}
+    art._spots["Elsewhere"] = gone.makeImageSnapshot()
+    _, one = art.compose({}, {"Cytochrome b6f": 1.0})
+    _, crossing = art.compose({}, {"Cytochrome b6f": 0.5, "Elsewhere": 0.5})
+    at = located(job, "overview", "Thylakoid").label_anchor  # washed by both, lit by neither
+    one_px, crossing_px = (image.toarray()[int(at.y), int(at.x)][:3].astype(int) for image in (one, crossing))
+    assert np.abs(one_px - crossing_px).max() <= 2
 
 
 def test_on_dark_art_the_ghost_and_the_spotlight_fade_toward_its_background(tmp_path):

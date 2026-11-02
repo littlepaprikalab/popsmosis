@@ -554,9 +554,12 @@ class SceneArt:
         for name, level in key[0]:
             canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
                              skia.Paint(Color=self.paper, Alphaf=GHOST_WASH * level))
-        for name, level in key[1]:
-            canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(),
-                             skia.Paint(Color=self.paper, Alphaf=SPOT_WASH * level))
+        if key[1]:  # added up, then washed once: two spotlights crossing wash the rest as one does, not less
+            canvas.saveLayerAlpha(None, round(255 * SPOT_WASH))
+            for name, level in key[1]:
+                canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(),
+                                 skia.Paint(Color=self.paper, Alphaf=level, BlendMode=skia.BlendMode.kPlus))
+            canvas.restore()
         for name, color, alpha in key[2]:
             canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
                              skia.Paint(Color=p.argb(color), Alphaf=alpha))
