@@ -1954,6 +1954,11 @@ def test_a_glide_on_a_short_arrow_takes_its_time():
     assert renderer_module._glide(short, took / 2)  # still on its way halfway through
     assert renderer_module._glide(short, took + renderer_module.GLIDE_PAUSE_S / 2) == []  # then its pause
     assert renderer_module.glide_speed(700.0, 170.0) == renderer_module.GLIDE_SPEED  # a long one keeps its pace
+    # ...but one whole glide always fits its flow's time on screen: the rocket's O2, shown 2.3 s, never left its tank
+    room = renderer_module.glide_room(10.0, 12.3)
+    fits = (80.0 + piece) / renderer_module.glide_speed(80.0, piece, room)
+    assert fits <= room + 1e-9 and fits < renderer_module.GLIDE_MIN_S
+    assert renderer_module.glide_speed(80.0, piece, 30.0) == renderer_module.glide_speed(80.0, piece)  # room to spare
 
 
 def test_an_arrow_carries_as_many_as_the_moments_words_count_for_what_moves():

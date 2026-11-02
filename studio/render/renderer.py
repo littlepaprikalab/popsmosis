@@ -861,13 +861,24 @@ def _cut(points: list[Point], a: float, b: float) -> list[Point]:
     return out
 
 
-def glide_speed(total: float, piece: float) -> float:
+def glide_speed(total: float, piece: float, room: float | None = None) -> float:
     """Frame pixels a second a glide runs at, its arrow `piece` long on a route `total` long: GLIDE_SPEED, or
-    slower on a short route, so it takes GLIDE_MIN_S."""
-    return min(GLIDE_SPEED, (total + piece) / GLIDE_MIN_S)
+    slower on a short route, so it takes GLIDE_MIN_S; but never so slow that one whole glide does not fit the `room`
+    seconds its flow is on screen (glide_room): at 3 s on a flow shown for 2.3 s, the rocket's O2 never got far
+    from the tank, and its arrow was left out as drawn wrong (Nov 2)."""
+    speed = min(GLIDE_SPEED, (total + piece) / GLIDE_MIN_S)
+    return max(speed, (total + piece) / room) if room else speed
 
 
-def _glide(line: list[Point], elapsed: float) -> list[Point]:
+GLIDE_ROOM_MIN = 1.0  # seconds a glide takes at the least, however short its flow's time on screen
+
+
+def glide_room(flow_in: float, flow_out: float) -> float:
+    """The seconds one glide has: its flow's time on screen, less its track drawing in and its fading out."""
+    return max(flow_out - flow_in - ROUTE_GROW_S - FLOW_IN_S, GLIDE_ROOM_MIN)
+
+
+def _glide(line: list[Point], elapsed: float, room: float | None = None) -> list[Point]:
     """The gliding arrow on a route at `elapsed` seconds into its flow (frame pixels): a piece GLIDE_SHARE of the route
     long (at most GLIDE_MAX) running from its tail to its head (glide_speed), shrinking into the head as it arrives,
     then GLIDE_PAUSE_S with none before the next; [] when none shows."""
@@ -875,7 +886,7 @@ def _glide(line: list[Point], elapsed: float) -> list[Point]:
     if total < 2.0:
         return []
     piece = min(GLIDE_SHARE * total, GLIDE_MAX)
-    speed = glide_speed(total, piece)
+    speed = glide_speed(total, piece, room)
     period = (total + piece) / speed + GLIDE_PAUSE_S
     head = (elapsed % period) * speed
     if head > total + piece:
@@ -2476,7 +2487,8 @@ class Renderer:
                                     room)
                 continue
             if self._as_arrow(beat.scene, flow):
-                self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame, t, count_in(beat.line, flow.label))
+                self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame, t, count_in(beat.line, flow.label),
+                                    glide_room(flow_in, flow_out))
                 continue
             points = self._path_points(beat.scene, flow.path, flow.blocked, lane)
             bends = None if flow.blocked else self._bends(beat.scene, flow.path, lane)
@@ -2670,7 +2682,7 @@ class Renderer:
             return min(max(middle, start), flow_out - 0.01)
         shown = [self.art_to_frame(middle, *q) for q in self._flow_line(scene_id, flow)]
         total = routing.length(shown)
-        speed = glide_speed(total, min(GLIDE_SHARE * total, GLIDE_MAX))
+        speed = glide_speed(total, min(GLIDE_SHARE * total, GLIDE_MAX), glide_room(flow_in, flow_out))
         period = (total + min(GLIDE_SHARE * total, GLIDE_MAX)) / speed + GLIDE_PAUSE_S
         along = ARROW_SEEN * total / speed  # into a glide, as its head gets that far
         t = start + max(round((middle - start - along) / period), 0) * period + along
@@ -2758,13 +2770,13 @@ class Renderer:
             p.draw_kind(canvas, spot, flow.color, flow.label, alpha, size=TAIL_SIZE)
 
     def _draw_rider(self, canvas: skia.Canvas, flow, shown: list[Point], piece: list[Point], alpha: float, t: float,
-                    elapsed: float, count: int = 1) -> None:
+                    elapsed: float, count: int = 1, room: float | None = None) -> None:
         """The flow's particle riding the head of its gliding arrow (frame pixels), the owner's idea (Nov 1): it says
         what moves and the arrow trailing it which way. It fades out at the head as the glide ends, and waits at the
         tail, jiggling and fading in, through the pause before the next."""
         total = routing.length(shown)
         length = min(GLIDE_SHARE * total, GLIDE_MAX)
-        speed = glide_speed(total, length)
+        speed = glide_speed(total, length, room)
         period = (total + length) / speed + GLIDE_PAUSE_S
         head = (elapsed % period) * speed
         if piece and head <= total + length:
@@ -2782,7 +2794,7 @@ class Renderer:
         self._draw_tail(canvas, flow, shown, alpha * fade, t, count=count)
 
     def _draw_handoffs(self, canvas: skia.Canvas, scene_id: str, flow, elapsed: float, alpha: float,
-                       on_frame, t: float = 0.0, count: int = 1) -> None:
+                       on_frame, t: float = 0.0, count: int = 1, room: float | None = None) -> None:
         """A travelling flow's arrows. Off a graph, one dashed arrow along its whole way (_flow_line), drawing itself
         in from its tail as it sets off, its dashes then moving along it, with its one-liner (Particles.says) beside
         it, joined to it. On a
@@ -2799,12 +2811,12 @@ class Renderer:
             else:
                 p.draw_route_track(canvas, shown, flow.color, alpha * TRACK_ALPHA, grown)
                 gliding = elapsed - ROUTE_GROW_S  # it glides once its track has drawn itself in
-                piece = _glide(shown, gliding) if gliding >= 0 else []
+                piece = _glide(shown, gliding, room) if gliding >= 0 else []
                 rider = bool(flow.label) and gliding >= 0  # its particle rides the gliding arrow's head
                 if piece:
                     p.draw_route_arrow(canvas, piece, flow.color, alpha, 1.0, dashed=False, head=not rider)
                 if rider:
-                    self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding, count)
+                    self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding, count, room)
             if flow.blocked or not (flow.label and elapsed >= ROUTE_GROW_S):
                 self._draw_tail(canvas, flow, shown, alpha, t, grown, count)
             says = getattr(flow, "says", "")
