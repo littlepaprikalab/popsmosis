@@ -1,7 +1,7 @@
 """The song styles a droplet rotates through when the learner asks for none.
 
 Left to choose, the model kept landing on the same loud genres. Each is a vocals-first sound a high school
-listener plays for fun, from 92 to 112 bpm, with no artist named. Until round 17 most had rapped verses, for their
+listener plays for fun, from 92 to 112 bpm, with no artist named; the owner's K-pop electro-pop (Nov 2) drives at 130. Until round 17 most had rapped verses, for their
 clear diction; with a lesson's lines in them, the verses came back recited, like sentences read aloud, and the
 rotation went to sung verses. One rapped style is back (Oct 31): the owner's favourite song, Cash in the Carrier
 (docs/reference-songs.md), whose rapped verses carry the lesson well. Whether rapped lines come back recited is the
@@ -49,6 +49,10 @@ SONG_STYLES = (
     "dance-pop with a four-on-the-floor beat, rapped verses, energetic female vocal, bright plucked synths, "
     "handclaps, sing-along chorus, 112 bpm",
     CASH_IN_THE_CARRIER,
+    "K-pop electro-pop with tight vocal comping; confident androgynous female lead, clipped melodic phrasing, rap-sung "
+    "verses, soaring chorus, group shouts on parenthetical echoes; stacked string synths, bright synth stabs, punchy "
+    "electro beat, trap hi-hats in verses, four-on-the-floor chorus, half-time bridge with bass and claps; driving "
+    "130 BPM feel, clear diction",
 )
 
 

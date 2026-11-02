@@ -524,9 +524,9 @@ RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\
                                  r"|\b(?:second verse|verse (?:2|two))\s+(?:is\s+|gets\s+)?rapped\b", re.I)
 RAPPED_BRIDGE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?bridge\b"
                            r"|\bbridge\s+(?:is\s+|gets\s+)?rapped\b", re.I)
-# A style that raps every verse (Nov 2: all of the rotation's, studio/styles.py), its chorus sung: "rapped verses", "rap verses",
-# "raps both verses", "the verses are rapped".
-RAPPED_VERSES = re.compile(r"\brap(?:ped|ping)?\s+verses\b|\braps?\s+(?:both|all|its|the)\s+verses\b"
+# A style that raps every verse (Nov 2: all of the rotation's, studio/styles.py), its chorus sung: "rapped verses",
+# "rap verses", "rap-sung verses", "raps both verses", "the verses are rapped".
+RAPPED_VERSES = re.compile(r"\brap(?:ped|ping|-sung)?\s+verses\b|\braps?\s+(?:both|all|its|the)\s+verses\b"
                            r"|\bverses\s+(?:are\s+)?rapped\b", re.I)
 
 
