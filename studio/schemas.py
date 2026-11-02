@@ -103,10 +103,13 @@ class Scene(Strict):
                                                              '"" for both on any other scene')
     # A painter guesses sizes: round 22's compound-interest bar chart came back with its bars at heights the lesson's
     # numbers never gave. A scene to scale (and every graph) is drawn by Claude as SVG, its sizes worked out from
-    # the numbers (studio/steps/art.py, drawn()). False in a bundle written before Oct 30.
+    # the numbers (studio/steps/art.py, drawn()). False in a bundle written before Oct 30. So is a figure whose parts must
+    # meet exactly (Nov 2: the GPS lesson's distance spheres, painted, did not cross at the phone; never marked in six
+    # runs while this asked only for amounts).
     to_scale: bool = Field(default_factory=bool, description="True for a chart, graph or figure whose sizes must be right "
                                                              "(bars of given heights, a stacked bar, a number line, a shape "
-                                                             "with given sides or angles); false for any other scene")
+                                                             "with given sides or angles), or whose parts must meet or line "
+                                                             "up exactly (rays meeting at a focus); false for any other scene")
     # One of the song's own pictures (Bundle.song_scenes), which the lesson never plays; the song may still play any
     # lesson scene that fits. Not the brain's to write: it writes them in a list of their own, after the lyrics.
     # False in a bundle written before Oct 31.

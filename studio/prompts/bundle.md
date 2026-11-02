@@ -261,10 +261,12 @@ Structures:
   lacks. The video writes them from the scene's first frame. An axis is never a structure: a
   common word like "price" would reveal it on every line.
 - `to_scale`: true for a scene the learner reads amounts off (a chart, a stacked bar, a
-  number line, a shape with given sides or angles): code draws it exactly from your
-  numbers, so its `image_prompt` gives each size as a number or a share of another ("the
-  interest block a third as tall as the savings block"). A graph (a scene with `axes`) is drawn so
-  whatever this says. False for every other scene.
+  number line, a shape with given sides or angles), and for a figure that is only true when
+  its parts meet or line up exactly (rays bending through a lens to meet at one focus, two
+  lines crossing at the one point that solves both): a painter guesses where lines go, and
+  code draws it exactly from your words, so its `image_prompt` gives each size and place as a
+  number or a share of another ("the interest block a third as tall as the savings block").
+  A graph (a scene with `axes`) is drawn so whatever this says. False for every other scene.
 
 ## The lesson
 
