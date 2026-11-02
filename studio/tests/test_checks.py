@@ -337,6 +337,7 @@ def test_a_style_that_raps_one_section_lets_only_its_lines_run_longer():
     assert rapped("Pop with clear rapped verses, rising into a sung chorus") == {"v1-1", "v1-2", "v2-1"}
     assert rapped("hip-hop pop, confident female rap verses, sung chorus") == {"v1-1", "v1-2", "v2-1"}
     assert rapped("K-pop electro-pop, rap-sung verses, soaring chorus") == {"v1-1", "v1-2", "v2-1"}
+    assert rapped("Upbeat pop with hip-hop verses, rapped in a confident, punchy flow") == {"v1-1", "v1-2", "v2-1"}
     assert rapped("Pop, make it rap, 100 bpm") == {
         "v1-1", "v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1"}  # rapped, no section named: every line, as before
     assert rapped("bright teen pop with melodic sung verses, 104 bpm") == set()

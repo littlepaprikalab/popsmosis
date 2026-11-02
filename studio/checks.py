@@ -526,9 +526,9 @@ RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\
 RAPPED_BRIDGE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?bridge\b"
                            r"|\bbridge\s+(?:is\s+|gets\s+)?rapped\b", re.I)
 # A style that raps every verse (Nov 2: all of the rotation's, studio/styles.py), its chorus sung: "rapped verses",
-# "rap verses", "rap-sung verses", "raps both verses", "the verses are rapped".
+# "rap verses", "rap-sung verses", "raps both verses", "the verses are rapped", "hip-hop verses, rapped in a ... flow".
 RAPPED_VERSES = re.compile(r"\brap(?:ped|ping|-sung)?\s+verses\b|\braps?\s+(?:both|all|its|the)\s+verses\b"
-                           r"|\bverses\s+(?:are\s+)?rapped\b", re.I)
+                           r"|\bverses,?\s+(?:are\s+)?rapped\b", re.I)
 
 
 def rapped_lines(data: dict) -> set[str]:
