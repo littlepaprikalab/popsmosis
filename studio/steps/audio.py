@@ -345,17 +345,19 @@ def gemini_song_model() -> str:
 
 
 def delivery(styles: list[str]) -> str:
-    """How the lines are performed, for the prompt's fixed line: in order, and the sections the style raps rapped,
-    spoken on the beat, by name. Three songs whose styles said "rapped verses" came back sung all through (the owner,
-    Nov 2): the line said "Sing the lines in order", and the styles said "rapping and singing close to the mic"."""
+    """The sections the style raps, named for the singer: rapped, spoken on the beat; "" when it raps none. Three songs
+    whose styles said "rapped verses" came back sung all through (the owner, Nov 2): the prompt said "Sing the lines
+    in order", and the styles "rapping and singing close to the mic". Nothing else is said of how the lines go:
+    singing the lyrics in order goes without saying (the owner, Nov 2), and "backing vocals and echoes of the hook
+    are welcome" asked for the group vocals the owner did not want."""
     style = " ".join(styles)
     if not checks.RAPPED.search(style):
-        return "Sing the lines in order, section by section."
+        return ""
     parts = (["every verse"] if checks.RAPPED_VERSES.search(style)
              else [part for part, said in (("the second verse", checks.RAPPED_SECOND_VERSE), ("the bridge", checks.RAPPED_BRIDGE))
                    if said.search(style)]) or ["the verses"]
     rest = "the chorus" if parts in (["every verse"], ["the verses"]) else "the rest"
-    return f"Perform the lines in order, section by section: rap {' and '.join(parts)}, spoken on the beat, not sung; sing {rest}."
+    return f"Rap {' and '.join(parts)}, spoken on the beat, not sung; sing {rest}."
 
 
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
@@ -370,7 +372,8 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     head = []
     if music.positive_styles:  # a free-form style may end on its own full stop
         head.append(f"Style: {', '.join(style.rstrip(' .') for style in with_diction(music.positive_styles))}.")
-    head.append(f"{delivery(music.positive_styles)} Backing vocals and echoes of the hook are welcome.")
+    if rapped := delivery(music.positive_styles):
+        head.append(rapped)
     lyrics = [f"[{p['section'].title()}]\n" + "\n".join(p["lines"]) for p in planned]
     return "\n".join(head) + "\n\nLyrics:\n" + "\n\n".join(lyrics), _placed(planned)
 
