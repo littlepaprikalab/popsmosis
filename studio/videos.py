@@ -293,10 +293,10 @@ def local(job: Path, ask=None) -> tuple[str, str, str]:
         record_interrupted(job)
         record = Record(job)
         knobs.use(jobs.studio_settings(job))  # as its last claim said, if it had one
-        why = unavailable(job)
-        if why:
-            return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
         with job_chosen(job):  # the brain the job was made on (`plan --brain`), else the default
+            why = unavailable(job)  # that brain's keys, as `videos` checks them: a Muse job needs no Claude key
+            if why:
+                return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
             return record.finish(*_make(job, None, ask or logged_ask(job), record, LOCAL_TAIL))
 
 
