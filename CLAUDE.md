@@ -71,6 +71,9 @@ How to run it, for each topic in `studio/scorecards/topics.json`:
 - **Read the droplets yourself** as well, lesson, song and narration, and report what you
   found with quotes, not only the scores.
 
+`tools/insession/score.py` does the code's part of all this (prompts, answer checks, the code checks, the blind
+pairing and the summary), and `tools/insession/SCORE_WRITER.md` and `SCORE_JUDGE.md` are the subagents' briefs.
+
 It costs no API money but a lot of session usage (about 24 subagents, 40 minutes), so when a
 change you make could move its scores, offer a run once and wait for the answer. That means a
 change to the bundle prompt (`studio/prompts/bundle.md`), the script prompt

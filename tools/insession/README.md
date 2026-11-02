@@ -24,3 +24,7 @@ subagent in the Claude Code session saves an answer. No call reaches the Anthrop
 - Subagents read `BRIEF.md`, answer from the call's own folder only and save with `answer.py save`, which checks
   the answer against the call's JSON schema and the studio's own model: fix only what it lists.
 - `sheet.sh <video> <out.png> [every_s] [cols]` tiles a video's frames, each stamped with its time.
+- `score.py` runs the scorecard in the session (CLAUDE.md, "The scorecard runs in the session"): it writes each
+  topic's prompts and schemas, checks the writer's and the judge's answers, runs the bundle step's code checks and
+  pairs each droplet blind with the baseline run's. The writer and the judge are subagents briefed by
+  `SCORE_WRITER.md` and `SCORE_JUDGE.md`. `python tools/insession/score.py` lists its commands.
