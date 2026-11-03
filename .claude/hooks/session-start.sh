@@ -1,6 +1,7 @@
 #!/bin/bash
 # Every tool this repo uses, installed when a cloud session starts: a developer's session,
-# or the teacher routine's run (docs/agent-runbook.md). Nothing then stops mid-task to
+# or the teacher routine's run (docs/agent-runbook.md), which with POPSMOSIS_TEACHER_ONLY=1
+# gets only the studio's part (parts 1 to 3). Nothing then stops mid-task to
 # install a package. The container is cached once this finishes, so the heavy parts
 # (PyTorch, the timing models, node_modules) are paid once per environment, not per session.
 # Each part is idempotent, and a part that cannot be done says so and lets the rest run.

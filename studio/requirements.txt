@@ -6,6 +6,7 @@ openai>=3.39,<4  # the Meta provider: Muse speaks the OpenAI API
 meta-sam-parser>=0.1,<0.2  # Meta's reader for SAM 3.1's masks (studio/muse.py)
 pydantic>=2.13,<3
 pytest>=9
+jsonschema>=4.26,<5  # tools/insession/answer.py checks a subagent's answer against the call's schema
 
 # The media steps: skia draws the art and the videos; PyTorch on CPU (its own index),
 # torchaudio's MMS aligner and Demucs time the song. Pinned where the audio lane tested.

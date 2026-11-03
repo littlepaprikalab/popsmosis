@@ -8,7 +8,7 @@
 // iOS and Android's "maskable" icons get a full-bleed square with no rounded corners:
 // the device rounds the corners itself, and transparent corners would turn black.
 import { chromium } from '@playwright/test';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,8 +17,18 @@ const tile = readFileSync(join(web, 'src/app/icon.svg'), 'utf8');
 const square = tile.replace(/ rx="[\d.]+"/, '');
 if (square === tile) throw new Error('icon.svg: expected the tile <rect> to have an rx to remove');
 
-// Locally, CHROMIUM_PATH can point at a browser build other than the one @playwright/test pins.
-const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+// The same Chromium as the browser tests (playwright.config.ts): CHROMIUM_PATH can point at
+// a build other than the one @playwright/test pins, and a cloud session's own is used when
+// the pinned build is missing.
+const CLOUD_CHROMIUM = '/opt/pw-browsers/chromium';
+let pinned = false;
+try {
+  pinned = existsSync(chromium.executablePath());
+} catch {
+  // no build for this platform
+}
+const executablePath = process.env.CHROMIUM_PATH || (!pinned && existsSync(CLOUD_CHROMIUM) ? CLOUD_CHROMIUM : undefined);
+const browser = await chromium.launch({ executablePath });
 const page = await browser.newPage();
 
 async function png(svg, size) {
