@@ -240,9 +240,9 @@ function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
   let text: string;
   if (siteFull) text = `Popsmosis has made all the droplets it can for now. It takes topics again ${when(siteOpensAt)}.`;
   else if (perDay === 0) text = 'New topics are paused for now.';
-  else if (left === 0) text = `0 of ${perDay} topics left. The next comes back ${when(nextAt)}.`;
+  else if (left === 0) text = `0 of ${perDay} topics left. You can send another ${when(nextAt)}.`;
   else if (!nextAt) text = `${left} of ${perDay} topics left. Each comes back 24 hours after you send it.`;
-  else text = `${left} of ${perDay} topics left. Another comes back ${clockLabel(nextAt)}.`;
+  else text = `${left} of ${perDay} topics left. You get one more ${clockLabel(nextAt)}.`;
   const none = siteFull || left === 0;
   return (
     <p className="text-xs mt-1" aria-live="polite" data-testid="topic-allowance"
