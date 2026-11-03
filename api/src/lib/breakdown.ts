@@ -46,6 +46,9 @@ export interface BreakdownStep {
 export interface Breakdown {
   steps: BreakdownStep[]; // the lesson's, then the videos'
   seconds: number | null; // wall time: the art and the audio run side by side, so less than the steps' sum
+  // Each part's wall time, the two adding up to `seconds`; null: that part's bill is not here, or has no time.
+  // The page sets them against the time from the request, to say how much of it was waiting (EndToEnd).
+  partSeconds: Record<Part, number | null>;
   costUsd: number; // every priced call
   credits: number | null; // credits of the calls with no price
   unpriced: number; // models whose calls have neither a price nor credits (the provider did not say)
@@ -215,8 +218,9 @@ export function endToEndOf(
 
 /** The droplet's bill of materials for the page, or null when the studio sent none. */
 export function serializeBreakdown(lesson: unknown, videos: unknown): Breakdown | null {
-  const parts = [readPart(lesson, 'lesson'), readPart(videos, 'videos')]
-    .filter((p): p is NonNullable<typeof p> => p !== null);
+  const lessonPart = readPart(lesson, 'lesson');
+  const videosPart = readPart(videos, 'videos');
+  const parts = [lessonPart, videosPart].filter((p): p is NonNullable<typeof p> => p !== null);
   if (parts.length === 0) return null;
   const steps = parts.flatMap((p) => p.steps);
   const times = parts.map((p) => p.seconds).filter((s): s is number => s !== null);
@@ -226,6 +230,7 @@ export function serializeBreakdown(lesson: unknown, videos: unknown): Breakdown 
   return {
     steps,
     seconds: times.length ? round(times.reduce((a, b) => a + b, 0), 1) : null,
+    partSeconds: { lesson: lessonPart?.seconds ?? null, videos: videosPart?.seconds ?? null },
     costUsd: round(steps.reduce((sum, s) => sum + s.costUsd, 0), 6),
     credits: credits.length ? credits.reduce((sum, m) => sum + (m.credits ?? 0), 0) : null,
     unpriced: unpriced.length - credits.length,

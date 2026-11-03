@@ -7,6 +7,8 @@
  *
  * When a learner takes a request back, or deletes their account, their side of it goes and the lesson stays. The
  * lesson is the AI's work and already carries nothing about them, so it goes on serving whoever comes after them.
+ * A learner who wants the lesson gone as well deletes the request with everything (routes/questions.ts), which takes
+ * the droplet and its files with it (lib/storage-delete.ts).
  */
 import type { Prisma } from '../generated/prisma/client.js';
 import type { TxClient } from './prisma.js';

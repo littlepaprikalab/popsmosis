@@ -345,8 +345,9 @@ def gemini_song_model() -> str:
 
 
 def delivery(styles: list[str]) -> str:
-    """The sections the style raps, named for the singer, rapped "spoken on the beat, not sung", the rest sung; ""
-    when it raps none. Three songs whose styles said "rapped verses" came back sung all through (the owner, Nov 2):
+    """The sections the style raps, named for the singer, rapped "spoken on the beat, not sung"; "" when it raps
+    none. Nothing is said of the rest: "sing the chorus" was cut (the owner, Nov 3), as it could contradict a style
+    that chants or raps its hook, and the style says how the rest goes. Three songs whose styles said "rapped verses" came back sung all through (the owner, Nov 2):
     the prompt said "Sing the lines in order", and the styles "rapping and singing close to the mic". This line
     brought the rap back; cut to "Rap every verse.", the next three were sung again (the owner: no more rapping in
     the verses, "or at least what I consider rapping"). Nothing else is said of how the lines go: "backing vocals and
@@ -357,8 +358,7 @@ def delivery(styles: list[str]) -> str:
     parts = (["every verse"] if checks.RAPPED_VERSES.search(style)
              else [part for part, said in (("the second verse", checks.RAPPED_SECOND_VERSE), ("the bridge", checks.RAPPED_BRIDGE))
                    if said.search(style)]) or ["the verses"]
-    rest = "the chorus" if parts in (["every verse"], ["the verses"]) else "the rest"
-    return f"Rap {' and '.join(parts)}, spoken on the beat, not sung; sing {rest}."
+    return f"Rap {' and '.join(parts)}, spoken on the beat, not sung."
 
 
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:

@@ -314,6 +314,23 @@ model DropletPlays {
   @@map("droplet_plays")
 }
 
+// A deleted droplet whose files are still to be cleared from R2 (api/src/lib/storage-delete.ts): written in the
+// transaction that deletes the droplet, so its files go even when R2 does not answer at that moment. Kept until a
+// sweep after the last upload URL signed for it has run out finds the job done, since a render still running when the
+// learner deleted it can upload a file after the first pass. Only the id: nothing about the learner or the lesson, and
+// no foreign key, as the answer is gone.
+model StorageDeletion {
+  answerId  String    @id
+  createdAt DateTime  @default(now()) // when the droplet was deleted
+  // When a pass last left both folders empty. Null: none has yet, or the last one failed. A sweep skips a row that is
+  // cleared until its last pass is due (after SETTLE_MS), so each droplet costs two passes, not one an hour.
+  clearedAt DateTime?
+  tries     Int       @default(0) // passes that failed, for the log; a sweep takes the rows that failed least first
+  lastError String? // why the last one did
+
+  @@map("storage_deletions")
+}
+
 // Settings an admin changes on /admin/studio (api/src/lib/studio-settings.ts), one row per key, its value JSON. The
 // studio reads them from its claims, so a change reaches the next run with no redeploy.
 model Setting {

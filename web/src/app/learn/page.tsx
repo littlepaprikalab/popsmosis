@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, mem
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LightBulbIcon } from '@heroicons/react/24/outline';
-import { api, Question, Answer, ApiError, type TopicAllowance } from '@/lib/api';
+import { api, ApiError, isMissingRoute, Question, Answer, type TopicAllowance } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useGuardedSubmit } from '@/lib/useGuardedSubmit';
 import { usePolling } from '@/lib/usePolling';
@@ -155,6 +155,74 @@ function TeacherNotesLink({ href }: { href: string }) {
     </a>
   );
 }
+
+/**
+ * What deleting a topic with a lesson takes: everything (the API's /everything route), or only the learner's request,
+ * leaving the lesson on the Droplets tab naming no one (api/src/lib/privacy.ts). When people have liked or commented
+ * on it, Everything says how many, so what it takes from them is plain before it is chosen.
+ */
+function DeleteChoice({ everything, onChange, typed, onType, likes = 0, comments = 0 }: {
+  everything: boolean;
+  onChange: (everything: boolean) => void;
+  typed: string; // what is in the box Everything asks the word in
+  onType: (typed: string) => void;
+  likes?: number;
+  comments?: number;
+}) {
+  const counted = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const taken = [likes ? counted(likes, 'like') : '', comments ? counted(comments, 'comment') : ''].filter(Boolean).join(' and ');
+  const options = [
+    {
+      value: true, label: 'Everything', testId: 'delete-everything',
+      detail: 'Your request, your files and the follow-ups, and the lesson: its text and videos, and the likes and '
+        + 'comments people left on it. It leaves the Droplets tab.',
+    },
+    {
+      value: false, label: 'Only my request', testId: 'delete-request-only',
+      detail: 'Your words, your files and the follow-ups. The lesson stays on the public Droplets tab for others to '
+        + 'learn from, with nothing linking it to you.',
+    },
+  ];
+  return (
+    <fieldset>
+      <legend className="mb-3">What should go? This cannot be undone.</legend>
+      <div className="space-y-2">
+        {options.map((o) => (
+          <label key={o.label} className="flex gap-2.5 items-start cursor-pointer rounded-lg p-2.5"
+            style={{ border: `1px solid ${everything === o.value ? 'var(--accent-red)' : 'var(--border)'}` }}>
+            <input type="radio" name="delete-scope" className="mt-1 shrink-0" style={{ accentColor: 'var(--accent-red)' }}
+              checked={everything === o.value} onChange={() => onChange(o.value)} data-testid={o.testId} />
+            <span>
+              <span className="block font-semibold" style={{ color: 'var(--text-primary)' }}>{o.label}</span>
+              <span className="block text-[13px]">{o.detail}</span>
+              {o.value && taken && (
+                <span className="block text-[13px] mt-1 font-semibold" style={{ color: 'var(--text-primary)' }} data-testid="delete-engagement">
+                  This also deletes {taken} on it.
+                </span>
+              )}
+            </span>
+          </label>
+        ))}
+      </div>
+      {/* Everything cannot be undone and takes what other people left on it: a word typed, not a click that slipped. */}
+      {everything && (
+        <div className="mt-3">
+          <label htmlFor="delete-confirm-text" className="block mb-1.5 text-[13px]">
+            To delete everything, type <strong style={{ color: 'var(--text-primary)' }}>{DELETE_WORD}</strong> below.
+          </label>
+          <input id="delete-confirm-text" data-testid="delete-confirm-text" value={typed} onChange={(e) => onType(e.target.value)}
+            placeholder={DELETE_WORD} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={20}
+            className="w-full px-3 py-2 rounded text-sm outline-none focus:ring-1"
+            style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
+/** The word Everything asks to be typed before it deletes; any case, so a phone's capital still counts. */
+const DELETE_WORD = 'delete';
+const typedDeleteWord = (typed: string) => typed.trim().toLowerCase() === DELETE_WORD;
 
 /**
  * One topic request, its lesson, and the follow-ups under it. Memoized on purpose: the armed poll hands
@@ -410,6 +478,9 @@ function LearnContent() {
   const [brain, setBrain] = useState<Brain | null>(null);
   const [defaultBrain, setDefaultBrain] = useState<Brain | null>(null); // the Studio page's, for the Default button
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  // For a topic with a lesson: whether the lesson goes too (the API's /everything route), or only the request.
+  const [deleteLesson, setDeleteLesson] = useState(true);
+  const [typedDelete, setTypedDelete] = useState(''); // the word Everything asks for (DeleteChoice)
   // Submit pressed signed out: the box asks them to sign in, keeping what they typed.
   const [askSignIn, setAskSignIn] = useState(false);
   const signInRef = useRef<HTMLAnchorElement>(null);
@@ -613,17 +684,48 @@ function LearnContent() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  // Stable identity, like the callbacks below: each card is handed it. Every opening starts at Everything.
+  const requestDelete = useCallback((id: string) => {
+    setDeleteLesson(true);
+    setTypedDelete('');
+    setPendingDelete(id);
+  }, []);
+  const handleDelete = async (id: string, everything: boolean) => {
     const hadLesson = questions.find((q) => q.id === id)?.status === 'ANSWERED';
     try {
-      await api.deleteQuestion(id);
+      await api.deleteQuestion(id, hadLesson && everything, !hadLesson);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
-      if (hadLesson) showToast('Your request is deleted. The lesson stays for others to learn from.', 'success');
+      if (hadLesson) {
+        showToast(everything
+          ? 'Deleted: your topic, its lesson and its videos.'
+          : 'Your request is deleted. The lesson stays for others to learn from.', 'success');
+      }
     } catch (err) {
+      // An API from before deleting everything (mid-deploy, or rolled back) has no such route, so it deleted nothing.
+      if (isMissingRoute(err)) {
+        showToast('Deleting everything is not available for a moment, so nothing was deleted. Please try again in a few minutes.', 'error');
+        return;
+      }
+      // The card showed it waiting, and its lesson landed before the next poll: nothing was deleted. Show the lesson's
+      // card and ask again, with the choice.
+      if (!hadLesson && err instanceof ApiError && err.status === 409) {
+        showToast(err.message, 'info');
+        try {
+          const fresh = await api.getQuestion(id);
+          setQuestions((prev) => prev.map((q) => (q.id === id ? fresh : q)));
+          requestDelete(id);
+        } catch {
+          // The next poll brings the card up to date; the learner can delete it from there.
+        }
+        return;
+      }
       showToast(err instanceof Error ? err.message : 'Failed to delete topic', 'error');
     }
   };
   const deleting = questions.find((q) => q.id === pendingDelete);
+  const deletingLesson = deleting?.status === 'ANSWERED';
+  // Everything waits for the word; only my request, and a topic with no lesson, are one confirm as before.
+  const deleteBlocked = deletingLesson && deleteLesson && !typedDeleteWord(typedDelete);
 
   // Stable identity: QuestionCard is memoized, and a callback rebuilt each
   // render would re-render every card on the page anyway.
@@ -663,13 +765,19 @@ function LearnContent() {
     <PageContainer className="py-6">
       <ConfirmDialog
         open={!!pendingDelete}
-        title={deleting?.status === 'ANSWERED' ? 'Delete your request' : 'Delete topic'}
-        message={deleting?.status === 'ANSWERED'
-          ? 'Delete your request? Your words, your files and the follow-ups under it are deleted. The lesson stays on the public Droplets tab for others to learn from, with nothing linking it to you. This cannot be undone.'
+        title="Delete topic"
+        message={deletingLesson
+          ? <DeleteChoice everything={deleteLesson} onChange={setDeleteLesson} typed={typedDelete} onType={setTypedDelete}
+              likes={deleting?.answer?.likeCount} comments={deleting?.answer?.commentCount} />
           : 'Delete this topic request? This cannot be undone.'}
-        confirmLabel="Delete"
+        confirmLabel={!deletingLesson ? 'Delete' : deleteLesson ? 'Delete everything' : 'Delete my request'}
         variant="danger"
-        onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete); setPendingDelete(null); }}
+        confirmDisabled={deleteBlocked}
+        onConfirm={() => {
+          if (deleteBlocked) return;
+          if (pendingDelete) handleDelete(pendingDelete, deletingLesson && deleteLesson);
+          setPendingDelete(null);
+        }}
         onCancel={() => setPendingDelete(null)}
       />
 
@@ -850,7 +958,7 @@ function LearnContent() {
               index={i}
               isAdmin={isAdmin}
               onAnswerChange={updateAnswer}
-              onRequestDelete={setPendingDelete}
+              onRequestDelete={requestDelete}
               onSetHidden={setHidden}
               onApprove={approve}
             />

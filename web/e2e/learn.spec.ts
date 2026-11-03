@@ -272,7 +272,7 @@ test.describe('signed in', () => {
     await expect(page.getByText('ATP synthesis: how do cells')).toHaveCount(0);
   });
 
-  test('a topic with a lesson can be deleted: the request goes, the lesson stays on the Droplets tab', async ({ page, context, request }) => {
+  test('a topic with a lesson can be deleted, the request only: it goes, the lesson stays on the Droplets tab', async ({ page, context, request }) => {
     const text = `E2E ${Date.now()}: diffusion, for my quiz`;
     const asked = await request.post(apiUrl('/api/questions'), {
       headers: { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' },
@@ -297,7 +297,13 @@ test.describe('signed in', () => {
     await card.getByRole('button', { name: 'delete' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('The lesson stays on the public Droplets tab');
-    await dialog.getByRole('button', { name: 'Delete' }).click();
+    // Everything is what a delete takes unless the learner picks less.
+    await expect(dialog.getByTestId('delete-everything')).toBeChecked();
+    await expect(dialog.getByTestId('delete-engagement')).toHaveCount(0); // nobody has liked or commented on it
+    await dialog.getByRole('radio', { name: /Only my request/ }).check();
+    // Only Everything asks for the word typed: taking the request back is one confirm, as it was.
+    await expect(dialog.getByTestId('delete-confirm-text')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Delete my request' }).click();
     await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
     await expect(page.getByText('The lesson stays for others to learn from')).toBeVisible();
 
@@ -307,6 +313,107 @@ test.describe('signed in', () => {
     expect((await tab.json()).content).toContain('high to low');
     await page.reload();
     await expect(page.getByText(text)).toHaveCount(0);
+  });
+
+  test('a topic with a lesson can be deleted with everything: the lesson, its likes and comments leave the Droplets tab', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: osmosis, delete it all`;
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const asked = await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: text } });
+    expect(asked.status()).toBe(201);
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    const questionId = (await asked.json()).id;
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    const answerId = (await (await bot.answer(questionId, 'Water moves toward the **higher** solute concentration.')).json()).id;
+    const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
+    expect((await bot.video(answerId, { status: 'RENDERING' })).status()).toBe(200);
+    expect((await bot.video(answerId, { status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4`, lessonVideoUrl: `${BASE}/samples/lesson.mp4` })).status()).toBe(200);
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    expect((await request.patch(apiUrl(`/api/answers/${answerId}`), { headers: asAda, data: { approved: true } })).status()).toBe(200);
+    // Someone else likes it and comments on it.
+    expect((await request.put(apiUrl(`/api/droplets/${answerId}/like`), { headers: asAda })).status()).toBe(200);
+    expect((await request.post(apiUrl(`/api/droplets/${answerId}/comments`), { headers: asAda, data: { content: 'Nice one' } })).status()).toBe(201);
+
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await card.getByRole('button', { name: 'delete' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('the likes and comments people left on it');
+    await expect(dialog.getByTestId('delete-engagement')).toHaveText('This also deletes 1 like and 1 comment on it.');
+    await expect(dialog.getByTestId('delete-everything')).toBeChecked();
+    // Not until the word is typed: a click, or an Enter, that slipped deletes nothing.
+    const confirm = dialog.getByRole('button', { name: 'Delete everything' });
+    await expect(confirm).toBeDisabled();
+    await page.keyboard.press('Enter');
+    const box = dialog.getByLabel(/To delete everything, type/);
+    await box.fill('delet');
+    await expect(confirm).toBeDisabled();
+    await box.fill('Delete'); // a phone's capital counts
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+    await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
+    await expect(page.getByText('Deleted: your topic, its lesson and its videos.')).toBeVisible();
+
+    // Gone from the API and the Droplets tab, for everyone; the droplet's own page says so.
+    expect((await request.get(apiUrl(`/api/droplets/${answerId}`))).status()).toBe(404);
+    expect((await request.get(apiUrl(`/api/questions/${questionId}`), { headers: asAda })).status()).toBe(404);
+    await page.goto(`/droplets/${answerId}`);
+    await expect(page.getByText('This droplet is not on the tab')).toBeVisible();
+    await page.goto('/learn');
+    await expect(page.getByText(text)).toHaveCount(0);
+  });
+
+  test('deleting everything against an API from before it deletes nothing, and says so', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: buoyancy, on an old API`;
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const questionId = (await (await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: text } })).json()).id;
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    const answerId = (await (await bot.answer(questionId, 'Things float when they push aside their weight in water.')).json()).id;
+
+    // The API mid-deploy or rolled back: it has no such route, as Fastify answers for one it does not know.
+    await page.route('**/api/questions/*/everything', (route) =>
+      route.fulfill({ status: 404, json: { error: { code: 'NOT_FOUND', message: 'Route not found' } } }));
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await card.getByRole('button', { name: 'delete' }).click();
+    await page.getByRole('dialog').getByTestId('delete-confirm-text').fill('delete');
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete everything' }).click();
+    await expect(page.getByText('nothing was deleted')).toBeVisible();
+    await expect(card).toBeVisible();
+    // The request is still the learner's, with its lesson: not taken back behind the page's back.
+    const row = await (await request.get(apiUrl(`/api/questions/${questionId}`), { headers: asBen })).json();
+    expect([row.content, row.answer.id]).toEqual([text, answerId]);
+  });
+
+  test('deleting a topic whose lesson lands before the page sees it deletes nothing, and asks again with the choice', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: refraction, never mind`;
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const questionId = (await (await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: text } })).json()).id;
+    // The page's poll of waiting cards brings nothing new, so the card goes on showing it waiting.
+    await page.route('**/api/questions?ids=*', (route) => route.fulfill({ json: { data: [], nextCursor: null } }));
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('waiting')).toBeVisible();
+
+    // The lesson lands, unseen.
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    expect((await bot.answer(questionId, 'Light bends as it slows in glass.')).status()).toBe(201);
+
+    await card.getByRole('button', { name: 'delete' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Delete this topic request?');
+    await dialog.getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByText('Its lesson arrived just now, so nothing was deleted')).toBeVisible();
+    // Asked again, now with the choice, and the card shows the lesson.
+    await expect(dialog.getByTestId('delete-everything')).toBeChecked();
+    await expect(card).toContainText('Light bends');
+    const row = await (await request.get(apiUrl(`/api/questions/${questionId}`), { headers: asBen })).json();
+    expect([row.content, row.status]).toEqual([text, 'ANSWERED']);
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
   });
 
   test('a topic the teacher gives up says why, in place, and can be deleted', async ({ page, context, request }) => {

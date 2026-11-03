@@ -15,6 +15,7 @@ import { checksError } from '../lib/review.js';
 import { progressError, storedProgress } from '../lib/progress.js';
 import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
+import { clearSoon, queueFileDeletion } from '../lib/storage-delete.js';
 import { parseBrain } from '../lib/brains.js';
 import { studioForAgent } from '../lib/studio-settings.js';
 import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritten, topicAllowance } from '../lib/usage.js';
@@ -236,12 +237,24 @@ export default async function questionRoutes(app: FastifyInstance) {
   // DELETE /api/questions/:id — owner. One with no lesson yet (PENDING or FAILED) goes entirely. One with a lesson
   // is taken back: the learner's words, files and follow-ups go and the request no longer names them, while the
   // lesson stays for everyone else (lib/privacy.ts).
-  app.delete('/api/questions/:id', { preHandler: [requireUser] }, async (request, reply) => {
+  // DELETE /api/questions/:id/everything — owner. The same, but the lesson goes too: the droplet, its follow-ups, the
+  // likes, comments and play counts on it (they cascade from the question), and its files in R2
+  // (lib/storage-delete.ts), so it leaves the Droplets tab. A route of its own rather than a flag on the one above:
+  // an API from before it answers 404 and deletes nothing, where it would ignore a flag and only take the request
+  // back, leaving a lesson the learner can no longer reach while the page says it is gone.
+  // What either used of the learner's limits is not given back (lib/usage.ts).
+  // ?expect=no-lesson: the page showed the topic with no lesson. If one has landed since (the page polls a waiting
+  // topic every 15 s), the delete is refused with a 409 and nothing changes, so the learner is shown the choice
+  // rather than having a lesson they never saw taken back and kept. An API from before it ignores it.
+  const deleteQuestion = (everything: boolean) => async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
+    const { expect } = request.query as Record<string, string | undefined>;
+    if (expect !== undefined && expect !== 'no-lesson') return sendError(reply, 'VALIDATION_ERROR', 'expect must be no-lesson');
     const userId = request.viewer!.id;
 
+    let deletedAnswers: string[] = [];
     try {
-      await runTransaction(async (tx) => {
+      deletedAnswers = await runTransaction(async (tx) => {
         // Locked as the answer route locks it, so a lesson cannot land between the look and the delete.
         const rows = await tx.$queryRaw<{ userId: string | null; status: string }[]>`
           SELECT "userId", status FROM questions WHERE id = ${id} FOR UPDATE
@@ -249,15 +262,29 @@ export default async function questionRoutes(app: FastifyInstance) {
         const question = rows[0];
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
         if (question.userId !== userId) throw new AppError('FORBIDDEN', 'You can only delete your own questions');
-        if (question.status === 'ANSWERED') await detachQuestions(tx, [id]);
-        else await tx.question.delete({ where: { id } });
+        if (question.status === 'ANSWERED' && expect === 'no-lesson') {
+          throw new AppError('CONFLICT', 'Its lesson arrived just now, so nothing was deleted: choose what should go');
+        }
+        if (question.status === 'ANSWERED' && !everything) {
+          await detachQuestions(tx, [id]);
+          return [];
+        }
+        // The droplet's files are recorded in the same transaction, so they are cleared even if R2 is down now.
+        const answers = (await tx.answer.findMany({ where: { questionId: id }, select: { id: true } })).map((a) => a.id);
+        await queueFileDeletion(tx, answers);
+        await tx.question.delete({ where: { id } });
+        return answers;
       });
     } catch (err) {
       if (isAppError(err)) return sendError(reply, err.code, err.message);
       throw err;
     }
+    // Not awaited: the learner's 204 does not wait on R2, and the hourly sweep finishes what this does not.
+    void clearSoon(deletedAnswers, prisma, request.log);
     return reply.status(204).send();
-  });
+  };
+  app.delete('/api/questions/:id', { preHandler: [requireUser] }, deleteQuestion(false));
+  app.delete('/api/questions/:id/everything', { preHandler: [requireUser] }, deleteQuestion(true));
 
   // POST /api/questions/:id/claim — agent: take, or renew, the lease on one
   // question, and get it back with its attachments. The studio calls it before

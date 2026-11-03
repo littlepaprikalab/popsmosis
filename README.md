@@ -25,8 +25,8 @@ anyone signed in can give it a thumbs-up and comment on it. The plan, and where 
 
 The lessons are everyone's; the learners are private. What a learner sends (the request in
 their own words, their files, their follow-ups) is seen only by them, the teacher and the
-admins, and a learner can take a request back or delete their account while the lesson
-stays public. The [Privacy Policy and Terms of Use](#privacy-and-the-legal-pages) say so
+admins. A learner can take a request back or delete their account while the lesson stays
+public, or delete a request with its lesson and everything on it. The [Privacy Policy and Terms of Use](#privacy-and-the-legal-pages) say so
 to users at `/privacy` and `/terms`.
 
 Popsmosis started as a copy of [zoey](https://github.com/Iztera/zoey) (an agent-answered
@@ -392,7 +392,8 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
 | GET | `/api/questions/allowance` | the caller's topics left: `{ perDay, left, nextInSeconds, siteFull, siteOpensInSeconds }`. Each topic's place comes back 24 hours after it was asked for (no midnight reset), so the times are seconds from now: `nextInSeconds` is until one more comes back, or with none left until the caller may ask again; null when none is coming. The Learn page shows it in the topic box, by the browser's clock and time zone |
 | POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
-| DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
+| DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one. `?expect=no-lesson` (the page showed none): 409 and nothing changes if one has landed since, so the learner is asked again with the choice |
+| DELETE | `/api/questions/:id/everything` | own topic, with its lesson: the droplet, its follow-ups, likes, comments and play counts, and its files in both R2 buckets ([Privacy](#privacy-and-the-legal-pages)); it leaves the tab. A route of its own, not a flag, so an API from before it answers 404 and deletes nothing |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars; 429 past `REPLIES_PER_USER_PER_HOUR` (30), or when its files would pass the learner's file limits |
 | DELETE | `/api/replies/:id` | own reply |
 | PUT | `/api/droplets/:id/like` | thumbs-up a droplet on the tab: `{ liked: true, likeCount }`; idempotent, so a second PUT changes nothing; 404 unless it is on the tab. 60 a minute with the DELETE |
@@ -430,8 +431,9 @@ reads text any learner writes ([the skill file](docs/popsmosis-agent-skill.md#wh
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
 `endToEnd`, how long it took from the request ([End to end](#end-to-end)); `awaitingVideos`, true while the page holds the text back for the videos (below);
-`hidden`, true when an admin took it off the Droplets tab; and `awaitingReview`, true while it waits for an admin to
-approve it. The question carries `progress` while its droplet is being
+`hidden`, true when an admin took it off the Droplets tab; `awaitingReview`, true while it waits for an admin to
+approve it; and `likeCount` and `commentCount`, its thumbs-up and comments on the tab, which the delete dialog names
+since deleting the topic with everything takes them too. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
 the question routes; the reply queue's `context` is the compact part a follow-up needs.
@@ -486,7 +488,7 @@ droplets, under a millisecond either way.
 
 Under each lesson on `/learn`, folded to its totals, is how the droplet was made: one line
 per step, the models that ran it with their number of calls and what they cost, how long
-it took, and the total time and cost, with how long it took from the request ([End to end](#end-to-end)). Under a step's models are the tools it ran on the
+it took, and the studio's work in all, its time and cost, with how long it took from the request ([End to end](#end-to-end)). Under a step's models are the tools it ran on the
 studio's machine, with their versions, and every line has a chip in its maker's colour. The
 studio logs every model call to the job's `calls.jsonl` with the step that made it
 (`studio/ledger.py`), and sends what it adds up to
@@ -506,9 +508,13 @@ it back as
                           { "name": "torchaudio", "version": "2.11.0+cpu", "maker": "Meta" },
                           { "name": "torch", "version": "2.11.0+cpu", "maker": "Meta" },
                           { "name": "ffmpeg", "version": "6.1.1-3ubuntu5", "maker": "FFmpeg" } ] } ],
-  "seconds": 653.3, "costUsd": 0.7981, "credits": 3214, "unpriced": 0, "complete": false
+  "seconds": 653.3, "partSeconds": { "lesson": 277.0, "videos": 376.3 },
+  "costUsd": 0.7981, "credits": 3214, "unpriced": 0, "complete": false
 }
 ```
+
+`partSeconds` is the lesson's and the videos' time each, adding up to `seconds`; `null` for a part
+whose bill is not there.
 
 `tools` is the software a step ran on the studio's machine besides its models (`TOOLS` in
 `studio/ledger.py`: skia for the art and the frames, ffmpeg for the audio and the videos,
@@ -539,13 +545,30 @@ post (the answer's `createdAt`) and the videos' READY (their last status change,
 ```
 
 in seconds from the request; `videos` is `null` until they are READY, and stays so for videos given up or never
-made. The database's clock stamps the lesson and the API's the READY, so `videos` is held to no less than `lesson`. The bill shows them under its total, "Request to lesson" and "End to end", and its folded line leads with the
-end to end ("15.2 min end to end · 10.9 min of work · $0.80"). A droplet is done end to end with its videos, or with
-its lesson when it has none; until then, and when its videos failed, the bill shows the lesson's time alone. A note
-says what the end to end counts besides the studio's time ("the studio's 10.9 min, and 4.3 min waiting for the
-studio to start and between the lesson and its videos"), only when the bill has every part up to the end: a READY
-sent without the videos' bill would otherwise count their work as waiting. A night in the queue reads in hours, a
-weekend in days. Nothing is stored for it, and the cards' queries already read the three times, so it costs no query
+made. The database's clock stamps the lesson and the API's the READY, so `videos` is held to no less than `lesson`.
+
+The bill shows it under the studio's work, "From the request, by the clock", split with each part's time
+(`partSeconds`) into the waits and the work, so that it adds up:
+
+```
+Studio's work                                      10.9 min   $0.80 + 3,214 cr
+FROM THE REQUEST, BY THE CLOCK
+  Waiting for the studio to start                   2.9 min
+  Writing the lesson (posted at 7.5 min)            4.6 min
+  Waiting between the lesson and the videos         1.4 min
+  Making the videos                                 6.3 min
+End to end                                         15.2 min
+```
+
+The wait between the lesson and the videos counts the hand-off and the gap before a retry, and a failed try's work
+on another machine, whose runs are not on this bill. While the end reads in minutes, every time is rounded to the
+tenth the bill shows before it is split, so the stretches add up to the end as shown and the two work stretches to
+the studio's work, not a tenth off (the work can only outrun the end by the clocks being apart; then the end wins).
+A part with no time on the bill (a READY sent without the videos' bill, which clears their bill so far; an API older
+than `partSeconds`), or with more than its stretch of the clock by over a minute, leaves its stretch whole ("Request
+to lesson", "Lesson to videos") rather than count its work as waiting. A droplet is done end to end with its videos, or with its lesson when it has none;
+until then, and when its videos failed, the time runs to "Request to lesson". The folded line leads with the end to
+end ("15.2 min end to end · 10.9 min of work · $0.80"). A night in the queue reads in hours, a weekend in days. Nothing is stored for it, and the cards' queries already read the three times, so it costs no query
 and about 40 bytes a card. The reply queue's `answer` does not carry it.
 
 #### While a droplet is made
@@ -795,11 +818,26 @@ Two sides, kept apart in the API (`api/src/lib/privacy.ts`):
 Beside both, the [play counts](#play-counts) are about no one: totals of how far each video's
 plays got and how often a hook clip was shared or downloaded, seen only by admins.
 
-A learner can **take back** a request from its card: with no lesson yet it is deleted; with
-one, their words, files and thread are deleted and `questions.userId` is set to null, so
-the lesson stays on the tab naming no one. **Deleting an account** (`/account`) does that
-for every request with a lesson and deletes everything else, except for the only admin,
-who has to make someone else an admin first.
+A learner can **delete** a request from its card: with no lesson yet it is deleted. With
+one, they choose. **Only my request** takes it back: their words, files and thread are
+deleted and `questions.userId` is set to null, so the lesson stays on the tab naming no one.
+**Everything** (`DELETE /api/questions/:id/everything`) deletes the request and the droplet
+with all that hangs on it (its follow-ups, the likes, comments and play counts others left,
+and the files in both R2 buckets), so it leaves the tab. It is the default, and the dialog
+will not delete until the learner types `delete` (any case), so a slipped click or Enter
+deletes nothing; it also says how many likes and comments go with it. Anything still writing to it (a like,
+a comment, a follow-up, the teacher's reply, the studio's video calls) gets a 404, never a
+server error, and the studio stops at its next step ("the topic was deleted"). The files are
+cleared by `api/src/lib/storage-delete.ts`: the droplet is recorded in `storage_deletions` in
+the transaction that deletes it and its `<answerId>/` folders are emptied at once; then an
+hourly sweep clears any droplet whose first pass did not (R2 down, the API restarted), and
+makes one last pass once every upload URL signed for it has run out (`UPLOAD_URL_SECONDS`,
+2 hours, and half an hour more), so a render still running at the delete leaves nothing
+behind. A droplet that keeps failing is tried after the others, so it holds none up. A copy
+Cloudflare already caches can be served a while longer to someone who has its link. Nothing it used of
+the learner's daily limits is given back. **Deleting an account** (`/account`) takes back every
+request with a lesson and deletes everything else, except for the only admin, who has to make
+someone else an admin first.
 
 `/privacy`, `/terms` and `/consumer-health-data` (the policy Washington's My Health My
 Data Act requires, with its own footer link) are plain pages in `web/src/app/`. The facts

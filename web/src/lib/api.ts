@@ -3,6 +3,11 @@ import type { Brain } from './brains';
 const API_BASE = '/api';
 const REQUEST_TIMEOUT_MS = 30_000;
 
+/** True when the API has no route for this request: one from before the web app, mid-deploy or rolled back. */
+export function isMissingRoute(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 404 && err.message === 'Route not found';
+}
+
 export class ApiError extends Error {
   status: number;
   code: string | undefined;
@@ -235,6 +240,9 @@ export interface BreakdownStep {
 export interface Breakdown {
   steps: BreakdownStep[];
   seconds: number | null; // wall time; the art and the audio are made side by side
+  // The lesson's and the videos' wall time, adding up to `seconds`; null: that part's bill is not here. Absent from
+  // an API older than this page.
+  partSeconds?: { lesson: number | null; videos: number | null };
   costUsd: number;
   credits: number | null; // credits of the calls with no price
   unpriced: number; // models with neither a price nor credits: the provider did not say
@@ -391,6 +399,10 @@ export interface Answer {
   endToEnd?: EndToEnd | null;
   hidden: boolean; // an admin took it off the public Droplets tab
   awaitingReview?: boolean; // READY, and off the Droplets tab until an admin has looked at it; absent from an older API
+  // The thumbs-up and comments on the Droplets tab, which deleting the topic with everything takes too; absent from an
+  // older API.
+  likeCount?: number;
+  commentCount?: number;
   replies: Reply[];
   awaitingAgent: boolean;
   // True while the page holds the lesson text back until its videos are READY or FAILED (at most an hour after
@@ -605,7 +617,13 @@ export const api = {
   // brain: an admin's pick for the topic (lib/brains.ts); left out, the teacher's own makes it.
   askQuestion: (content: string, brain?: Brain | null) =>
     request<Question>('/questions', { method: 'POST', body: JSON.stringify(brain ? { content, brain } : { content }) }).then(localClock),
-  deleteQuestion: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
+  // everything: a topic with a lesson goes whole, the lesson, its videos, likes and comments too; without it, the
+  // request is taken back and the lesson stays on the Droplets tab. A topic with no lesson goes whole either way.
+  // Its own route, so an API from before it answers 404 ('Route not found') and deletes nothing (isMissingRoute).
+  // expectNoLesson: the page shows the topic with no lesson; if one has landed since, the API answers 409 and
+  // deletes nothing, so the learner can be shown the choice.
+  deleteQuestion: (id: string, everything = false, expectNoLesson = false) =>
+    request<void>(`/questions/${id}${everything ? '/everything' : expectNoLesson ? '?expect=no-lesson' : ''}`, { method: 'DELETE' }),
   getTopicAllowance: () => request<TopicAllowanceAnswer>('/questions/allowance').then(allowanceClock),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh

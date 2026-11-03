@@ -61,6 +61,7 @@ describe('serializeBreakdown', () => {
     expect(b.steps.map((s) => [s.part, s.step])).toEqual([
       ['lesson', 'request'], ['lesson', 'bundle'], ['videos', 'audio'], ['videos', 'timing'], ['videos', 'render']]);
     expect(b.seconds).toBe(480.4);
+    expect(b.partSeconds).toEqual({ lesson: 180.4, videos: 300 }); // each part's own, for the page's waits
     expect(b.costUsd).toBeCloseTo(0.98);
     expect(b.credits).toBe(3300); // ElevenLabs, with no price set for its credits
     expect(b.unpriced).toBe(0);
@@ -91,7 +92,7 @@ describe('serializeBreakdown', () => {
   it('shows the lesson alone while the videos are not done', () => {
     const b = serializeBreakdown(lesson, null)!;
     expect(b.steps).toHaveLength(2);
-    expect(b).toMatchObject({ seconds: 180.4, credits: null, unpriced: 0, complete: true });
+    expect(b).toMatchObject({ seconds: 180.4, partSeconds: { lesson: 180.4, videos: null }, credits: null, unpriced: 0, complete: true });
   });
 
   it('counts a model whose provider said neither a price nor credits', () => {
@@ -120,6 +121,7 @@ describe('serializeBreakdown', () => {
       models: [{ model: 'claude-opus-5-5', maker: 'Anthropic', calls: 2, costUsd: 0.25, credits: null }],
       tools: [{ name: 'ffmpeg', version: null, maker: 'FFmpeg' }] }]);
     expect(b.seconds).toBeNull();
+    expect(b.partSeconds).toEqual({ lesson: null, videos: null });
     expect(b.costUsd).toBe(0.25);
   });
 });

@@ -98,8 +98,10 @@ export default function TermsPage() {
             same lesson. To the extent you have any rights in a lesson because of what you asked for, you give us a
             permanent, irrevocable, worldwide, royalty-free license to use, publish and adapt it, and to let others use
             it as <a href="#license">section 8</a> allows.</li>
-          <li>You can delete your request at any time. The lesson stays public, with nothing linking it to you. If a
-            lesson identifies you or anyone else, tell us at <Contact /> and we will take it down.</li>
+          <li>You can delete your request at any time, and choose whether the lesson made from it is deleted with it
+            or stays public with nothing linking it to you. Deleting a lesson takes it off Popsmosis; it does not reach
+            copies other people already made or shared under <a href="#license">section 8</a>. If a lesson identifies
+            you or anyone else, tell us at <Contact /> and we will take it down.</li>
         </ul>
       </Section>
 

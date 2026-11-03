@@ -1040,6 +1040,8 @@ account.
   follow-ups in their thread; admins see everyone's to moderate (`api/src/lib/privacy.ts`).
   A learner can take a request back, or delete their account: their words, files and
   follow-ups go, and the lesson stays on the tab naming no one (`questions.userId` null).
+  Or they can delete a request with everything: the droplet goes too, with its likes,
+  comments, play counts and files in R2 (README, "Privacy and the legal pages").
   `/privacy` and `/terms` tell users so, and the droplets are shared under CC BY-NC-SA 4.0
   (`web/src/lib/legal.ts`).
 - **Listed automatically** once the videos are READY, so everything on it passed the

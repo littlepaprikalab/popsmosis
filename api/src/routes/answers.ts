@@ -147,6 +147,9 @@ export default async function answerRoutes(app: FastifyInstance) {
     });
     await prisma.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });
     if (count === 0) {
+      // Deleted with everything by its learner since the look above: say so, as every other route does, so the studio
+      // stops on "the topic was deleted" rather than on another run.
+      if (!(await prisma.answer.findUnique({ where: { id }, select: { id: true } }))) return sendError(reply, 'NOT_FOUND', 'Answer not found');
       return sendError(reply, 'CONFLICT', attempt === undefined
         ? 'These videos are READY and listed on the Droplets tab; they can no longer change'
         : 'Another run has taken over these videos, or they are no longer rendering');
