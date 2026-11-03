@@ -553,14 +553,17 @@ The bill shows it under the studio's work, "From the request, by the clock", spl
 (`partSeconds`) into the waits and the work, so that it adds up:
 
 ```
-Studio's work                                      10.9 min   $0.80 + 3,214 cr
+Studio's work                                           10.9 min  $0.80 + 3,214 cr
 FROM THE REQUEST, BY THE CLOCK
-  Waiting for the studio to start                   2.9 min
-  Writing the lesson (posted at 7.5 min)            4.6 min
-  Waiting between the lesson and the videos         1.4 min
-  Making the videos                                 6.3 min
-End to end                                         15.2 min
+  Waiting for the studio to start                        2.9 min
+  Making the lesson (steps 01–03, posted at 7.5 min)     4.6 min
+  Waiting between the lesson and the videos              1.4 min
+  Making the videos (steps 04–10)                        6.3 min
+End to end                                              15.2 min
 ```
+
+Each part's work is all its steps, so the line names them by their numbers on the bill above: making the lesson is
+reading the request, writing it and fact-checking it, longer than step 02 "Write the lesson" alone.
 
 The wait between the lesson and the videos counts the hand-off and the gap before a retry, and a failed try's work
 on another machine, whose runs are not on this bill. While the end reads in minutes, every time is rounded to the
