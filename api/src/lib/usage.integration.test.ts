@@ -73,6 +73,60 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await ask(ada.cookie)).statusCode).toBe(201);
   });
 
+  it('tells a learner how many topics they have left, and when the next comes back', async () => {
+    process.env.QUESTIONS_PER_USER_PER_DAY = '3';
+    const ivy = await learner('ivy');
+    const allowance = async () => {
+      const res = await app.inject({ method: 'GET', url: '/api/questions/allowance', headers: asUser(ivy.cookie) });
+      expect(res.statusCode).toBe(200);
+      return res.json();
+    };
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
+    const inHours = (seconds: number) => seconds / 3600;
+
+    // None used: all left, nothing coming back.
+    expect(await allowance()).toEqual({ perDay: 3, left: 3, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null });
+
+    // Two used: one left, and the older's place comes back first, 24 hours after it was taken. A row past the
+    // window, or someone else's, counts for nothing.
+    const other = await learner('ivy-other');
+    await prisma.usageEvent.createMany({ data: [
+      { userId: ivy.id, kind: 'TOPIC', createdAt: hoursAgo(20) },
+      { userId: ivy.id, kind: 'TOPIC', createdAt: hoursAgo(2) },
+      { userId: ivy.id, kind: 'TOPIC', createdAt: hoursAgo(25) },
+      { userId: ivy.id, kind: 'REPLY', createdAt: hoursAgo(23) },
+      { userId: other.id, kind: 'TOPIC', createdAt: hoursAgo(23) },
+    ] });
+    const some = await allowance();
+    expect(some).toMatchObject({ perDay: 3, left: 1, siteFull: false });
+    expect(inHours(some.nextInSeconds)).toBeCloseTo(4, 1);
+
+    // One more through the API: none left, and the next is still the 20-hours-ago one's.
+    expect((await ask(ivy.cookie)).statusCode).toBe(201);
+    const none = await allowance();
+    expect(none.left).toBe(0);
+    expect(inHours(none.nextInSeconds)).toBeCloseTo(4, 1);
+
+    // An admin lowers the limit under what is used: asking opens again only once enough have gone.
+    process.env.QUESTIONS_PER_USER_PER_DAY = '2';
+    const lowered = await allowance();
+    expect(lowered.left).toBe(0);
+    expect(inHours(lowered.nextInSeconds)).toBeCloseTo(22, 1); // the 2-hours-ago one, the second oldest
+    process.env.QUESTIONS_PER_USER_PER_DAY = '0'; // 0: nobody may ask; nothing comes back
+    expect(await allowance()).toMatchObject({ left: 0, nextInSeconds: null });
+
+    // The site's day used up: said whatever the learner has left, with when it takes topics again.
+    process.env.QUESTIONS_PER_USER_PER_DAY = '10';
+    process.env.TOPICS_PER_DAY = '4';
+    const full = await allowance();
+    expect(full).toMatchObject({ left: 7, siteFull: true });
+    expect(inHours(full.siteOpensInSeconds)).toBeCloseTo(1, 1); // the other learner's, 23 hours ago
+    process.env.TOPICS_PER_DAY = '0';
+    expect(await allowance()).toMatchObject({ siteFull: false, siteOpensInSeconds: null });
+
+    expect((await app.inject({ method: 'GET', url: '/api/questions/allowance' })).statusCode).toBe(401);
+  });
+
   it('requests sent all at once cannot all pass the same count', async () => {
     process.env.QUESTIONS_PER_USER_PER_DAY = '3';
     const ben = await learner('ben');

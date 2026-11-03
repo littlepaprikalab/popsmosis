@@ -116,6 +116,57 @@ async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Pro
   return null;
 }
 
+/**
+ * What the caller has left of their topics, for the page to show before they ask (GET /api/questions/allowance).
+ * The window rolls: each topic's place comes back 24 hours after it was asked for, the same instant wherever the
+ * learner is. So the times are seconds from now, which the page turns into a time on its own clock and in the
+ * learner's own time zone.
+ *
+ * - `left`: how many the learner may ask for now, by their own limit.
+ * - `nextInSeconds`: with some left, until one more comes back (the oldest take in the window turns 24 hours old);
+ *   with none left, until they may ask again, which is more than one coming back when an admin lowered the limit.
+ *   Null when nothing is coming back: none used, or a limit of 0.
+ * - `siteFull`: every learner's topics together have reached TOPICS_PER_DAY, whatever this learner has left, and
+ *   `siteOpensInSeconds` is until the site takes one again.
+ *
+ * Lock-free, like topicAllowed: a look, never what holds.
+ */
+export interface TopicAllowance {
+  perDay: number;
+  left: number;
+  nextInSeconds: number | null;
+  siteFull: boolean;
+  siteOpensInSeconds: number | null;
+}
+
+export async function topicAllowance(userId: string, env: NodeJS.ProcessEnv = process.env): Promise<TopicAllowance> {
+  const { topicsPerUserPerDay: perDay, topicsPerDay } = usageLimits(env);
+  const now = Date.now();
+  const since = new Date(now - DAY_MS);
+  // Until the take at `index` in the window, oldest first, turns 24 hours old; null when there is no such take.
+  const placeBackIn = async (who: { userId?: string }, index: number): Promise<number | null> => {
+    if (index < 0) return null;
+    const take = await prisma.usageEvent.findFirst({
+      where: { ...who, kind: 'TOPIC', createdAt: { gte: since } },
+      orderBy: { createdAt: 'asc' }, skip: index, select: { createdAt: true },
+    });
+    return take ? Math.max(0, Math.ceil((take.createdAt.getTime() + DAY_MS - now) / 1000)) : null;
+  };
+
+  const used = await prisma.usageEvent.count({ where: { userId, kind: 'TOPIC', createdAt: { gte: since } } });
+  const left = Math.max(0, perDay - used);
+  const nextInSeconds = await placeBackIn({ userId }, left > 0 ? 0 : used - perDay);
+
+  let siteFull = false;
+  let siteOpensInSeconds: number | null = null;
+  if (topicsPerDay > 0) {
+    const all = await prisma.usageEvent.count({ where: { kind: 'TOPIC', createdAt: { gte: since } } });
+    siteFull = all >= topicsPerDay;
+    if (siteFull) siteOpensInSeconds = await placeBackIn({}, all - topicsPerDay);
+  }
+  return { perDay, left, nextInSeconds, siteFull, siteOpensInSeconds };
+}
+
 /** Why the caller may not post a follow-up now, or null. */
 async function replyRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Promise<AppError | null> {
   const { repliesPerUserPerHour } = usageLimits(env);
