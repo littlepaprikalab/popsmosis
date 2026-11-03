@@ -401,7 +401,8 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
                       {making && <td className={`${cell} !pr-1`}>{j === 0 && <StatusMark status={r.status} />}</td>}
                       <td className={`${cell} tabular-nums`} style={{ color: 'var(--text-muted)' }}>{j === 0 ? String(i + 1).padStart(2, '0') : ''}</td>
                       <td className={cell} style={{ color: 'var(--text-primary)' }}>{j === 0 && <StepName row={r} />}</td>
-                      <td className={`${cell} break-all`}>
+                      {/* A long name breaks where it must; a line's words wrap whole (break-all split "the less on") */}
+                      <td className={`${cell} wrap-anywhere`}>
                         {l ? <LineName line={l} /> : <span style={{ color: 'var(--text-muted)' }}>{r.bill && r.status !== 'running' ? 'code' : '—'}</span>}
                       </td>
                       <td className={cell}><MakerChip maker={l?.maker ?? null} /></td>
@@ -475,7 +476,7 @@ function PhoneBill({ rows, bill, making, time, timeline }: {
             {r.bill && linesOf(r.bill).map((l, k) => (
               // By place: one model can have two lines, its API calls' and those answered in session.
               <div key={k} className={`flex gap-2 ${making ? 'pl-11' : 'pl-6'}`}>
-                <span className="min-w-0 break-all">
+                <span className="min-w-0 wrap-anywhere">
                   <LineName line={l} />{l.calls !== null && l.calls > 1 ? ` ×${l.calls}` : ''}<MakerChip maker={l.maker} className="ml-1.5" />
                 </span>
                 <span className="ml-auto tabular-nums whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{l.cost ?? ''}</span>
