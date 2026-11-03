@@ -33,6 +33,7 @@ from studio.schemas import Arrows, Locations, SceneLocations, Timeline
 GHOST_WASH = 0.85  # how pale an unrevealed structure is
 SPOT_WASH = 0.6  # how pale everything but the spotlit structure is
 EDGE_BLUR = 3.0  # sigma of a ghost's edge, in art pixels
+GROUND_RING = 24  # art pixels around a structure where its ghost finds the colour it fades toward (SceneArt.ground)
 SPOT_BLUR = 1.2  # a spotlight's edge stays crisp, so the bright structure keeps its outline
 REVEAL_S = 0.4  # ghost to full
 LABEL_IN_S = 0.35
@@ -359,6 +360,7 @@ class SceneArt:
         self.width, self.height = pixels.shape[1], pixels.shape[0]
         b, g, r = media.paper(pixels)  # the art's background, which the washes fade toward
         self.paper = skia.Color(r, g, b)
+        self._paper_bgr = (b, g, r)
         self.art = skia.Image.fromarray(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
         self._half = pixels[::2, ::2, :3].copy()  # for finding its painted labels (label_boxes())
         self._label_boxes: list[Rect] | None = None
@@ -383,6 +385,8 @@ class SceneArt:
             self.masks[s.name] = skia.Image.fromarray(np.ascontiguousarray(grey), colorType=skia.kAlpha_8_ColorType)
             self._mask_files[s.name] = mask_file
         self._ghosts: dict[str, skia.Image] = {}
+        self._grounds: dict[str, tuple[tuple[int, int, int], str | None]] = {}
+        self._half_masks: dict[str, np.ndarray] = {}
         self._spots: dict[str, skia.Image] = {}
         self._composed: OrderedDict[tuple, skia.Image] = OrderedDict()
         self.content = _drawn_box(pixels, located, (b, g, r))
@@ -430,7 +434,8 @@ class SceneArt:
         return skia.Surface.MakeRaster(skia.ImageInfo.Make(self.width, self.height, kind, skia.kPremul_AlphaType))
 
     def ghost(self, name: str) -> skia.Image:
-        """Where the structure is, with a soft edge: drawn in the background's colour at GHOST_WASH over the art.
+        """Where the structure is, with a soft edge: drawn at GHOST_WASH over the art, in the colour around it
+        (_fade_to()): the page's for a part drawn on the page.
 
         Washes are alpha only (a byte a pixel), so a scene with many structures stays small."""
         if name not in self._ghosts:
@@ -442,16 +447,58 @@ class SceneArt:
             self._ghosts[name] = surface.makeImageSnapshot()
         return self._ghosts[name]
 
+    def _half_mask(self, name: str) -> np.ndarray:
+        if name not in self._half_masks:
+            self._half_masks[name] = _read(self._mask_files[name], skia.kGray_8_ColorType)[::2, ::2] > 127
+        return self._half_masks[name]
+
+    def ground(self, name: str) -> tuple[tuple[int, int, int], str | None]:
+        """What is around the structure in the art, which its ghost fades toward: the median colour (in the art's
+        channel order) of the pixels within GROUND_RING of its box and outside it, and the structure those pixels
+        mostly belong to, or None (the page, or a painted part no structure names). Faded toward the page, a dark
+        beetle on dark bark was a white beetle until named (Nov 2)."""
+        if name not in self._grounds:
+            mask = self._half_mask(name)
+            ys, xs = np.nonzero(mask)
+            colour, around = self._paper_bgr, None
+            if len(xs):
+                r = GROUND_RING // 2
+                y0, y1 = max(int(ys.min()) - r, 0), min(int(ys.max()) + r + 1, mask.shape[0])
+                x0, x1 = max(int(xs.min()) - r, 0), min(int(xs.max()) + r + 1, mask.shape[1])
+                ring = ~mask[y0:y1, x0:x1]
+                if ring.any():
+                    colour = tuple(int(v) for v in np.median(self._half[y0:y1, x0:x1][ring], axis=0))
+                    cover = {other: int((self._half_mask(other)[y0:y1, x0:x1] & ring).sum())
+                             for other in self.masks if other != name}
+                    best = max(cover, key=cover.get, default=None)
+                    if best is not None and cover[best] * 2 > int(ring.sum()):
+                        around = best
+            self._grounds[name] = (colour, around)
+        return self._grounds[name]
+
+    def _fade_to(self, name: str, levels: dict[str, float], seen: frozenset = frozenset()) -> tuple[float, ...]:
+        """The colour a ghost fades toward now: what is around it as it shows on screen, so a part on another part
+        that is itself still a ghost fades with it, toward the page, and never shows as a dark blob on a pale one."""
+        colour, around = self.ground(name)
+        if around is None or around in seen:
+            return colour
+        wash = GHOST_WASH * levels.get(around, 0.0)
+        under = self._fade_to(around, levels, seen | {name})
+        return tuple(c * (1 - wash) + u * wash for c, u in zip(colour, under))
+
     def spot(self, name: str) -> skia.Image:
-        """Everywhere but the structure: drawn in the background's colour at SPOT_WASH, it leaves only that
-        one bright."""
+        """Everywhere but the structure and the parts on it (ground()): drawn in the background's colour at
+        SPOT_WASH, it leaves only that one bright. The bark spotlit left its beetles, holes in its mask, washed white
+        (Nov 2)."""
         if name not in self._spots:
             surface = self._surface(alpha_only=True)
             canvas = surface.getCanvas()
             canvas.clear(skia.ColorWHITE)
-            canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(),
-                             skia.Paint(BlendMode=skia.BlendMode.kDstOut,
-                                        ImageFilter=skia.ImageFilters.Blur(SPOT_BLUR, SPOT_BLUR)))
+            on_it = [other for other in self.masks if other != name and self.ground(other)[1] == name]
+            for part in (name, *on_it):
+                canvas.drawImage(self.masks[part], 0, 0, skia.SamplingOptions(),
+                                 skia.Paint(BlendMode=skia.BlendMode.kDstOut,
+                                            ImageFilter=skia.ImageFilters.Blur(SPOT_BLUR, SPOT_BLUR)))
             self._spots[name] = surface.makeImageSnapshot()
         return self._spots[name]
 
@@ -605,9 +652,11 @@ class SceneArt:
         surface = self._surface()
         canvas = surface.getCanvas()
         canvas.drawImage(self.art, 0, 0)
+        levels = dict(key[0])
         for name, level in key[0]:
+            b, g, r = (round(v) for v in self._fade_to(name, levels))
             canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
-                             skia.Paint(Color=self.paper, Alphaf=GHOST_WASH * level))
+                             skia.Paint(Color=skia.Color(r, g, b), Alphaf=GHOST_WASH * level))
         if key[1]:  # added up, then washed once: two spotlights crossing wash the rest as one does, not less
             canvas.saveLayerAlpha(None, round(255 * SPOT_WASH))
             for name, level in key[1]:
