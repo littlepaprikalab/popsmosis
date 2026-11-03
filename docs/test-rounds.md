@@ -1933,7 +1933,9 @@ an animation of shots hitting a person). Its corrections kept a couplet's rhyme 
 60 lines against the full prompt's 45 of 58, with couplets such as "Italy stayed neutral when the war began / In
 'fifteen it fought Austria-Hungary instead". No single cut showed it; all of them together did. The rule that a
 corrected couplet keeps its lines, rhythm and last word went back into the Lyrics section, in its own words.
-Two runs with it back are under way.
+With it back (0bd2ba4), one more run on each droplet kept the rhyme word on 27 of 32 lines and gave the
+full prompt's verdicts, but "the wall breaks down", the borderline line that also moved in copies
+missing unrelated rules.
 
 The prompt is 1,769 words, from 2,643. What remains untested is Muse: the same rules may matter more to a
 weaker checker, and only a paid run on Muse Wonder and Muse Spark can say.
