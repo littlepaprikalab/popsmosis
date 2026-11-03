@@ -775,6 +775,20 @@ def test_the_picture_is_told_each_colour_in_one_everyday_word():
     assert "Colours: ATP synthase brown, Water cyan, Carbon dioxide teal." in art.paint_prompt(bundle, scene)
 
 
+def test_the_looks_bilayer_is_asked_for_only_where_a_part_is_a_membrane():
+    bundle = Bundle.model_validate(bundle_data())
+    look = ("Educational textbook illustration of a capillary, clean scientific style: a red blood cell inside it. A "
+            "clean, modern biology textbook illustration: soft gradient shading, vibrant colour coding; the membrane a "
+            "phospholipid bilayer; a molecule the scene names as a small glossy sphere.")
+    cell = Structure(name="Red blood cell", aliases=[], sam_phrase="red disc", color_hex="#D92323")
+    capillary = bundle.scenes[1].model_copy(update={"image_prompt": look, "structures": [cell]})
+    prompt = art.paint_prompt(bundle, capillary)
+    assert "bilayer" not in prompt and "vibrant colour coding; a molecule the scene names" in prompt
+    membrane = Structure(name="Thylakoid", aliases=["thylakoid membrane"], sam_phrase="green band", color_hex="#2E7D32")
+    pump = capillary.model_copy(update={"structures": [cell, membrane]})
+    assert "the membrane a phospholipid bilayer" in art.paint_prompt(bundle, pump)
+
+
 def test_a_biology_picture_is_asked_for_in_campbell_biologys_style():
     # The owner (Nov 2): Campbell-style pictures look much better. Added at paint time, never in the bundle, where the
     # fact-check struck the book's name as a claim.
