@@ -784,3 +784,37 @@ def test_the_chroma_of_a_sung_note_is_its_pitch_class():
     notes = timing.chroma(np.sin(2 * np.pi * 440.0 * t)[None, :])  # an A
     assert notes.shape[1] == 12 and notes[5:-5].argmax(axis=1).tolist() == [0] * (len(notes) - 10)
     assert np.allclose(np.linalg.norm(notes, axis=1), 1.0, atol=1e-4)
+
+
+def test_a_heard_chorus_at_the_end_of_the_song_is_heard_as_far_as_the_chroma_reaches():
+    """chroma() hears whole windows only, so it stops a little short of the song's end: the chorus heard last, sung to
+    the end, is matched over the frames it has rather than failing the step."""
+    tune = [(2.0, 4.0, 0), (4.0, 6.0, 7)]
+    lines = [*_two_lines(1.0, "c"), *_two_lines(6.0, "d")]  # c, unheard and a second early; d heard, to the end
+    texts = {line.line_id: "Sodium out potassium in" for line in lines}
+    notes = _notes(10.0, [*tune, *[(a + 4.0, b + 4.0, p) for a, b, p in tune]])[:-5]  # 0.25 s short
+    scores = {"c0": 0.1, "c1": 0.1, "d0": 0.9, "d1": 0.9}
+    runs = timing.repeated_runs([line.line_id for line in lines], texts)
+    assert timing.by_the_melody(lines, scores, runs, notes, None, texts, length=10.0) == ["c0", "c1"]
+    assert (lines[0].start, lines[1].end) == (2.0, 6.0)
+
+
+def test_a_last_line_a_chorus_now_covers_is_aligned_again_up_to_the_end_of_the_song():
+    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]
+    lines = [*_two_lines(0.0, "c"), *_two_lines(8.0, "d"), TimedLine(line_id="o", start=12.0, end=14.0, words=[
+        Word(word=w, start=12.0 + i, end=13.0 + i) for i, w in enumerate(["Gods", "germs"])])]
+    texts = {"c0": "Sodium out potassium in", "c1": "Sodium out potassium in", "d0": "Sodium out potassium in",
+             "d1": "Sodium out potassium in", "o": "Gods germs"}
+    notes = _notes(20.0, [*tune, *[(10.0 + a, 10.0 + b, p) for a, b, p in tune], (15.0, 17.0, 4)])
+    scores = {"c0": 0.9, "c1": 0.9, "d0": 0.1, "d1": 0.1, "o": 0.1}
+    calls = []
+
+    def alone(ids, t0, t1):
+        calls.append((ids, t0, t1))
+        return [(TimedLine(line_id="o", start=15.0, end=17.0, words=[Word(word="Gods", start=15.0, end=16.0),
+                                                                  Word(word="germs", start=16.0, end=17.0)]), 0.7)]
+
+    runs = timing.repeated_runs([line.line_id for line in lines], texts)
+    assert timing.by_the_melody(lines, scores, runs, notes, alone, texts, length=20.0) == ["d0", "d1"]
+    assert calls == [(["o"], 14.0, 20.0)] and lines[4].sung and lines[4].start == 15.0
+    Timing(audio="audio/song.mp3", duration=20.0, lines=lines)

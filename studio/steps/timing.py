@@ -427,7 +427,8 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
             realigned.append(line.line_id)
     runs = repeated_runs([line.line_id for line in lines], texts)
     placed = by_the_melody(lines, scores, runs, chroma(vocals) if runs and levels is not None else None,
-                           lambda ids, t0, t1: _align_lines(vocals, align, texts, ids, t0, t1, t0, t1), texts)
+                           lambda ids, t0, t1: _align_lines(vocals, align, texts, ids, t0, t1, t0, t1), texts,
+                           length=length)
     spread = by_the_singing(lines, scores, levels, placed=set(placed))
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
     if aligning is not None:
@@ -486,15 +487,16 @@ def chroma(vocals):
 
 def by_the_melody(lines: list[TimedLine], scores: dict[str, float | None], runs: list[list[list[int]]], notes,
                   alone: Callable[[list[str], float, float], list[tuple[TimedLine, float | None]]],
-                  texts: dict[str, str]) -> list[str]:
+                  texts: dict[str, str], length: float | None = None) -> list[str]:
     """Each repeat of a chorus the aligner did not hear, found by its melody (the module's docstring), in place; the
     ids of the lines it moved. `notes` is chroma() of the vocals (None: nothing to go by); `alone` aligns lines alone
-    between two times. The lines a moved repeat now covers are aligned again alone in the room left them, or, with no
-    room for their words, are not sung."""
+    between two times; `length` is the song's (by default, as far as `notes` reach). The lines a moved repeat now
+    covers are aligned again alone in the room left them, or, with no room for their words, are not sung."""
     import numpy as np
 
     if notes is None:
         return []
+    length = len(notes) * FRAME_S if length is None else length
     moved: list[str] = []
 
     def heard(k: int) -> bool:
@@ -515,7 +517,8 @@ def by_the_melody(lines: list[TimedLine], scores: dict[str, float | None], runs:
         if best is None or best[0] < LOW_SCORE:
             continue  # no repeat the aligner heard to go by
         ref = repeats[best[1]]
-        a, b = int(round(lines[ref[0]].start / FRAME_S)), int(round(lines[ref[-1]].end / FRAME_S))
+        # chroma() hears whole windows only, so its frames stop a little short of the song's end.
+        a, b = int(round(lines[ref[0]].start / FRAME_S)), min(len(notes), int(round(lines[ref[-1]].end / FRAME_S)))
         if b - a < 2:
             continue
         for repeat, m in zip(repeats, means):
@@ -528,7 +531,7 @@ def by_the_melody(lines: list[TimedLine], scores: dict[str, float | None], runs:
             while q < len(lines) and not heard(q):
                 q += 1
             lo = int(np.ceil((lines[p].end if p >= 0 else 0.0) / FRAME_S))
-            hi = int((lines[q].start if q < len(lines) else len(notes) * FRAME_S) / FRAME_S) - (b - a)
+            hi = min(int((lines[q].start if q < len(lines) else length) / FRAME_S), len(notes)) - (b - a)
             if hi < lo:
                 continue
             match, at = max((likeness(a, b, f), f) for f in range(lo, hi + 1))
@@ -550,7 +553,7 @@ def by_the_melody(lines: list[TimedLine], scores: dict[str, float | None], runs:
                 _make_room(lines, scores, before, lines[before[0] - 1].end if before[0] else 0.0, start, alone, texts)
             if after:
                 _make_room(lines, scores, after, end,
-                           lines[after[-1] + 1].start if after[-1] + 1 < len(lines) else end, alone, texts)
+                           lines[after[-1] + 1].start if after[-1] + 1 < len(lines) else length, alone, texts)
     return moved
 
 
