@@ -572,19 +572,22 @@ def claude_texts(message) -> list[str]:
 # First run live on Oct 28 (muse-spark-1.3). No effort is sent: the effort on /admin/studio is Claude's, and Muse
 # keeps its own default (high, as its answers say).
 #
-# Each call runs in the background on Meta's Responses API, and is polled for its answer (Nov 2). Muse reasons in
-# silence and sends its answer only at the end, streamed or not, so a call it thinks long about holds a connection
-# with nothing on it: Muse Wonder's lungs bundle, asked on chat completions, came back "Connection error." after 15
-# minutes, about what three tries cut at 5 minutes each take (the SDK tries twice more by itself), each perhaps
-# billed with no answer. Polled, no connection stays open while it thinks.
+# The writer's calls run in the background on Meta's Responses API, and are polled for their answers (Nov 2). Muse
+# reasons in silence and sends its answer only at the end, streamed or not, so a call it thinks long about holds a
+# connection with nothing on it: Muse Wonder's lungs bundle, asked on chat completions, came back "Connection error."
+# after 15 minutes, about what three tries cut at 5 minutes each take (the SDK tries twice more by itself), each
+# perhaps billed with no answer. Polled, no connection stays open while it thinks.
 #
-# A call Meta never finishes is asked again, once. On the lungs' videos two Muse Spark picture checks, which take
-# about 30 s, sat queued or in progress for 17 minutes while a fresh call beside them finished in 6 s. So each role
-# has a wait, well past its slowest answer seen (the writer's bundle 221 s, its narration edit 209 s; a check 30 s),
-# after which the call is cancelled and sent again, and a call that outlasts its wait twice fails.
+# The helper's calls (a picture's check, a part's box: 30 to 100 s) are asked and answered in one request, as they
+# were on chat completions. In the background about a third of Muse Spark's calls on the lungs' videos stayed queued
+# and never started, while the same calls sent again were answered in 30 s; none of Muse Wonder's did. So a writer's
+# call still queued after META_QUEUED_S has not started, and is cancelled and sent again; one in progress past its
+# wait (well past the slowest answer seen: the bundle 221 s, the narration edit 209 s) too, up to META_TRIES tries.
+META_BACKGROUND = ("brain",)  # the roles whose calls run in the background
 META_POLL_S = 3.0  # between looks at a call that is not done
-META_WAIT_S = {"brain": 1800.0, "helper": 300.0}  # how long one try of a call may take before it is cancelled
-META_TRIES = 2  # tries of a call that Meta does not finish in its wait
+META_QUEUED_S = 90.0  # a call still queued this long never started (one that starts does so within seconds)
+META_WAIT_S = 1800.0  # how long one try of a call may take before it is cancelled
+META_TRIES = 3  # tries of a call that Meta does not finish
 META_NOTE_S = 120.0  # a call still not done says so every this many seconds, with its id
 META_POLL_FAILURES = 5  # looks in a row that may fail (the call runs on regardless) before the call is given up
 META_RUNNING = ("queued", "in_progress")
@@ -594,14 +597,16 @@ _sleep = time.sleep  # tests stand in
 def meta_request(
     role: str, prompt: str, schema: type[BaseModel] | None, images: Sequence[str | Path], system: str | None
 ) -> dict:
-    """The keyword arguments for client.responses.create(): a call run in the background."""
+    """The keyword arguments for client.responses.create(): the writer's call run in the background."""
     content: list[dict] = [
         {"type": "input_image", "image_url": f"data:{media_type};base64,{data}"}
         for media_type, data in map(_image, images)
     ]
     content.append({"type": "input_text", "text": prompt})
     model = brain_model() if role == "brain" else META[role]["model"]
-    request = {"model": model, "input": [{"role": "user", "content": content}], "background": True}
+    request = {"model": model, "input": [{"role": "user", "content": content}]}
+    if role in META_BACKGROUND:
+        request["background"] = True
     if system:
         request["instructions"] = system
     if schema is not None:
@@ -618,15 +623,13 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
         _clients["meta"] = openai.OpenAI(api_key=meta_key(), base_url=META_BASE_URL)
     client = _clients["meta"]
     started = time.monotonic()
-    wait = META_WAIT_S.get(role, META_WAIT_S["brain"])
     for attempt in range(1, META_TRIES + 1):
-        response = _meta_answer(client, request, label, wait)
+        response, why = _meta_answer(client, request, label)
         if response is not None:
             break
-        print(f"  {label}: no answer from {request['model']} in {wait / 60:.0f} min"
-              + (", asked again" if attempt < META_TRIES else ""), file=sys.stderr)
+        print(f"  {label}: {why}" + (", so it was asked again" if attempt < META_TRIES else ""), file=sys.stderr)
     else:
-        raise BrainError(f"{request['model']}: no answer in {META_TRIES} tries of {wait / 60:.0f} minutes each")
+        raise BrainError(f"{request['model']}: no answer in {META_TRIES} tries: {why}")
     seconds = time.monotonic() - started
     model = getattr(response, "model", None) or request["model"]
     usage = getattr(response, "usage", None)
@@ -651,9 +654,9 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
     return [text]
 
 
-def _meta_answer(client, request: dict, label: str, wait: float):
-    """One try of a call in the background: the response once it is done (completed, failed, cut off), or None when
-    it is still not done after `wait` seconds, cancelled then."""
+def _meta_answer(client, request: dict, label: str):
+    """One try of a call: (the response once it is done: completed, failed or cut off, None) or (None, why) when a
+    call in the background never started (META_QUEUED_S) or ran past META_WAIT_S, cancelled then."""
     import openai
 
     started = noted = time.monotonic()
@@ -663,15 +666,17 @@ def _meta_answer(client, request: dict, label: str, wait: float):
         raise BrainError(f"{request['model']}: {e}") from e
     failures = 0
     while getattr(response, "status", None) in META_RUNNING:
-        now = time.monotonic()
-        if now - started > wait:
+        took = time.monotonic() - started
+        why = (f"{response.id} still queued after {took:.0f}s, so it never started" if response.status == "queued"
+               and took > META_QUEUED_S else f"{response.id} not done in {took / 60:.0f} min" if took > META_WAIT_S
+               else "")
+        if why:
             with contextlib.suppress(openai.APIError):
                 client.responses.cancel(response.id)
-            return None
-        if now - noted >= META_NOTE_S:
-            noted = now
-            print(f"  {label}: {response.id} still {response.status} after {(now - started) / 60:.0f} min",
-                  file=sys.stderr)
+            return None, why
+        if time.monotonic() - noted >= META_NOTE_S:
+            noted = time.monotonic()
+            print(f"  {label}: {response.id} still {response.status} after {took / 60:.0f} min", file=sys.stderr)
         _sleep(META_POLL_S)
         try:
             response = client.responses.retrieve(response.id)
@@ -680,7 +685,7 @@ def _meta_answer(client, request: dict, label: str, wait: float):
             failures += 1
             if failures >= META_POLL_FAILURES:
                 raise BrainError(f"{request['model']}: lost the call {response.id} after {failures} looks: {e}") from e
-    return response
+    return response, ""
 
 
 def meta_output(response) -> tuple[str, str | None]:

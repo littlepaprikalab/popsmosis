@@ -236,9 +236,8 @@ def test_meta_request_shape(tmp_path, monkeypatch):
     assert request["text"]["format"] == {
         "type": "json_schema", "name": "FactCheck", "schema": brain.strict_schema(FactCheck), "strict": True,
     }
-    assert brain.meta_request("helper", "Hi", None, [], None) == {
+    assert brain.meta_request("helper", "Hi", None, [], None) == {  # a short call, answered in the one request
         "model": "muse-spark-1.3", "input": [{"role": "user", "content": [{"type": "input_text", "text": "Hi"}]}],
-        "background": True,
     }
 
 
@@ -267,7 +266,7 @@ class FakeResponses:
 
     def create(self, **request):
         self.created.append(request)
-        return NS(id=self.answer.id, status="queued")
+        return NS(id=self.answer.id, status="queued") if request.get("background") else self.answer
 
     def retrieve(self, id):
         import openai
@@ -318,7 +317,7 @@ def test_a_look_that_fails_is_tried_again_while_the_call_runs_on(meta):
 
 
 class StuckFirst(FakeResponses):
-    """Meta never finishes the first try (it stays queued), and answers the next at once."""
+    """Meta never starts the first try (it stays queued), and answers the next at once."""
 
     def create(self, **request):
         self.created.append(request)
@@ -329,21 +328,27 @@ class StuckFirst(FakeResponses):
         return NS(id=id, status="queued") if id == "resp_1" else self.answer
 
 
-def test_a_meta_call_never_finished_is_cancelled_and_asked_again_once(meta, monkeypatch, capsys):
-    clock = iter(range(0, 10**7, 60))  # a minute a look
+def test_a_writers_call_that_never_starts_is_cancelled_and_asked_again(meta, monkeypatch, capsys):
+    clock = iter(range(0, 10**7, 20))  # 20 s a look
     monkeypatch.setattr(brain.time, "monotonic", lambda: next(clock))
     fake = StuckFirst(meta_response("ok"))
     monkeypatch.setitem(brain._clients, "meta", NS(responses=fake))
-    with brain.chosen("muse-spark"):
-        assert brain.ask("helper", "Look.", label="art check overview") == {"text": "ok"}
-    assert fake.cancelled == ["resp_1"] and len(fake.created) == 2  # past the helper's 5 minutes
-    said = capsys.readouterr().err
-    assert "art check overview: resp_1 still queued after" in said and "asked again" in said
+    with brain.chosen("muse-wonder"):
+        assert brain.ask("brain", "Write.", label="bundle") == {"text": "ok"}
+    assert fake.cancelled == ["resp_1"] and len(fake.created) == 2
+    assert "bundle: resp_1 still queued after" in capsys.readouterr().err
 
-    fake = meta(meta_response("ok"), looks=10**6)  # never done
-    with brain.chosen("muse-spark"), pytest.raises(brain.BrainError, match="no answer in 2 tries of 30 minutes"):
+    fake = meta(meta_response("ok"), looks=10**6)  # started, never done
+    with brain.chosen("muse-wonder"), pytest.raises(brain.BrainError, match="no answer in 3 tries: resp_1 not done"):
         brain.ask("brain", "Hi")
-    assert len(fake.created) == 2 and len(fake.cancelled) == 2
+    assert len(fake.created) == 3 and len(fake.cancelled) == 3
+
+
+def test_a_helpers_call_is_answered_in_the_one_request(meta):
+    fake = meta(meta_response("seen"))
+    with brain.chosen("muse-wonder"):
+        assert brain.ask("helper", "Any text in it?") == {"text": "seen"}
+    assert "background" not in fake.created[0] and fake.retrieved == 0
 
 
 @pytest.mark.parametrize("answer, error", [
