@@ -4,12 +4,13 @@ Copyright (c) 2026 Spicy Ginger Labs. All rights reserved.
 The source code in this repository is public so that it can be read. It is licensed,
 not sold, and the only rights granted are these:
 
-1. Anyone may view the code, and fork it on GitHub as GitHub's Terms of Service allow.
+1. Anyone may view the code.
 2. The organizers and judges of the Meta Global AI Developer Hackathon may copy, build,
    run and test the code to judge and review this submission.
 
 No other right to use, copy, modify, host, distribute or sublicense the code is granted
-without written permission from Spicy Ginger Labs.
+without written permission from Spicy Ginger Labs. GitHub's Terms of Service also let
+GitHub users fork public repositories on GitHub; a fork gives no rights beyond that.
 
 Licensed separately:
 - Lessons ("droplets") published on Popsmosis: CC BY-NC-SA 4.0, per the Terms of Use.
