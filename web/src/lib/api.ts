@@ -353,6 +353,30 @@ function onLocalClock<T extends { data: Question[] }>(page: T): T {
   return { ...page, data: page.data.map(localClock) };
 }
 
+/**
+ * What the learner has left of their topics (GET /api/questions/allowance, api/src/lib/usage.ts). Each topic's
+ * place comes back 24 hours after it was asked for, so the times are by this browser's clock, worked out from the
+ * seconds the API gave as the answer arrived, and shown in the learner's own time zone.
+ */
+export interface TopicAllowance {
+  perDay: number; // topics in any 24 hours
+  left: number; // what the learner may ask for now, by their own limit
+  nextAt: number | null; // with some left, when one more comes back; with none, when they may ask again; null: none coming
+  siteFull: boolean; // every learner's topics together reached the site's day, whatever this one has left
+  siteOpensAt: number | null; // siteFull: when the site takes topics again
+}
+
+interface TopicAllowanceAnswer extends Omit<TopicAllowance, 'nextAt' | 'siteOpensAt'> {
+  nextInSeconds: number | null;
+  siteOpensInSeconds: number | null;
+}
+
+function allowanceClock({ nextInSeconds, siteOpensInSeconds, ...rest }: TopicAllowanceAnswer): TopicAllowance {
+  const now = Date.now();
+  const at = (seconds: number | null) => (seconds === null ? null : now + seconds * 1000);
+  return { ...rest, nextAt: at(nextInSeconds), siteOpensAt: at(siteOpensInSeconds) };
+}
+
 export interface Answer {
   id: string;
   questionId: string;
@@ -582,6 +606,7 @@ export const api = {
   askQuestion: (content: string, brain?: Brain | null) =>
     request<Question>('/questions', { method: 'POST', body: JSON.stringify(brain ? { content, brain } : { content }) }).then(localClock),
   deleteQuestion: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
+  getTopicAllowance: () => request<TopicAllowanceAnswer>('/questions/allowance').then(allowanceClock),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh
   // that changes nothing. since is the caller's watermark: the server then only

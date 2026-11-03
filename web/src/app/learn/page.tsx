@@ -4,11 +4,11 @@ import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, mem
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LightBulbIcon } from '@heroicons/react/24/outline';
-import { api, Question, Answer } from '@/lib/api';
+import { api, Question, Answer, ApiError, type TopicAllowance } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useGuardedSubmit } from '@/lib/useGuardedSubmit';
 import { usePolling } from '@/lib/usePolling';
-import { timeAgo } from '@/lib/time';
+import { timeAgo, clockLabel } from '@/lib/time';
 import { LoadingMessage } from '@/components/LoadingMessage';
 import PageContainer from '@/components/PageContainer';
 import Markdown from '@/components/Markdown';
@@ -162,6 +162,28 @@ function TeacherNotesLink({ href }: { href: string }) {
  * page — markdown, thread and all — re-renders on a tick that changed one of
  * them. Callers must pass stable callbacks for that to hold.
  */
+/**
+ * How many topics the learner may still ask for, and when the next comes back, in their own time zone. Each topic's
+ * place comes back 24 hours after it was sent (api/src/lib/usage.ts), so there is no midnight to count to.
+ */
+function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
+  const { perDay, left, nextAt, siteFull, siteOpensAt } = allowance;
+  const when = (at: number | null) => (at ? clockLabel(at) : 'soon');
+  let text: string;
+  if (siteFull) text = `Popsmosis has made all the droplets it can for now. It takes topics again ${when(siteOpensAt)}.`;
+  else if (perDay === 0) text = 'New topics are paused for now.';
+  else if (left === 0) text = `0 of ${perDay} topics left. The next comes back ${when(nextAt)}.`;
+  else if (!nextAt) text = `${left} of ${perDay} topics left. Each comes back 24 hours after you send it.`;
+  else text = `${left} of ${perDay} topics left. Another comes back ${clockLabel(nextAt)}.`;
+  const none = siteFull || left === 0;
+  return (
+    <p className="text-xs mt-1" aria-live="polite" data-testid="topic-allowance"
+      style={{ color: none ? 'var(--accent-orange)' : 'var(--text-secondary)' }}>
+      {text}
+    </p>
+  );
+}
+
 const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerChange, onRequestDelete, onSetHidden, onApprove }: {
   q: Question;
   index: number;
@@ -444,6 +466,24 @@ function LearnContent() {
     rememberBrain(value);
   };
 
+  // What the learner has left of their topics, shown in the box: read on sign-in, after each send, and again when
+  // the next place comes back (or the site takes topics again), so it never goes on saying none are left.
+  const [allowance, setAllowance] = useState<TopicAllowance | null>(null);
+  const readAllowance = useCallback(() => {
+    api.getTopicAllowance().then(setAllowance).catch(() => {}); // without it the box just says nothing of it
+  }, []);
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) { setAllowance(null); return; }
+    readAllowance();
+  }, [authLoading, user, readAllowance]);
+  const opensAt = allowance && (allowance.siteFull ? allowance.siteOpensAt : allowance.nextAt);
+  useEffect(() => {
+    if (!opensAt) return;
+    const timer = setTimeout(readAllowance, Math.max(0, opensAt - Date.now()) + 1000);
+    return () => clearTimeout(timer);
+  }, [opensAt, readAllowance]);
+
   // Ask the cheap status endpoint; when something newer exists, show the banner.
   // Localized refresh: only the topics that are waiting on the teacher.
   const armedIds = questions.filter((q) => isArmed(q)).map((q) => q.id);
@@ -565,9 +605,11 @@ function LearnContent() {
         changeQuestion('');
         showToast(`Topic sent${picked ? ` to ${brainLabel(picked)}` : ''}. The teacher picks it up on its next pass; `
           + `a droplet takes about ${USUAL_MINUTES} minutes to make.`, 'success');
+        readAllowance();
       });
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to send topic', 'error');
+      if (err instanceof ApiError && err.status === 429) readAllowance(); // sent elsewhere since, or the limit changed
     }
   };
 
@@ -720,6 +762,7 @@ function LearnContent() {
           <span>No personal info: the lesson will be public. Min {QUESTION_MIN} characters. Enter adds a line; Ctrl+Enter (⌘+Enter) or Submit sends.</span>
           <span>{newQuestion.length}/{QUESTION_MAX}</span>
         </p>
+        {user && allowance && <AllowanceNote allowance={allowance} />}
         {!user && !askSignIn && (
           <p className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }} data-testid="sign-in-to-send">
             Look around and type a topic first: you sign in with Google only to send it.

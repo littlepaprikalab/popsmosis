@@ -12,6 +12,20 @@ export function dayLabel(date: string | Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/**
+ * A moment soon, by this browser's clock and in its time zone: "at 3:42 PM", "tomorrow at 9:15 AM", or further off
+ * "on Thu, Nov 5 at 9:15 AM". Rounded up to the minute, so it never names a time before the moment itself.
+ */
+export function clockLabel(at: number, now = Date.now()): string {
+  const d = new Date(Math.ceil(at / 60_000) * 60_000);
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const day = new Date(now);
+  if (d.toDateString() === day.toDateString()) return `at ${time}`;
+  day.setDate(day.getDate() + 1);
+  if (d.toDateString() === day.toDateString()) return `tomorrow at ${time}`;
+  return `on ${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at ${time}`;
+}
+
 /** Format a date as a relative time string (e.g. "2h ago", "3d ago") */
 export function timeAgo(date: string | Date): string {
   const now = Date.now();

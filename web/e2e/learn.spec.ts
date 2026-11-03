@@ -453,6 +453,47 @@ test.describe('signed in', () => {
     expect((await request.delete(apiUrl(`/api/questions/${id}`), { headers: asAda })).status()).toBe(204);
   });
 
+  test('the box says how many topics are left, and one fewer once a topic is sent', async ({ page, context, request }) => {
+    // Ben, whose day of questions the other tests leave room in. What he has left depends on the runs before.
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const before = await (await request.get(apiUrl('/api/questions/allowance'), { headers: asBen })).json();
+    expect(before.left).toBeGreaterThan(0);
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const note = page.getByTestId('topic-allowance');
+    await expect(note).toContainText(`${before.left} of ${before.perDay} topics left.`);
+
+    await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(`E2E ${Date.now()}: why the sky is blue`);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    // Its place comes back 24 hours from now: tomorrow, by this browser's clock, a minute later at most.
+    await expect(note).toContainText(`${before.left - 1} of ${before.perDay} topics left.`);
+    await expect(note).toContainText(/comes back (at|tomorrow at) \d/);
+  });
+
+  test('the box says when the next topic comes back once none are left, and when the site is full', async ({ page, context }) => {
+    let answer = { perDay: 10, left: 0, nextInSeconds: 3 * 3600, siteFull: false, siteOpensInSeconds: null as number | null };
+    await page.route('**/api/questions/allowance', (route) => route.fulfill({ json: answer }));
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const note = page.getByTestId('topic-allowance');
+    // Three hours from when the page read it, by this browser's clock and in its time zone: the minute it rounds up
+    // to now, or the one before when a minute turned since the read.
+    const threeHoursOn = async () => {
+      const labels = await page.evaluate(() => [0, 10_000].map((ago) => {
+        const d = new Date(Math.ceil((Date.now() - ago + 3 * 3600_000) / 60_000) * 60_000);
+        return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      }));
+      return `(at|tomorrow at) (${labels.map(escape).join('|')})`;
+    };
+    await expect(note).toBeVisible();
+    await expect(note).toHaveText(new RegExp(`^0 of 10 topics left\\. The next comes back ${await threeHoursOn()}\\.$`));
+
+    answer = { ...answer, left: 7, siteFull: true, siteOpensInSeconds: 3 * 3600 };
+    await page.reload();
+    await expect(note).toContainText('Popsmosis has made all the droplets it can');
+    await expect(note).toHaveText(new RegExp(`^Popsmosis has made all the droplets it can for now\\. It takes topics again ${await threeHoursOn()}\\.$`));
+  });
+
   test('a learner gets no brain picker: their topics are made by the teacher\'s own', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');

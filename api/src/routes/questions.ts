@@ -17,7 +17,7 @@ import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { parseBrain } from '../lib/brains.js';
 import { studioForAgent } from '../lib/studio-settings.js';
-import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritten } from '../lib/usage.js';
+import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritten, topicAllowance } from '../lib/usage.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
@@ -85,6 +85,10 @@ export default async function questionRoutes(app: FastifyInstance) {
       agentLastSeenAt: row?.agentLastSeenAt?.toISOString() ?? null,
     };
   });
+
+  // GET /api/questions/allowance — how many topics the viewer may still ask for, and when the next comes back
+  // (lib/usage.ts): the Learn page shows it in the topic box. Admins have the same limit as everyone.
+  app.get('/api/questions/allowance', { preHandler: [requireUser] }, async (request) => topicAllowance(request.viewer!.id));
 
   // GET /api/questions/queue — agent: PENDING questions, oldest first, claimed
   // for this caller so an overlapping run is handed different ones.
