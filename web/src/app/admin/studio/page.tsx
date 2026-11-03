@@ -45,7 +45,7 @@ const SINGERS: Record<SongProvider, { label: string; note: string }> = {
 };
 const singerOf = (provider: string) => SINGERS[provider as SongProvider] ?? { label: provider, note: '' };
 
-const EFFORT_NOTE = 'How hard Claude thinks when it writes and checks a lesson; thinking is billed as output. Muse ignores it.';
+const EFFORT_NOTE = 'How hard the brain thinks when it writes and checks a lesson, Claude or Muse; thinking is billed as output. Unset, Muse Wonder would think at max.';
 
 // The knobs (api/src/lib/knobs.ts): environment variables an admin can set here instead, by section, in the order
 // the page shows them. .env.example says the same of each variable.
@@ -192,7 +192,7 @@ export default function AdminStudioPage() {
   };
   const pickEffort = (effort: Effort) => {
     if (settings?.brain.effort === effort) return;
-    save('effort', { brain: { effort } }, `Claude thinks at ${effort} effort from the next run.`);
+    save('effort', { brain: { effort } }, `The brain thinks at ${effort} effort from the next run.`);
   };
   const setKnob = (name: string, value: KnobValue | null) => {
     const knob = settings?.knobs[name];
@@ -256,8 +256,8 @@ export default function AdminStudioPage() {
             ))}
           </div>
           <div className="mt-4" data-testid="brain-effort">
-            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Claude's effort">
-              <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Claude&rsquo;s effort:</span>
+            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="The brain's effort">
+              <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Brain&rsquo;s effort:</span>
               {settings.choices.brain.effort.map((effort) => {
                 const on = settings.brain.effort === effort;
                 return (

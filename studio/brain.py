@@ -439,7 +439,8 @@ def brain_model() -> str:
 
 
 def claude_brain() -> tuple[str, str]:
-    """Claude's brain's model and effort: the brain in force, at the effort set on /admin/studio (high by default)."""
+    """The brain's model and effort: the brain in force, at the effort set on /admin/studio (high by default). Muse's
+    brain is asked at the same effort (meta_request())."""
     effort = _effort or DEFAULT_EFFORT
     if effort not in EFFORTS:
         raise BrainError(f"Claude's effort must be one of {', '.join(EFFORTS)}, not {effort!r} (/admin/studio)")
@@ -622,6 +623,11 @@ def meta_request(
     request = {"model": model, "input": [{"role": "user", "content": content}]}
     if role in META_BACKGROUND:
         request["background"] = True
+    if role == "brain":
+        # The effort set on /admin/studio, as for Claude: Meta's API takes the same levels as `reasoning.effort`.
+        # Left out, Muse Spark thinks at high and Muse Wonder at max, as Meta echoed on Nov 3, so until then an admin's
+        # effort did nothing on a Muse brain. The helper's calls keep Meta's default.
+        request["reasoning"] = {"effort": claude_brain()[1]}
     if system:
         request["instructions"] = system
     if schema is not None:
