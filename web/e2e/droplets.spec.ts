@@ -478,9 +478,9 @@ test.describe('videos on /learn', () => {
     await expect(table.getByTestId('breakdown-clock')).toHaveText(/From the request, by the clock/i);
     await expect(table.getByTestId('breakdown-stretch')).toHaveText([
       /^Waiting for the studio to start\s*2\.9 min$/,
-      /^Writing the lesson \(posted at 7\.5 min\)\s*4\.6 min$/,
+      /^Making the lesson \(steps 01–03, posted at 7\.5 min\)\s*4\.6 min$/,
       /^Waiting between the lesson and the videos\s*1\.4 min$/,
-      /^Making the videos\s*6\.3 min$/,
+      /^Making the videos \(steps 04–10\)\s*6\.3 min$/,
     ]);
     await expect(table.getByTestId('breakdown-milestone')).toHaveText([/^End to end\s*15\.2 min$/]);
     await expect(bill.getByText(/^(End to end|Request to lesson):/)).toHaveCount(0); // the stretches say it: no note
@@ -524,15 +524,15 @@ test.describe('videos on /learn', () => {
     let bill = await billOf();
     await expect(bill.getByTestId('breakdown-total')).toHaveText('15.2 min end to end · 4.6 min of work · $0.71');
     await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/,
-      /^Writing the lesson \(posted at 7\.5 min\)\s*4\.6 min$/, /^Lesson to videos\s*7\.7 min$/, /^End to end\s*15\.2 min$/]);
+      /^Making the lesson \(steps 01–03, posted at 7\.5 min\)\s*4\.6 min$/, /^Lesson to videos\s*7\.7 min$/, /^End to end\s*15\.2 min$/]);
     await expect(bill.getByText(/Waiting between|Making the videos/)).toHaveCount(0);
 
     // A night in the queue reads in hours, a weekend in days; on a phone too.
     change = (a) => { a.endToEnd = { lesson: 6 * 3600, videos: 6.5 * 3600 }; };
     bill = await billOf();
     await expect(bill.getByTestId('breakdown-total')).toHaveText('6.5 h end to end · 10.9 min of work · $0.80 + 3,214 cr');
-    const night = [/^Waiting for the studio to start\s*5\.9 h$/, /^Writing the lesson \(posted at 6\.0 h\)\s*4\.6 min$/,
-      /^Waiting between the lesson and the videos\s*23\.7 min$/, /^Making the videos\s*6\.3 min$/];
+    const night = [/^Waiting for the studio to start\s*5\.9 h$/, /^Making the lesson \(steps 01–03, posted at 6\.0 h\)\s*4\.6 min$/,
+      /^Waiting between the lesson and the videos\s*23\.7 min$/, /^Making the videos \(steps 04–10\)\s*6\.3 min$/];
     await expect(await opened(bill)).toHaveText([...night, /^End to end\s*6\.5 h$/]);
     await page.setViewportSize({ width: 390, height: 900 });
     await expect(bill.getByTestId('breakdown-stretch-phone')).toHaveText(night);
@@ -545,7 +545,7 @@ test.describe('videos on /learn', () => {
     change = (a) => { a.video = null; a.breakdown = lessonOnly(a.breakdown); a.endToEnd = { lesson: 450, videos: null }; };
     bill = await billOf();
     await expect(bill.getByTestId('breakdown-total')).toHaveText('7.5 min end to end · 4.6 min of work · $0.71');
-    await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Writing the lesson\s*4\.6 min$/,
+    await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Making the lesson \(steps 01–03\)\s*4\.6 min$/,
       /^End to end\s*7\.5 min$/]);
 
     // Videos given up: never done end to end, so only the lesson's time from the request.
@@ -555,7 +555,7 @@ test.describe('videos on /learn', () => {
     };
     bill = await billOf();
     await expect(bill.getByTestId('breakdown-total')).toHaveText('10.9 min · $0.80 + 3,214 cr');
-    await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Writing the lesson\s*4\.6 min$/,
+    await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Making the lesson \(steps 01–03\)\s*4\.6 min$/,
       /^Request to lesson\s*7\.5 min$/]);
 
     // An API older than the parts' times: no waits it cannot tell from the work, but still pieces that add up.

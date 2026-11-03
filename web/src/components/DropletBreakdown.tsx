@@ -201,7 +201,7 @@ function StepName({ row, short = false }: { row: Row; short?: boolean }) {
 interface Stretch {
   label: string;
   seconds: number;
-  aside: string | null; // after the label, lighter: when the lesson was posted
+  aside: string | null; // after the label, lighter: the steps a stretch of work ran, and when the lesson was posted
 }
 
 /** The time from the request, under the bill's work: the stretches it was spent in, and the line they add up to. */
@@ -217,6 +217,25 @@ const CLOCKS_APART = 60;
 /** A time as the bill shows it while it reads in minutes: to the tenth of a minute, in seconds. */
 const toTenth = (s: number) => Math.round(Number((s / 60).toFixed(1)) * 10) * 6;
 
+type Part = BreakdownStep['part'];
+
+/** The part a step on the bill belongs to; one still to come, by its name. */
+function partOf(row: Row): Part | null {
+  if (row.bill) return row.bill.part;
+  return LESSON_STEPS.includes(row.step) ? 'lesson' : VIDEO_STEPS.includes(row.step) ? 'videos' : null;
+}
+
+/**
+ * A part's steps by their numbers on the bill ("steps 01–03"), so its stretch of work is not read as the one step
+ * of the same name; null when it has none, or they are not side by side.
+ */
+function stepsOf(rows: Row[], part: Part): string | null {
+  const at = rows.flatMap((r, i) => (partOf(r) === part ? [i + 1] : []));
+  if (at.length === 0 || at[at.length - 1] - at[0] + 1 !== at.length) return null;
+  const n = (i: number) => String(i).padStart(2, '0');
+  return at.length === 1 ? `step ${n(at[0])}` : `steps ${n(at[0])}–${n(at[at.length - 1])}`;
+}
+
 /**
  * The time from the request, split where the bill allows into the waits and the studio's work: up to the lesson,
  * the wait for the studio to start and the lesson's writing; after it, the wait for the videos (the hand-off, and the
@@ -228,17 +247,22 @@ const toTenth = (s: number) => Math.round(Number((s / 60).toFixed(1)) * 10) * 6;
  *
  * While the end reads in minutes, every time is rounded to the tenth the bill shows before it is split, so the
  * stretches add up to the end as shown, and the lesson's and the videos' work to the studio's work, not a tenth off.
+ *
+ * A part's work is all its steps, so it says which ("Making the lesson (steps 01–03)"): the lesson's is not step 02
+ * "Write the lesson" alone, which takes less.
  */
-function timelineOf(endToEnd: EndToEnd | null | undefined, bill: Breakdown | null, video: Video | null, making: boolean): Timeline | null {
+function timelineOf(endToEnd: EndToEnd | null | undefined, bill: Breakdown | null, video: Video | null, making: boolean,
+  rows: Row[]): Timeline | null {
   if (!endToEnd) return null;
   const { lesson, videos } = endToEnd;
   const end = videos ?? lesson;
   const shown = end >= 60 && end < 90 * 60 ? toTenth : (s: number) => s;
   const parts = [
-    { length: lesson, work: bill?.partSeconds?.lesson ?? null,
-      wait: 'Waiting for the studio to start', working: 'Writing the lesson', whole: 'Request to lesson' },
-    ...(videos === null ? [] : [{ length: videos - lesson, work: bill?.partSeconds?.videos ?? null,
-      wait: 'Waiting between the lesson and the videos', working: 'Making the videos', whole: 'Lesson to videos' }]),
+    { length: lesson, work: bill?.partSeconds?.lesson ?? null, steps: stepsOf(rows, 'lesson'),
+      posted: videos === null ? null : `posted at ${duration(lesson)}`,
+      wait: 'Waiting for the studio to start', working: 'Making the lesson', whole: 'Request to lesson' },
+    ...(videos === null ? [] : [{ length: videos - lesson, work: bill?.partSeconds?.videos ?? null, steps: stepsOf(rows, 'videos'),
+      posted: null, wait: 'Waiting between the lesson and the videos', working: 'Making the videos', whole: 'Lesson to videos' }]),
   ];
   const fits = parts.map((p) => p.work !== null && p.work <= p.length + CLOCKS_APART);
   const lengths = videos === null ? [shown(lesson)] : [shown(lesson), shown(videos) - shown(lesson)];
@@ -258,7 +282,7 @@ function timelineOf(endToEnd: EndToEnd | null | undefined, bill: Breakdown | nul
   const stretches = parts
     .flatMap((p, i): Stretch[] => (fits[i]
       ? [{ label: p.wait, seconds: lengths[i] - work[i], aside: null },
-        { label: p.working, seconds: work[i], aside: i === 0 && videos !== null ? `posted at ${duration(lesson)}` : null }]
+        { label: p.working, seconds: work[i], aside: [p.steps, p.posted].filter(Boolean).join(', ') || null }]
       : [{ label: p.whole, seconds: lengths[i], aside: null }]))
     .filter((st) => st.seconds > 0);
   const done = videos !== null || (!video && !making);
@@ -313,7 +337,7 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
   const totalSince = progress && progress.running.length > 0 ? progress.since : undefined;
   const totalSeconds = progress?.seconds ?? bill?.seconds ?? null;
   const totalTime: ReactNode = totalSince !== undefined ? <Elapsed base={0} since={totalSince} /> : duration(totalSeconds);
-  const timeline = timelineOf(endToEnd, bill, video, making);
+  const timeline = timelineOf(endToEnd, bill, video, making, rows);
   const end = timeline?.line.end ? timeline.line : undefined;
   const notes = [
     making && rows.some((r) => r.status === 'running')
