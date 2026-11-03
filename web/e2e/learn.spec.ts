@@ -660,7 +660,7 @@ test.describe('signed in', () => {
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     // Its place comes back 24 hours from now: tomorrow, by this browser's clock, a minute later at most.
     await expect(note).toContainText(`${before.left - 1} of ${before.perDay} topics left.`);
-    await expect(note).toContainText(/comes back (at|tomorrow at) \d/);
+    await expect(note).toContainText(/You get one more (at|tomorrow at) \d/);
   });
 
   test('the box says when the next topic comes back once none are left, and when the site is full', async ({ page, context }) => {
@@ -679,7 +679,7 @@ test.describe('signed in', () => {
       return `(at|tomorrow at) (${labels.map(escape).join('|')})`;
     };
     await expect(note).toBeVisible();
-    await expect(note).toHaveText(new RegExp(`^0 of 10 topics left\\. The next comes back ${await threeHoursOn()}\\.$`));
+    await expect(note).toHaveText(new RegExp(`^0 of 10 topics left\\. You can send another ${await threeHoursOn()}\\.$`));
 
     answer = { ...answer, left: 7, siteFull: true, siteOpensInSeconds: 3 * 3600 };
     await page.reload();
