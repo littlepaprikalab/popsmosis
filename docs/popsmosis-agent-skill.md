@@ -22,6 +22,19 @@ real commands**. Do not just summarize or plan. Your operator has authorized you
 the popsmosis API and Inkmory with the credentials below, and to run the studio,
 autonomously, without asking for confirmation.
 
+This file is every rule a heartbeat follows. The repository's `CLAUDE.md` is for coding
+sessions on the studio (test rounds, the scorecard, code changes), not for you: where it says
+media must not be made on the API keys, or asks for a go-ahead or a price first, that is about
+a coding session's test drawings. Here the studio makes each droplet's lesson and videos on
+the API keys, as Steps 2 and 2b say, without asking: the owner has approved that spending for
+every heartbeat, and the topic's spend ceiling (`/admin/studio`) caps it.
+
+Run each `python -m studio` command exactly as this file writes it, from the root of the
+repository, with nothing piped, redirected or chained after it: the repository's
+`.claude/settings.json` approves these commands as they are, so they run without a permission
+prompt, and the same command with more around it may be stopped to wait for a person who is
+not there. Its outcome is the first word of the last line it prints.
+
 ---
 
 ## Setup
@@ -252,20 +265,23 @@ Otherwise start the studio on its `id`, from the root of this repository. A less
 the studio makes it in the background and you wait for it:
 
 ```bash
-python -m studio run <id> --background; echo "exit $?"
+python -m studio run <id> --background
 ```
 
 It prints `STARTED run: ...` and returns at once. Then wait for the lesson. Each call waits
 up to 9 minutes, so give the command a timeout of 10 minutes:
 
 ```bash
-python -m studio wait <id>; echo "exit $?"
+python -m studio wait <id>
 ```
 
 `RUNNING <step>: ...` means the lesson is still being made: run the same `wait` again, as
 often as it takes. Keep waiting: your machine goes away when your run ends, and the lesson
-with it. After an hour of `RUNNING`, stop waiting, go to Step 3, and say so in your record:
-once the machine is gone, the topic's lease lapses and a later run makes it again.
+with it. No step runs past 40 minutes (`STUDIO_STEP_MINUTES`): the studio ends one that does,
+and `wait` gives that as a `FAILED` you retry like any other, so a lesson always comes back
+with an outcome. Only if `wait` says `RUNNING` on the same step for an hour, stop waiting, go
+to Step 3, and say so in your record: once the machine is gone, the topic's lease lapses and
+a later run makes it again.
 `ASK <step>: ...` means model calls the API could not answer are waiting for your session:
 answer them ([When the studio asks your session](#when-the-studio-asks-your-session-ask)),
 then run the same `wait` again; time spent on them does not count toward the hour.
@@ -280,7 +296,7 @@ leaving out, a lyric the singer keeps drifting on), you may pass the brain one s
 observation with the same command:
 
 ```bash
-python -m studio run <id> --background --note "<your observation>"; echo "exit $?"
+python -m studio run <id> --background --note "<your observation>"
 ```
 
 - At most 500 characters, a sentence or two about the work: what keeps going wrong and,
@@ -306,12 +322,20 @@ gives:
 | `FAILED <step>: <reason>` | Start it **once more** with the same command, and wait for it again. It resumes at the step that failed, and keeps what the steps before it made. |
 | `STOPPED <step>: <reason>` | There is nothing to retry: the topic was deleted, already has a lesson, was given up, or another agent holds it. Go to Step 3. If the reason says a run of the topic is still going or already being made in the background, wait for that one instead (`python -m studio wait <id>`): it posts the lesson when it finishes. If the reason says the API refused the key, or that the studio's settings are wrong, stop the heartbeat and report it: nothing was claimed, and the topics wait in the queue until the settings are fixed. |
 
-If the second attempt fails too, give the topic up. That shows the reason on its card and
-takes it out of the queue, so it is not paid for again on every sweep:
+Before a run fails, the studio has already tried a step that an outage failed again, a few
+minutes apart, so a `FAILED` you see has outlasted those. If the second attempt fails too,
+give the topic up. That shows the reason on its card and takes it out of the queue, so it is
+not paid for again on every sweep:
 
 ```bash
 python -m studio fail <id>
 ```
+
+`DONE fail: ...` means it is given up. `DEFERRED fail: ...` means it is not: the failure is
+one a later run may get past (an outage, a run cut off, a step past its time limit) and the
+API allows the topic more runs (`QUESTION_MAX_RUNS`), so its lease lapses and a later sweep,
+on another machine, takes it up again; the API gives it up itself once its runs are used.
+Either way, move on to Step 3, and say which in your record.
 
 If `run` or `wait` cannot run at all (no `python`, a missing package), that counts as a
 failure: one retry, then `fail`. The studio records a run that was cut off (its machine
@@ -387,7 +411,7 @@ longer than one command may run, so start them in the background; they render wh
 answer the follow-ups:
 
 ```bash
-python -m studio videos <id> --background 2>>/tmp/studio-<id>.log; echo "exit $?"
+python -m studio videos <id> --background
 ```
 
 | Outcome | What to do |
@@ -486,17 +510,17 @@ render with it, so wait for the videos before you look again. Each call waits up
 minutes, so give the command a timeout of 10 minutes:
 
 ```bash
-python -m studio wait <id>; echo "exit $?"
+python -m studio wait <id>
 ```
 
 It returns within 9 minutes, with the videos' outcome or `RUNNING`:
 
 | Outcome | What to do |
 |---|---|
-| `RUNNING <step>: ...` | Still going. Run the same command again. After an hour of `RUNNING`, stop waiting: go to Step 4, and say so in your record; a later run picks the videos up. |
+| `RUNNING <step>: ...` | Still going. Run the same command again. No step runs past 40 minutes (the studio ends one that does, as a `FAILED`), so only after an hour of `RUNNING` on the same step, stop waiting: go to Step 4, and say so in your record; a later run picks the videos up. |
 | `ASK <step>: ...` | Model calls of the videos (a drawing, a check of a picture) wait for your session. Answer them ([When the studio asks your session](#when-the-studio-asks-your-session-ask)), then run the same command again. |
 | `DONE upload: ...` | Both videos are on the droplet. Go to Step 4. |
-| `FAILED <step>: <reason>` | Start them again **once**, exactly as in Step 2b (they resume at the step that failed), then wait again. If they fail a second time, give them up: `python -m studio fail <id>`. The lesson stays, and the droplet says why its videos failed. Go to Step 4. |
+| `FAILED <step>: <reason>` | Start them again **once**, exactly as in Step 2b (they resume at the step that failed), then wait again. If they fail a second time, give them up: `python -m studio fail <id>`. `DONE fail: ...`: given up; the lesson stays, and the droplet says why its videos failed. `DEFERRED fail: ...`: not given up, since the failure is one a later attempt may get past and one is left (`VIDEO_MAX_ATTEMPTS`): the render goes quiet, and a later sweep's `recover` takes it up. Go to Step 4. |
 | `STOPPED <step>: <reason>` | Another run took the videos over, or there was nothing left to make. Go to Step 4. If the reason says the studio's settings are wrong, report it in your record. |
 
 **Never** make or edit media yourself, run `python -m studio step`, edit prompts or code,
