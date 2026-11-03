@@ -379,7 +379,7 @@ def version(tool: str) -> str | None:
 # words mean different work: the longest match wins. "again" in a label is a retry of the same work, so it is passed
 # over ("learner again grade" grades, as "learner grade" does). A label none matches leaves its line unlabelled.
 TASKS = {
-    "script": "writes the script", "bundle": "writes the lesson", "lesson rewrite": "rewrites the lesson",
+    "script": "writes the script", "bundle": "writes the lesson and/or song", "lesson rewrite": "rewrites the lesson",
     "narration edit": "edits the narration", "lyric rewrite": "rewrites the lyrics",
     "learner": "takes the lesson as a student", "learner grade": "grades the student's answers",
     "fact audit": "audits the facts", "factcheck": "fact-checks every line",

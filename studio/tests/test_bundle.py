@@ -229,3 +229,25 @@ def test_jobs_made_one_after_another_never_share_a_style_and_a_retry_keeps_its_o
     assert style_for_job(tmp_path / "job3") == picked[3]  # a retry keeps its style
     assert (tmp_path / "job3" / CHOSEN).is_file()
     assert style_for_job(tmp_path / "late") == picked[0]  # then the one taken longest ago comes round again
+
+
+@pytest.mark.parametrize("videos, data", [("", bundle_data), ("lesson", lesson_bundle_data)])
+def test_the_bill_says_the_lesson_call_writes_the_lesson_and_or_song(tmp_path, videos, data):
+    """The step as the runner runs it (at its step, its calls logged), then its line on the lesson's bill: one wording
+    with the song or without it (the lesson video alone)."""
+    from studio import ledger
+
+    knobs.use({"knobs": {"STUDIO_VIDEOS": videos} if videos else {}})
+    write(tmp_path / "request.json", Request(topic="the light reactions", course="AP Bio"))
+    fake = _asking(data(), {})
+
+    def logged(role, prompt, schema=None, images=(), *, system=None, label=None):
+        answer = fake(role, prompt, schema, images, system=system, label=label)
+        ledger.log(tmp_path, [brain.Call(label, role, "claude-opus-5-5", 1, 1, 0.01, 1.0, "end_turn")])
+        return answer
+
+    with ledger.at_step("bundle"):
+        bundle_step.run(tmp_path, ask=logged)
+    knobs.use({"knobs": {}})
+    [step] = ledger.breakdown(tmp_path, "lesson")["steps"]
+    assert [m["task"] for m in step["models"]] == ["writes the lesson and/or song", "edits the narration"]

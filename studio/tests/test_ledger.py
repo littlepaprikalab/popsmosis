@@ -78,9 +78,9 @@ def test_the_lesson_counts_every_try_and_every_model_that_answered(tmp_path):
     assert (steps["bundle"]["seconds"], steps["bundle"]["tries"]) == (180.0, 2)
     assert steps["bundle"]["costUsd"] == pytest.approx(0.9)
     assert steps["bundle"]["models"] == [
-        {"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.4, "credits": None, "task": "writes the lesson"},
+        {"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.4, "credits": None, "task": "writes the lesson and/or song"},
         {"model": "claude-opus-5", "calls": 1, "costUsd": 0.5, "credits": None,
-         "task": "writes the lesson"}]  # after a refusal fell back
+         "task": "writes the lesson and/or song"}]  # after a refusal fell back
     assert steps["factcheck"]["models"] == [{"model": "claude-opus-5-5", "calls": 2, "costUsd": 0.25, "credits": None,
                                              "task": "fact-checks every line"}]
     assert steps["request"]["models"] == [] and steps["request"]["costUsd"] == 0
@@ -452,7 +452,7 @@ def test_every_label_the_studio_logs_says_what_its_call_did():
     """Each label as the code logs it (the step's module in the comment), and what its line on the bill says."""
     said = {
         ("bundle", "script"): "writes the script",  # steps/script.py
-        ("bundle", "bundle"): "writes the lesson", ("bundle", "bundle again"): "writes the lesson",  # steps/bundle.py
+        ("bundle", "bundle"): "writes the lesson and/or song", ("bundle", "bundle again"): "writes the lesson and/or song",  # steps/bundle.py
         ("bundle", "fact audit"): "audits the facts", ("bundle", "fact audit again"): "audits the facts",  # audit.py
         ("bundle", "learner"): "takes the lesson as a student",  # steps/learner.py: the student, then its grader
         ("bundle", "learner grade"): "grades the student's answers",

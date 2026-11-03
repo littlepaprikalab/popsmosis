@@ -637,6 +637,38 @@ def test_the_step_aligns_a_gemini_narration_and_logs_the_aligner(read_by_gemini,
                                                             for r in local]
 
 
+def test_the_lesson_alone_read_by_gemini_bills_the_aligner_and_what_it_ran_on(tmp_path, monkeypatch):
+    """STUDIO_VIDEOS=lesson with Gemini's voice, which has no timings of its own: the steps run as the runner runs them
+    (each at its step), and the bill shows MMS timing the voice, on torchaudio, torch and ffmpeg, with no Demucs."""
+    from studio import ledger
+
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setattr(audio, "send", FakeGemini())
+    monkeypatch.setattr(audio, "duration", lambda path: 30.1)
+    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type, kind="song": data)
+    monkeypatch.setattr(timing, "_speech_audio", lambda path: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
+    monkeypatch.setattr(timing, "mms_aligner", lambda: even_aligner([], pitch=0.3))
+    monkeypatch.setattr(timing, "separate_vocals", lambda job: pytest.fail("a song is separated for the lesson alone"))
+    monkeypatch.setattr(ledger, "version", lambda name: "1.0")
+    job = tmp_path / "sample"
+    job.mkdir()
+    jobs.write(job / "bundle.json", sample_media.bundle())
+    jobs.keep_studio_settings(job, {"song": {"provider": "gemini"}})
+    with ledger.at_step("audio"):
+        audio.run(job)
+    with ledger.at_step("timing"):
+        timing.run(job)
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})  # as the worker has it when it sends the bill
+
+    bill = {s["step"]: s for s in ledger.breakdown(job, "videos")["steps"]}
+    assert [(m["model"], m["task"]) for m in bill["audio"]["models"]] == [("gemini-3.8-flash-tts", "reads the narration")]
+    assert [(m["model"], m["task"]) for m in bill["timing"]["models"]] == [("mms-fa", "times the narration")]
+    assert [(t["name"], t["task"]) for t in bill["timing"]["tools"]] == [
+        ("torchaudio", "runs mms-fa"), ("torch", "runs the models"), ("ffmpeg", "decodes the audio for them")]
+    knobs.use({"knobs": {}})
+
+
 def test_a_narration_the_aligner_cannot_hear_fails_the_step_and_is_read_again(read_by_gemini, monkeypatch):
     """Gemini cut the text short or read something else: the narration goes, and the retry reads it again."""
     monkeypatch.setattr(timing, "_speech_audio", lambda path: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
