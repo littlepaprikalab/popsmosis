@@ -1957,6 +1957,52 @@ mitosis. Every call answered on its first try, in 95 to 291 s, for $0.07 to $0.1
 The prompt is 1,936 words, from 2,643. What the cut takes out was tested on Opus and Muse Spark, not on Muse
 Wonder.
 
+## Nov 3: songs with a voice of their own
+
+The owner found the songs simple, without depth. Read beside the reference songs (docs/reference-songs.md), the
+Oct 30 songs were the lesson told again in rhyming lines: verses that walk the steps ("Then it faces the outside
+and the sodium's let out / Two potassium bind, and it flips back around"), choruses that sum up ("Supply meets
+demand, equilibrium found"), a comparison sung once and dropped. Cash in the Carrier and Split the Water instead
+sing the real parts in one world's words all the way through ("net two in the bank", "You can't spend sunshine").
+The brief kept that out: "The comparison, once at most … the title, the chorus, the bridge and the outro sing the
+real thing", and the rubric marked down a comparison "stretched over … every line of the song".
+
+In the session, no API call. Five scorecard topics (the pump, the derivative, the French Revolution, supply and
+demand, the Moon's phases), one script each, written by a subagent from the script prompt, and from it the
+bundle's fields up to the lyrics, written three ways by subagent writers, 15 in all. A, the brief as it was. B,
+three song rules changed: **one voice** from start to finish in place of the comparison once at most; verses that
+need not walk every step, the step that matters most getting two couplets; and a chorus in the song's voice,
+never the core idea's own words. C, B and the script section's "the lesson text and the song tell the same story
+as the script, in the same order" loosened for the song (its order, not its words). Each song had the code's
+lyric checks and a round-one fact-check of its couplets (`prompts/factcheck.md`, the payload `check_bundle`
+builds), and an Opus judge read A beside B, then B beside C, blind, for depth, singability, teaching and accuracy.
+
+| | A | B | C |
+|---|---|---|---|
+| Preferred | | over A on 3 of 5 | over B on 2 of 5 |
+| Depth (judge, 1 to 5) | 3.0 | 3.8 against A, 3.6 against C | 3.2 |
+| Teaching | 4.4 | 4.0 | 4.0 |
+| Couplets the fact-check failed | 1 | 0 | 1 |
+
+- **The voice changes what the writer does.** B's depth was above A's on four topics and level on the derivative,
+  and each win was for its voice: "Pay for the push, pay for the pull / Charge up the cell, keep the bank full",
+  "No oxygen, so the cells go broke" (the judge: "turns ATP into a price, the gradient into savings and a stroke
+  into bankruptcy"); "The crown can't pay and the rich won't pay / Guess who's been paying every day". The
+  fact-check passed every line of it. Shipped, and the rubric's frame now says a voice that names the real parts
+  is not a stretched or competing comparison; one that leaves the listener to map stand-ins still is.
+- **A chorus in the song's voice cost clarity.** A's two wins were choruses that say the idea outright: "The king
+  went broke, the people rose" beat "Foot the bill, then make the laws", which "has to be decoded", and the code
+  checks recorded that title and chorus too. Not shipped.
+- **Verses that dwell changed nothing**: in all 15 songs every verse walks the script a couplet a step, nearly
+  line for line across the arms ("Phosphate group hooks on, the pump bends into a new shape", "A phosphate group
+  clips on, and the whole pump reshapes", "The phosphate group clicks on, it flips outside, sodium's free"). Not
+  shipped. Nor C's loosening, which freed nothing either and lost to B.
+
+So the verses follow the script's narration whatever the song's section says. A song with more of its own may
+need the script to plan it (its few ideas, its voice), not yet tried. Five topics, one run each; a judge also
+grades a song against the one beside it (B's moon song had depth 4 beside A's and 3 beside C's), so the
+preferences, and the voice's steady lead on depth, are the signal.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
