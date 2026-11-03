@@ -2163,8 +2163,42 @@ the edge colour, so it reads as background, and Romeo's dark blue is lost in it.
 not segmented; the colour count on them (locate.Colours) had the clergy's purple at 0.3% of the picture against 6.4%
 in the old one, and three of the three estates' four parts at risk.
 
-The wording stays as fixed. Still one look for every droplet, as "textbook" was: whether the look should change by
-droplet (a rotation in code, or the writer's pick for the topic) is not decided.
+The wording stays as fixed. Still one look for every droplet, as "textbook" was.
+
+**The writer picks the look** (`Bundle.look`, the owner's choice). A scene that is not a diagram opens "Illustration
+of" with no style; at paint time code makes it "A <look> of ..." and ends it with "<look>: bright and evenly lit
+with no deep shadows, real depth, each thing the lesson names painted solidly in its own colour, clear in front"
+(`art.looked()`), striking from the look what takes colour or light away (sepia, noir, engraving, dark, cinematic,
+"in the style of ..."). Six subagent writers, free: every one used the form on every scene and kept the textbook
+look on every diagram. Their looks fit their topics but fell in two families, the first of them the brief's own
+example's medium:
+
+| Topic | Look |
+|---|---|
+| French Revolution | a vivid painterly gouache history illustration |
+| Romeo and Juliet | a warm, vivid gouache theatre-poster illustration |
+| Supply and demand | a cheerful, chunky flat-colour vector illustration |
+| Spanish subjunctive | a warm, sunny flat-colour editorial illustration |
+| Classical conditioning | a warm, friendly flat vector illustration |
+| Light reactions | a bright, sun-washed flat vector illustration |
+
+The same six scenes, painted in their topics' looks ($0.41) and segmented ($0.08):
+
+| | Old wording | Fixed editorial look | Writer's look |
+|---|---|---|---|
+| Parts found | 16 of 23 | 19 of 23 | 22 of 23 |
+| By SAM's first words | 9 | 14 | 18 |
+| In the helper's box | 7 | 5 | 4 |
+
+Every part found was on the right thing; the tomb passed for the first time (the helper boxed the slab, not the
+vault). Blind beside the fixed look, the judge preferred the writer's look 2 times in 6 (appeal 3.8 vs 4.2, clarity
+4.0 vs 4.2, correct 3.2 vs 3.5): it liked the flat-vector pondweed's bubbles in the water and the gouache three
+estates' green Third Estate, and marked down an Eiffel Tower behind the 1789 Bastille, modern banknotes on the tax
+table, the tomb's missing "Romeo" label and made-up writing on the hook's posters. One picture each, so the scores
+are close to noise; the segmentation gain held on four scenes of six and was lost on none.
+
+Not decided: how to widen the looks the writer picks (the brief without its gouache example, or a rotation that
+seeds a look the writer adapts to the topic, as the song style's does).
 
 ## Not tested
 
