@@ -324,12 +324,6 @@ YouTube and play it again and again, so it must sound like a real song first and
 second: fewer ideas, in words that sound like a song, every word easy to hear, the full
 explanation left to the narration.
 
-- Pick the 3 to 5 things the learner most needs to remember (the order of the steps, what
-  goes in and what comes out, the one cause behind it all, the misconception's correction);
-  every line serves one of them.
-- Sing a run of small parts as one plain thing ("three tiny bones pass the sound
-  along").
-
 ### The music
 
 - `music.positive_styles`: one entry, the sound briefed the way a producer would, in a few
@@ -407,9 +401,6 @@ explanation left to the narration.
     down, the pressure declines".
 - **Rhyme**: in couplets, every section. A near rhyme is fine; rhyme on plain words. Never bend a line's meaning or
   grammar to reach a rhyme, and never cut a name short ("the Krebs" for the Krebs cycle).
-- **A story that moves**: for a process, follow one thing through the steps (an electron, a
-  signal, a drop of water), with verbs that move and a reason to move ("crowded outside, the
-  sodium wants in"). Things the listener can picture and count beat abstract words.
 - **Sung to the listener, never directions**: no narrating the picture or the camera ("zoom
   inside to the chloroplast", "now look at the membrane"), no announcing a section.
 - **One voice, start to finish**: pick one everyday world the listener knows (money, a
@@ -420,8 +411,6 @@ explanation left to the narration.
   way of talking, not a comparison to map: nothing stands in for a part (no tower for the
   pump), so the listener never has to translate. Choose a world whose verbs are true of the
   real thing, since a rhyme makes them sound true.
-- **One surprise**, where the facts give one that serves the core idea: a line a listener
-  repeats to a friend, in a verse.
 - **Terms as they are sung**: the course's real terms, written as a singer says them: "NAD
   plus", not "NAD+"; "sodium", not "Na+"; "CO2" and "two ATP" are fine.
 
@@ -438,38 +427,23 @@ In this order, each section a run of lines with its own `section` value:
   on the title line, but most songs are better opening on a line that leads to it, so the
   chorus lands it ("Moon rolls over, the water leans / Sand gets swallowed, then it's seen",
   before "Pull the sea, then let it go").
-- **Verse**, 8 lines, four couplets: the first half of the story in order, a couplet a step
-  (the first line shows it happening, the second lands what follows).
+- **Verse**, 8 lines, four couplets: the first half of the story in order.
 - **Pre-chorus**, 2 lines, once in the song: bust the misconception with a fact, singing the
   right idea and the mistake only as what it is not ("it's not how close, it's how the
   Earth is tilted"), never a filler like "that isn't true". It comes before the first chorus,
   or before the second when the first verse has not yet sung what the mistake is about.
 - **Chorus**, 4 or 5 lines: `core_idea` as a chant, opening and ending on the title line.
-  The two or three lines between are the whole idea in brief, each built like the one
-  before so the rhythm repeats ("Pull the sea, then let it go / High tide, low tide, to and
-  fro"): for a process, what goes in and what comes out ("Sugar and oxygen in / Water, CO2
-  out"); for any other idea, its cause and its result, never "in" and "out". Short words,
-  nothing to stumble on.
 - **Verse**, 8 lines: the second half of the story, ending with what it makes.
 - **Chorus**, word for word.
-- **Bridge**, 8 lines, only for a system that can fail: a sung exam question. Name one thing
-  that breaks it (a drug, a toxin, a mutation, a missing part) and walk its effects in
-  cause-and-effect order to the outcome, one link a line ("no myelin, so the signal
-  crawls"), every effect one the facts say follows from that break, never the verses' story
-  again. Any other topic has no bridge.
+- **Bridge**, 8 lines, only for a system that can fail. Any other topic has no bridge.
 - **Chorus**: a summary couplet, then the chorus word for word.
 - **Outro**, 3 lines: echo the intro and end on the title line.
-
-The misconception is never in the title line or the chorus: a listener keeps the catchy
-lines.
 
 ### Lines and names
 
 - `fact_id`: the fact a line teaches, or "filler" for one that teaches nothing (a call-out,
   pure attitude). Most lines carry one of the song's ideas; a line that says one again in a
   new way carries it too.
-- A rhyme makes a line sound true, so a lyric is as true as a sentence of the lesson: never
-  a claim that sounds right and is not ("every mutation does harm", when most do nothing).
 
 ### The song's pictures
 

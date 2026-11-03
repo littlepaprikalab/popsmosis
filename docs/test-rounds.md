@@ -2003,6 +2003,47 @@ need the script to plan it (its few ideas, its voice), not yet tried. Five topic
 grades a song against the one beside it (B's moon song had depth 4 beside A's and 3 beside C's), so the
 preferences, and the voice's steady lead on depth, are the signal.
 
+## Nov 3: which of the song section's rules change what the writer does
+
+The owner asked whether the brain can follow a brief of 629 lines and 8,000 words. The rule the owner keeps
+(CLAUDE.md, "Rules in the prompts earn their place"), applied to the song section as Nov 3's round did to the
+fact-check. In the session, no API call but the songs the owner asked to hear.
+
+Fourteen groups of song rules, each taken out of the brief in turn; the music's style, the song's pictures and
+the voice (tested the same day) were left alone. Sixteen subagent writers, two with the full brief and one per
+cut, each wrote the song (`music` and `lyrics`) of three topics (the pump, the French Revolution, the Moon's
+phases) from that day's scripts. The code counted what it can; six blind Opus judges filled a checklist written
+before any song existed, one item or more per group. A group earned its place when, cut, its own signals were
+worse than every other run's on 2 of the 3 topics.
+
+- **One group earned its place alone: the syllables.** Cut, lines over the limit went to 3, 14 and 5 (others 0 to
+  1, 1 to 7, 0 to 3) and the median sung line to 10 to 12 syllables (others 8).
+- **The other 13 changed nothing**, and two were not followed even with them in: "3 to 5 things" (12 to 25 ideas
+  a song, by the judges' count, in every run) and the misconception never in the chorus (most pump choruses sang
+  it). No cut lowered the judges' overall score.
+- **All 13 out together broke what none did alone**, as the fact-check's cut had: unrhymed couplets 4, 3 and 4
+  (full brief 0 to 1), overall 3 on every topic (4), one kind of device in the Moon song (4 to 5), two title lines
+  failed, label-shaped lines 5 against 1 to 2 in the French one, a stage direction. The rules overlap: rhyme is
+  asked for in several places, and any one can go, not all.
+- **Seven out together held**: the 3 to 5 things and the run of small parts; follow one thing, and a couplet a
+  step; one surprise; the misconception never in the title line or chorus; the chorus's middle lines; the bridge
+  as a sung exam question; a lyric as true as a lesson sentence (the fact-check holds that). Overall 4, 4 and 4
+  beside the full brief's 4 or 3, 4, 4; rhyme, devices, titles and directions as the full brief's. Shipped: about
+  330 words out of the song section.
+
+**The syllables, by ear.** The judges scored the songs written without a count lower (3 against 3 to 4; with the
+seven out too, 3 on every topic against 4) for "long rhymed lines". The owner heard three French Revolution songs
+by Lyria ($0.32 in all; one of the four calls was lost to a script that did not make the audio folder): the full
+brief's (sung lines 7 to 10 syllables, rapped 14 to 18), the one written without a count (sung 9 to 14, rapped
+10 to 14), which the owner preferred, and the seven-out one without a count (rapped 16 to 21, "So the Third
+Estate says, we're the National Assembly, the laws are ours from now on"), which "sounds fine". So the brief gives
+no count, and the check records a sung line from 15 syllables and a rapped one from 16 (`checks.py`). Read on
+paper, the judge prefers short lines where the owner's ear does not.
+
+What it does not show: it was Opus alone, while the Muse brains read the same brief and may lean on rules Opus
+does not (Muse Spark needed three of the fact-check's back); the songs only, not the whole bundle; three topics,
+one run a cut.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
