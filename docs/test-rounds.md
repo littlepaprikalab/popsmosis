@@ -2067,6 +2067,42 @@ The same, 89 against 89. The judge on the French lesson with the cut: "the clear
 names the learner does not need". The checks left on either side are of the same kinds (long lyric lines, a name a
 scene does not draw, two parts painted alike), none about the facts or the essence. Shipped.
 
+## Nov 3: which rules for the pictures and the direction change what the writer does
+
+The same test as the song section's, on "Scenes and structures" and "Direction", on the bundle call's brief with a
+script (`bundle_step.with_script`). Seventeen groups of rules, each taken out in turn, and an eighteenth variant with
+the reasons and past incidents taken out of those rules and every rule kept (about 370 words); two writers with the
+brief whole. Each of the 20 subagent writers wrote, for three topics (the pump, the French Revolution, the Moon's
+phases), only the scenes, the direction, what builds up, turns, blocks and changes, and the key lines, around a
+lesson, song and narration written already (that day's bundles with the brief as committed). Code merged each answer
+into its bundle and ran the studio's checks, and counted the picture descriptions and the direction; six blind Opus
+judges filled a checklist written beforehand. No picture was painted: what the painter makes of a description was
+not tested. Rules for a graph, a cycle of forms and a grave topic had no topic here and were not cut.
+
+- **Earned their place**, worse than every other run on every topic or on the one topic they are for: the opening
+  phrase (1, 6 and 4 descriptions without it, against 0), the look sentence (6, 6 and 4 without it), the tags in
+  double brackets (31, 21 and 14 parts untagged, against 0), `sam_phrase` (30, 21 and 14 phrases over three words,
+  "large purple protein in the membrane"), the camera (more close-ups on 2 of 3), the stages (the pump's three stages
+  opened on two different sentences, every other run on one), the younger audience (the Moon's overview went to 4
+  parts a scene, others 2.5 to 3.8), the still stage (the pump's descriptions asked for action) and "in history only
+  goods move" (a route of something else appeared in the French plan).
+- **Changed nothing alone**: whole before parts, region by region, real names not shapes, never panels.
+  Not cut: **all four out together broke what none did alone**: overall 3 on every topic against 4 for both
+  whole-brief plans, two of three plans no longer naming the whole first, the pump's descriptions naming shapes for
+  things 9 times (0), more modelling errors and a weaker camera on the Moon. The rules overlap, as the song's did.
+- **Left in as unsure**: a failure's detail scene and two side-by-side spaces (no topic here crosses between two
+  spaces), and the particles' rules (446 words: only the pump moves much here).
+- **The reasons**: without them the plans tied for the judges' lowest score on every topic, never below and never
+  above. Kept.
+
+Two places where the brief and the script pull apart, met by most writers: the younger audience's "two or three
+structures a scene" against a script whose narration names six or seven parts over the Moon's overview (every writer
+but two kept them all), and the colours' "never near black" against the script's black coats for the Third Estate
+(recoloured green or brown; one writer kept the coats black under a soft tint of the part's colour).
+
+Nothing in the brief changed on this round: the only cuts it found overlapped, and another session is reworking the
+picture descriptions' rules.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
