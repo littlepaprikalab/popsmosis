@@ -2,10 +2,8 @@
 question, the essence, the facts, the scenes and the narration: studio/steps/script.py), then, in one call, the
 rest around it (the pictures, the direction, the lesson text and the song), held to the script.
 
-Writes bundle.json, after a learner has read its lesson (studio/steps/learner.py: the
-lesson is rewritten once if the learner missed its essence) and the code checks
-(studio/checks.py) have repaired what they can, and checks.json. A new bundle makes any earlier fact audit and
-fact-check stale, so this step removes them.
+Writes bundle.json, after the code checks (studio/checks.py) have repaired what they can, and checks.json. A new
+bundle makes any earlier fact audit and fact-check stale, so this step removes them.
 
 The lesson video alone (STUDIO_VIDEOS=lesson, studio/media.py): no song is written. The brain gets the brief
 without its song section and with NO_SONG at its end (LESSON_ONLY_PROMPT), and answers a LessonBundle: no music,
@@ -24,7 +22,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from studio import brain, checks, media
-from studio.steps import audit, learner, narration, script as script_step
+from studio.steps import audit, narration, script as script_step
 from studio.jobs import read, write
 from studio.schemas import Bundle, LessonBundle, Request, bundle_of
 from studio.styles import style_for_job
@@ -141,7 +139,7 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     sung = not media.lesson_only()
     brief = PROMPT if sung else LESSON_ONLY_PROMPT
     for stale in ("audit.json", "factcheck.json", "songwriter.json", "bundle.draft.json", "bundle.invalid.json",
-                  "learner.json", narration.RECORD, script_step.RECORD):
+                  narration.RECORD, script_step.RECORD):
         (job / stale).unlink(missing_ok=True)
     prompt = user_prompt(request, style_for_job(job), sung)
     script = script_step.write_script(prompt, brief, ask, request.images, job, request.topic)
@@ -157,9 +155,6 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     if script:
         bundle = script_step.follow(bundle, script, job)
     bundle, report = checks.review(bundle)
-    rewritten = learner.run(job, bundle, ask, system)
-    if rewritten is not bundle:  # a new lesson: the code checks read it again
-        bundle, report = checks.review(rewritten)
     edited = narration.edit(bundle, ask, job)  # the voice-over made one explanation (studio/steps/narration.py)
     settled, repaired = checks.repair_once(edited, request.study_guide)  # words set once, before the fact-check
     if settled is not bundle:  # read again, keeping what the first reading repaired (it is not there to find twice)

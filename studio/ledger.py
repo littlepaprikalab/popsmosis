@@ -377,12 +377,10 @@ def version(tool: str) -> str | None:
 
 # What a call did, for its line on the bill, by its label's first words (one or two), and its step where the same
 # words mean different work: the longest match wins. "again" in a label is a retry of the same work, so it is passed
-# over ("learner again grade" grades, as "learner grade" does). A label none matches leaves its line unlabelled.
+# over ("fact audit again" audits, as "fact audit" does). A label none matches leaves its line unlabelled.
 TASKS = {
     "script": "writes the script", "bundle": "writes the lesson and/or song",
-    "lesson rewrite": "writes the lesson and/or song",  # the learner missed its essence: the lesson written again
     "narration edit": "edits the narration",
-    "learner": "takes the lesson as a student", "learner grade": "grades the student's answers",
     "fact audit": "audits the facts",
     "factcheck": "fact-checks and fixes every line",
     "lyric rewrite": "fact-checks and fixes every line",  # songwriter.py: a couplet the fact-check failed, sung again

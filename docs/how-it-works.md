@@ -8,8 +8,8 @@ Who does each step: **code** (no model, no cost), **the brain** (the costly call
 or **another model** (a painter, SAM, Eleven Music, an ElevenLabs voice, Demucs, MMS). The brain is Claude Opus by default; an
 admin can switch it to Meta's Muse Wonder or Muse Spark (`/admin/studio`, or a topic's own on `/learn`), and the
 helper switches with it (Claude Sonnet for Claude, Muse Spark for Muse). Every brain call below goes to the brain in
-force for the topic: the script and the bundle are two calls, then the audit, the narration edit, a lesson rewrite,
-the fact-check and the songwriter. Two stay Claude whatever the brain: the SVG drawer (Claude Opus) and the
+force for the topic: the script and the bundle are two calls, then the audit, the narration edit, the fact-check
+and the songwriter. Two stay Claude whatever the brain: the SVG drawer (Claude Opus) and the
 scorecard's judge (Claude Opus). Prompt changes tested in a session run on Claude subagents, so they say how a
 prompt works on Claude's brain, not on Muse's.
 
@@ -28,8 +28,6 @@ prompt works on Claude's brain, not on Muse's.
    the learner's, or else one of the nine in `styles.SONG_STYLES`, picked by code from the job's name, which the
    brain treats as a seed (its genre and tempo kept, its voice and sound its own). Inside this step too:
    - the **fact audit** (the brain, `prompts/audit.md`), begun on the plan's facts beside the bundle call;
-   - the **learner test**: a helper reads only the lesson, as a first-time learner, and another helper call
-     grades what it took away; when it missed the core idea, the brain rewrites the lesson and it is read again;
    - the **narration edit** (the brain): the voice-over made one explanation;
    - the **code checks** (`checks.py`): names, scenes, line lengths, motions and more; some repaired, the rest
      recorded for the prompt to fix.

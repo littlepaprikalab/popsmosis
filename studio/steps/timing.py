@@ -40,6 +40,14 @@ hook cut ending with them. So where lines the aligner did not hear (LOW_SCORE) a
 GAP_S of singing with no line, they are spread over themselves and that singing, each word in proportion to its
 letters (by_the_singing). The report's `spread` and the summary line name them.
 
+A chorus found by its melody: a chorus repeat the aligner did not hear at all may still be placed at a singing pace,
+only somewhere else: Nov 3's Silk Roads song went from the line before its last chorus straight into the chorus, never
+singing the line between, and the aligner put that line where the chorus began and every chorus line one line late.
+A chorus sings the same tune each time, so a repeat the aligner did not hear is found where its vocals' pitch classes
+match the repeat it heard best (between the lines it heard either side), and its lines take that repeat's timing. A
+line the repeat now covers is aligned again in the room left it, or, with no room for its words, is not sung. The
+report's `by_melody` and the summary line name the lines moved.
+
 The narration as read: a Gemini narration is held to its lines as the song is to its lyrics. When the
 aligner cannot hear more than MISMATCH_SHARE of them, the voice did not read what was written (it
 skipped or cut short the text), so the step fails and the narration is deleted, and the retry reads it
@@ -104,6 +112,14 @@ SINGING_DB = 20.0
 GAP_S = 2.0
 PAUSE_S = 2.0
 SQUEEZED_S = 0.28
+# A chorus repeat found by its melody (by_the_melody): its vocals' pitch classes (CHROMA_HZ, heard CHROMA_WINDOW
+# samples at a time) match the repeat the aligner heard at least MELODY_MATCH where it is sung, and MELODY_GAIN
+# better than where the aligner put it. Nov 3's Silk Roads song: the last chorus matched the first at 0.95 to 0.97
+# where it was sung, and 0.66 to 0.85 a line off, where the aligner had put it.
+MELODY_MATCH = 0.85
+MELODY_GAIN = 0.1
+CHROMA_HZ = (90.0, 1100.0)
+CHROMA_WINDOW = 4096
 SAMPLE_RATE = 16000
 CHUNK_S = 30  # the aligner hears a longer window this much at a time (_emission)
 CONTEXT_S = 5  # with this much of the audio either side of each piece
@@ -409,21 +425,166 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
         if score is not None and score > scores[line.line_id]:
             lines[k], scores[line.line_id] = again, score
             realigned.append(line.line_id)
-    spread = by_the_singing(lines, scores, levels)
+    runs = repeated_runs([line.line_id for line in lines], texts)
+    placed = by_the_melody(lines, scores, runs, chroma(vocals) if runs and levels is not None else None,
+                           lambda ids, t0, t1: _align_lines(vocals, align, texts, ids, t0, t1, t0, t1), texts,
+                           length=length)
+    spread = by_the_singing(lines, scores, levels, placed=set(placed))
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
     if aligning is not None:
         _log_local(job, "song alignment", MMS_MODEL, aligning)
-    return timing, {**song_report(timing, texts, scores), "realigned": realigned, "spread": spread}
+    return timing, {**song_report(timing, texts, scores), "realigned": realigned, "by_melody": placed,
+                    "spread": spread}
 
 
-def by_the_singing(lines: list[TimedLine], scores: dict[str, float | None], levels: list[float] | None) -> list[str]:
+def repeated_runs(order: list[str], texts: dict[str, str]) -> list[list[list[int]]]:
+    """The runs of two or more lines in a row that the song sings again, word for word, later on (a chorus): for
+    each, the indexes in `order` of the lines of each of its repeats, in order."""
+    key = [" ".join(spoken(w) for w, _, _ in words_of(texts[i])) for i in order]
+    runs, used = [], set()
+    for i in range(len(order)):
+        if i in used:
+            continue
+        size = 0
+        for j in range(i + 1, len(order)):
+            n = 0
+            while j + n < len(order) and i + n < j and key[i + n] == key[j + n]:
+                n += 1
+            size = max(size, n)
+        if size < 2:
+            continue
+        starts, free = [i], i + size
+        for j in range(free, len(order) - size + 1):
+            if j >= free and key[j:j + size] == key[i:i + size]:
+                starts.append(j)
+                free = j + size
+        runs.append([list(range(s, s + size)) for s in starts])
+        used.update(k for s in starts for k in range(s, s + size))
+    return runs
+
+
+def chroma(vocals):
+    """The vocals' pitch classes every FRAME_S (from CHROMA_HZ): a row of 12, of unit length, a frame. Frame f hears
+    from f * FRAME_S on."""
+    import numpy as np
+
+    mono = np.asarray(vocals, dtype=np.float32).reshape(-1)
+    hop, n = int(FRAME_S * SAMPLE_RATE), CHROMA_WINDOW
+    frames = max(0, (len(mono) - n) // hop + 1)
+    freqs = np.fft.rfftfreq(n, 1 / SAMPLE_RATE)
+    band = (freqs >= CHROMA_HZ[0]) & (freqs <= CHROMA_HZ[1])
+    pitch = (np.round(12 * np.log2(freqs[band] / 440.0)) % 12).astype(int)
+    window = np.hanning(n).astype(np.float32)
+    out = np.zeros((frames, 12), dtype=np.float32)
+    for f0 in range(0, frames, 256):  # a few MB at a time
+        f1 = min(frames, f0 + 256)
+        spectrum = np.abs(np.fft.rfft(mono[np.arange(n)[None, :] + hop * np.arange(f0, f1)[:, None]] * window,
+                                      axis=1))[:, band]
+        for k in range(12):
+            out[f0:f1, k] = spectrum[:, pitch == k].sum(axis=1)
+    return out / np.maximum(np.linalg.norm(out, axis=1, keepdims=True), 1e-6)
+
+
+def by_the_melody(lines: list[TimedLine], scores: dict[str, float | None], runs: list[list[list[int]]], notes,
+                  alone: Callable[[list[str], float, float], list[tuple[TimedLine, float | None]]],
+                  texts: dict[str, str], length: float | None = None) -> list[str]:
+    """Each repeat of a chorus the aligner did not hear, found by its melody (the module's docstring), in place; the
+    ids of the lines it moved. `notes` is chroma() of the vocals (None: nothing to go by); `alone` aligns lines alone
+    between two times; `length` is the song's (by default, as far as `notes` reach). The lines a moved repeat now
+    covers are aligned again alone in the room left them, or, with no room for their words, are not sung."""
+    import numpy as np
+
+    if notes is None:
+        return []
+    length = len(notes) * FRAME_S if length is None else length
+    moved: list[str] = []
+
+    def heard(k: int) -> bool:
+        return (scores.get(lines[k].line_id) or 0.0) >= LOW_SCORE or lines[k].line_id in moved
+
+    def mean(repeat: list[int]) -> float | None:
+        got = [scores.get(lines[k].line_id) for k in repeat]
+        return None if any(s is None for s in got) or not all(lines[k].sung for k in repeat) else sum(got) / len(got)
+
+    def likeness(a: int, b: int, at: int) -> float:
+        if at < 0 or at + (b - a) > len(notes):
+            return -1.0
+        return float((notes[at:at + b - a] * notes[a:b]).sum() / (b - a))
+
+    for repeats in runs:
+        means = [mean(r) for r in repeats]
+        best = max((m, i) for i, m in enumerate(means) if m is not None) if any(m is not None for m in means) else None
+        if best is None or best[0] < LOW_SCORE:
+            continue  # no repeat the aligner heard to go by
+        ref = repeats[best[1]]
+        # chroma() hears whole windows only, so its frames stop a little short of the song's end.
+        a, b = int(round(lines[ref[0]].start / FRAME_S)), min(len(notes), int(round(lines[ref[-1]].end / FRAME_S)))
+        if b - a < 2:
+            continue
+        for repeat, m in zip(repeats, means):
+            if repeat is ref or m is None or m >= LOW_SCORE:
+                continue
+            p = repeat[0] - 1
+            while p >= 0 and not heard(p):
+                p -= 1
+            q = repeat[-1] + 1
+            while q < len(lines) and not heard(q):
+                q += 1
+            lo = int(np.ceil((lines[p].end if p >= 0 else 0.0) / FRAME_S))
+            hi = min(int((lines[q].start if q < len(lines) else length) / FRAME_S), len(notes)) - (b - a)
+            if hi < lo:
+                continue
+            match, at = max((likeness(a, b, f), f) for f in range(lo, hi + 1))
+            now = likeness(a, b, int(round(lines[repeat[0]].start / FRAME_S)))
+            if match < MELODY_MATCH or match - now < MELODY_GAIN:
+                continue
+            shift = at * FRAME_S - lines[ref[0]].start
+            if any(len(lines[k].words) != len(lines[r].words) for k, r in zip(repeat, ref)):
+                continue
+            for k, r in zip(repeat, ref):
+                words = [Word(word=w.word, start=round(max(0.0, x.start + shift), 3), end=round(max(0.0, x.end + shift), 3))
+                         for w, x in zip(lines[k].words, lines[r].words)]
+                lines[k] = lines[k].model_copy(update={"start": words[0].start, "end": words[-1].end, "words": words})
+                moved.append(lines[k].line_id)
+            start, end = lines[repeat[0]].start, lines[repeat[-1]].end
+            before = [k for k in range(p + 1, repeat[0]) if lines[k].end > start]
+            after = [k for k in range(repeat[-1] + 1, q) if lines[k].start < end]
+            if before:
+                _make_room(lines, scores, before, lines[before[0] - 1].end if before[0] else 0.0, start, alone, texts)
+            if after:
+                _make_room(lines, scores, after, end,
+                           lines[after[-1] + 1].start if after[-1] + 1 < len(lines) else length, alone, texts)
+    return moved
+
+
+def _make_room(lines: list[TimedLine], scores: dict[str, float | None], ks: list[int], t0: float, t1: float,
+               alone, texts: dict[str, str]) -> None:
+    """Lines `ks`, which a repeat found by its melody now covers, aligned again alone between t0 and t1; with no room
+    for their words (under SQUEEZED_S a word), not sung, at no length at t0: the singer went from the line before
+    them straight into the repeat."""
+    ids = [lines[k].line_id for k in ks]
+    if t1 - t0 >= SQUEEZED_S * sum(len(lines[k].words) for k in ks if lines[k].sung):
+        try:
+            for k, (line, score) in zip(ks, alone(ids, t0, t1)):
+                lines[k], scores[line.line_id] = line, score
+            return
+        except (RuntimeError, ValueError):
+            pass
+    for k in ks:
+        lines[k] = _unsung(lines[k].line_id, texts, t0)
+        scores[lines[k].line_id] = None
+
+
+def by_the_singing(lines: list[TimedLine], scores: dict[str, float | None], levels: list[float] | None,
+                   placed: set[str] = frozenset()) -> list[str]:
     """Spread the lines the aligner did not hear over the singing they leave with no line (the module's docstring),
     in place; the ids of the sung lines it moved. The lines it heard, and each pause of PAUSE_S, stay where they are
     and part the song into stretches. In a stretch where two lines have GAP_S of singing between them, the lines from
     the first one crammed (under SQUEEZED_S a word) to the last such gap are spread over the stretch up to that gap's
     end: the aligner crams what it cannot hear right after what it last heard, and finds its place again by the next
     line it hears (the five songs of Nov 1). Singing with no line and no crammed line before it is left: Lyria is
-    asked for echoes of the hook, and a line it did not hear but placed at a pace that sings stays where it is."""
+    asked for echoes of the hook, and a line it did not hear but placed at a pace that sings stays where it is.
+    The lines in `placed` (found by the melody) count as heard."""
     import numpy as np
 
     if levels is None:
@@ -431,7 +592,7 @@ def by_the_singing(lines: list[TimedLine], scores: dict[str, float | None], leve
     sung = np.asarray(levels) >= -SINGING_DB
 
     def heard(line: TimedLine) -> bool:
-        return (scores.get(line.line_id) or 0.0) >= LOW_SCORE
+        return (scores.get(line.line_id) or 0.0) >= LOW_SCORE or line.line_id in placed
 
     def crammed(line: TimedLine) -> bool:  # sung (it has a score), in under SQUEEZED_S a word
         return scores.get(line.line_id) is not None and line.end - line.start < SQUEEZED_S * len(line.words)
@@ -652,6 +813,8 @@ def song_notes(report: dict) -> str:
         notes.append(f"DRIFT over {DRIFT_S}s: {', '.join(report['drifting'])}")
     if report.get("realigned"):  # a report from before the repair pass has none
         notes.append(f"re-aligned alone: {', '.join(report['realigned'])}")
+    if report.get("by_melody"):  # nor one from before choruses were found by their melody
+        notes.append(f"placed by the chorus melody: {', '.join(report['by_melody'])}")
     if report.get("spread"):  # nor one from before lines were spread over the singing
         notes.append(f"spread over the singing: {', '.join(report['spread'])}")
     if report["unsure"]:

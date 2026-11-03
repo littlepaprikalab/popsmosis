@@ -13,7 +13,7 @@ def script_data(**changes) -> dict:
     data = bundle_data()
     out = {
         "audience": "high school", "question": "Where does a leaf's ATP come from?",
-        "core_idea": "Light pumps protons, and their flow back makes ATP.", "why_chain": [],  # no learner test
+        "core_idea": "Light pumps protons, and their flow back makes ATP.", "why_chain": [],
         "key_terms": ["ATP synthase"], "facts": data["facts"], "misconception": "A common mistake is to think so.",
         "scenes": [{"id": "hook", "picture": "A leaf."}, {"id": "overview", "picture": "A thylakoid membrane."},
                    {"id": "synthase", "picture": "ATP synthase up close."}],
