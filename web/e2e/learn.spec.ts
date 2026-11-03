@@ -622,19 +622,20 @@ test.describe('signed in', () => {
     await picker.getByRole('radio', { name: 'Claude' }).click();
     await expect(page.getByTestId('brain-note')).toHaveText('Claude Opus 5.5 writes and checks the lesson.');
 
+    // The API refuses Muse Wonder from a learner, before it takes one of their day's topics.
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
     const text = `E2E ${Date.now()}: osmosis, on Claude by a learner`;
+    const wonder = await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: `${text}, on Wonder`, brain: 'muse-wonder' } });
+    expect(wonder.status()).toBe(403);
+
+    // Claude it takes, and hands on with the topic. One of Ben's day: a run of the suite leaves him one to spare.
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
     await expect(card.getByTestId('topic-brain')).toHaveText('Claude');
-
-    // The API takes Claude from a learner, never Muse Wonder.
-    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
     const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
     const sent = own.data.find((q: { content: string }) => q.content === text);
     expect(sent.brain).toBe('claude');
-    const wonder = await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: `${text}, on Wonder`, brain: 'muse-wonder' } });
-    expect(wonder.status()).toBe(403);
     expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).status()).toBe(204);
   });
 
