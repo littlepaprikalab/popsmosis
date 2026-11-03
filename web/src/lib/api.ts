@@ -240,6 +240,9 @@ export interface BreakdownStep {
 export interface Breakdown {
   steps: BreakdownStep[];
   seconds: number | null; // wall time; the art and the audio are made side by side
+  // The lesson's and the videos' wall time, adding up to `seconds`; null: that part's bill is not here. Absent from
+  // an API older than this page.
+  partSeconds?: { lesson: number | null; videos: number | null };
   costUsd: number;
   credits: number | null; // credits of the calls with no price
   unpriced: number; // models with neither a price nor credits: the provider did not say

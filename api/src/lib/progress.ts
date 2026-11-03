@@ -188,7 +188,7 @@ export function videoProgress(
   const running = rendering ? p.running : [];
   // The lesson's whole bill and the videos' so far, which came with the videos' last report that had one.
   const breakdown = serializeBreakdown(lessonBreakdown, videoBreakdown);
-  const lesson = serializeBreakdown(lessonBreakdown, undefined)?.seconds ?? 0;
+  const lesson = breakdown?.partSeconds.lesson ?? 0;
   return {
     running,
     failed: rendering ? p.failed : [],

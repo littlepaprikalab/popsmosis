@@ -487,7 +487,7 @@ droplets, under a millisecond either way.
 
 Under each lesson on `/learn`, folded to its totals, is how the droplet was made: one line
 per step, the models that ran it with their number of calls and what they cost, how long
-it took, and the total time and cost, with how long it took from the request ([End to end](#end-to-end)). Under a step's models are the tools it ran on the
+it took, and the studio's work in all, its time and cost, with how long it took from the request ([End to end](#end-to-end)). Under a step's models are the tools it ran on the
 studio's machine, with their versions, and every line has a chip in its maker's colour. The
 studio logs every model call to the job's `calls.jsonl` with the step that made it
 (`studio/ledger.py`), and sends what it adds up to
@@ -507,9 +507,13 @@ it back as
                           { "name": "torchaudio", "version": "2.11.0+cpu", "maker": "Meta" },
                           { "name": "torch", "version": "2.11.0+cpu", "maker": "Meta" },
                           { "name": "ffmpeg", "version": "6.1.1-3ubuntu5", "maker": "FFmpeg" } ] } ],
-  "seconds": 653.3, "costUsd": 0.7981, "credits": 3214, "unpriced": 0, "complete": false
+  "seconds": 653.3, "partSeconds": { "lesson": 277.0, "videos": 376.3 },
+  "costUsd": 0.7981, "credits": 3214, "unpriced": 0, "complete": false
 }
 ```
+
+`partSeconds` is the lesson's and the videos' time each, adding up to `seconds`; `null` for a part
+whose bill is not there.
 
 `tools` is the software a step ran on the studio's machine besides its models (`TOOLS` in
 `studio/ledger.py`: skia for the art and the frames, ffmpeg for the audio and the videos,
@@ -540,13 +544,30 @@ post (the answer's `createdAt`) and the videos' READY (their last status change,
 ```
 
 in seconds from the request; `videos` is `null` until they are READY, and stays so for videos given up or never
-made. The database's clock stamps the lesson and the API's the READY, so `videos` is held to no less than `lesson`. The bill shows them under its total, "Request to lesson" and "End to end", and its folded line leads with the
-end to end ("15.2 min end to end · 10.9 min of work · $0.80"). A droplet is done end to end with its videos, or with
-its lesson when it has none; until then, and when its videos failed, the bill shows the lesson's time alone. A note
-says what the end to end counts besides the studio's time ("the studio's 10.9 min, and 4.3 min waiting for the
-studio to start and between the lesson and its videos"), only when the bill has every part up to the end: a READY
-sent without the videos' bill would otherwise count their work as waiting. A night in the queue reads in hours, a
-weekend in days. Nothing is stored for it, and the cards' queries already read the three times, so it costs no query
+made. The database's clock stamps the lesson and the API's the READY, so `videos` is held to no less than `lesson`.
+
+The bill shows it under the studio's work, "From the request, by the clock", split with each part's time
+(`partSeconds`) into the waits and the work, so that it adds up:
+
+```
+Studio's work                                      10.9 min   $0.80 + 3,214 cr
+FROM THE REQUEST, BY THE CLOCK
+  Waiting for the studio to start                   2.9 min
+  Writing the lesson (posted at 7.5 min)            4.6 min
+  Waiting between the lesson and the videos         1.4 min
+  Making the videos                                 6.3 min
+End to end                                         15.2 min
+```
+
+The wait between the lesson and the videos counts the hand-off and the gap before a retry, and a failed try's work
+on another machine, whose runs are not on this bill. While the end reads in minutes, every time is rounded to the
+tenth the bill shows before it is split, so the stretches add up to the end as shown and the two work stretches to
+the studio's work, not a tenth off (the work can only outrun the end by the clocks being apart; then the end wins).
+A part with no time on the bill (a READY sent without the videos' bill, which clears their bill so far; an API older
+than `partSeconds`), or with more than its stretch of the clock by over a minute, leaves its stretch whole ("Request
+to lesson", "Lesson to videos") rather than count its work as waiting. A droplet is done end to end with its videos, or with its lesson when it has none;
+until then, and when its videos failed, the time runs to "Request to lesson". The folded line leads with the end to
+end ("15.2 min end to end · 10.9 min of work · $0.80"). A night in the queue reads in hours, a weekend in days. Nothing is stored for it, and the cards' queries already read the three times, so it costs no query
 and about 40 bytes a card. The reply queue's `answer` does not carry it.
 
 #### While a droplet is made
