@@ -312,6 +312,11 @@ class Bundle(Strict):
                                  description="The terms the learner must know, at most 8; every other name is optional")
     facts: list[Fact]
     misconception: str
+    # The writer's pick for the topic since Nov 3 (art.droplet_look()); a bundle written before has none, and each
+    # scene keeps the look its image_prompt asks for.
+    look: str = Field(default_factory=str, description='The look of the hook and of every scene that is not a '
+                                                       'diagram, one for the droplet, chosen for its topic: "a bold '
+                                                       'gouache poster illustration"')
     scenes: list[Scene]
     lesson_markdown: str
     music: Music

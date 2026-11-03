@@ -459,6 +459,8 @@ def key(bundle: Bundle, scene: Scene) -> str:
         data.append(_dump(stage.first))
     if (source := style_source(bundle, scene)) is not None:  # painted in its look: again whenever it is
         data.append(["style", _dump(source)])
+    if (look := droplet_look(bundle)) and takes_look(scene):  # the droplet's look: none before Nov 3, the key kept
+        data.append(["look", look])
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 
 
@@ -580,6 +582,16 @@ NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels.
 BOXED = "Write each label in black letters on its own small white box."
 NO_LABELS = "No labels, title, legend, key, caption or any other writing."
 SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
+TEXTBOOK_STYLE = "clean textbook style"  # ...and a graph's or a chart's in any subject
+# The hook and every scene that is not a diagram are painted in the droplet's look, the writer's pick for its topic
+# (Bundle.look, Nov 3). Code adds it, and after it the light and the colours the locate step needs: it finds each
+# part by its colour, and "cinematic light" made every picture dark, the background near-black and the clergy's
+# purple 0.3% of the picture (docs/test-rounds.md, Nov 3). Words that take the colour or the light away are struck.
+LOOK_LIGHT = ("bright and evenly lit with no deep shadows, real depth, each thing the lesson names painted solidly in "
+              "its own colour, clear in front")
+RISKY_LOOK = re.compile(r"\b(?:sepia|black[- ]and[- ]white|monochrom\w*|gr[ae]yscale|noir|engrav\w*|etch\w*|woodcut\w*"
+                        r"|charcoal|silhouett\w*|photo\w*|hyper-?real\w*|dark\w*|moody|cinematic|dramatic|shadow\w*"
+                        r"|chiaroscuro|candlelit|dim|dimly|muted|desaturated|faded|aged|night\w*)\b", re.I)
 # A biology picture is asked for in the Campbell textbook look, the owner's choice (Nov 2): "the images are much better
 # looking". A style, not a figure of theirs. Added here at paint time, never in the bundle: when the brief had the
 # writer name the book, the fact-check struck it from every picture as a claim (eed1ff6). Biology is the course's, or,
@@ -1096,7 +1108,7 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     words, left = inline(scene)
     words = without_bilayer(scene, words)
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in left)
-    parts = [campbell_styled(bundle, words).strip().rstrip(".") + "."]
+    parts = [looked(bundle, scene, campbell_styled(bundle, words)).strip().rstrip(".") + "."]
     if left or not scene.structures:
         parts.append(f"Colours: {colours}.")
     if loose := loose_line(bundle, scene):
@@ -1158,6 +1170,41 @@ def campbell_styled(bundle: Bundle, image_prompt: str) -> str:
     if not (BIOLOGY_COURSE.search(bundle.course or "") or CELL_PARTS.search(image_prompt)):
         return image_prompt
     return re.sub(re.escape(SCIENCE_STYLE), CAMPBELL_STYLE, image_prompt, count=1, flags=re.I)
+
+
+def droplet_look(bundle: Bundle) -> str:
+    """The bundle's look (Bundle.look) without what takes the colour or the light away (RISKY_LOOK) or names someone
+    ("in the style of ..."), ending in "illustration", with no article; "" when none is left."""
+    look = re.sub(r"\bin the (?:style|manner) of\b.*$", "", bundle.look, flags=re.I)
+    pieces = []
+    for piece in re.split(r"[,;]", RISKY_LOOK.sub(" ", look)):  # a struck word takes its "and" or "with" along
+        piece = re.sub(r"\s+", " ", piece).strip(" .:-")
+        while (shorter := re.sub(r"^(?:an?|the|and|or|with|in|of)\b\s*|\s*\b(?:and|or|with|in|of)$", "", piece,
+                                 flags=re.I).strip()) != piece:
+            piece = shorter
+        if re.search(r"[a-z]", piece, re.I):
+            pieces.append(piece)
+    look = ", ".join(pieces)
+    if not look or look.lower() == "illustration":
+        return ""
+    return look if look.lower().endswith("illustration") else f"{look} illustration"
+
+
+def takes_look(scene: Scene) -> bool:
+    """Whether the scene is painted in the droplet's look: the hook and every scene that is not a diagram."""
+    return not (is_diagram(scene) or TEXTBOOK_STYLE in scene.image_prompt.lower())
+
+
+def looked(bundle: Bundle, scene: Scene, words: str) -> str:
+    """The scene's words in the droplet's look: its "Illustration of" opening made "A <look> of", and the look with
+    the light and colours the locate step needs after them (LOOK_LIGHT). A diagram, or a bundle with no look, as
+    written."""
+    look = droplet_look(bundle)
+    if not look or not takes_look(scene):
+        return words
+    named = f"{'An' if look[0].lower() in 'aeiou' else 'A'} {look}"
+    words = re.sub(r"^\s*(?:an?\s+)?illustration of\b", f"{named} of", words, count=1, flags=re.I)
+    return f"{words.strip().rstrip('.')}. {named}: {LOOK_LIGHT}."
 
 
 def loose_line(bundle: Bundle, scene: Scene) -> str:
