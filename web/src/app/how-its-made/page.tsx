@@ -108,16 +108,17 @@ const VIDEO_STEP: Step = {
 
 // Frames of the lesson videos of two test droplets on mitosis, made for this page with the models listed below (Nov
 // 2's Claude calls answered in a Claude Code session). The note: Nov 2's video at 152 s, on a cell dividing wrong,
-// where the check found the picture's "Spindle fibers" label pointing at a chromosome, ringed with its sticky note.
-// The tag: Oct 30's video, the hook at 8 s, where the check found nothing.
+// where the check found the picture's "Spindle fibers" label pointing at a chromosome, ringed with its sticky note,
+// and one chromatid too many at the right end, its note in a corner. The tag: Oct 30's video, the hook at 8 s, where
+// the check found nothing.
 const FRAMES = {
   note: {
     src: '/how-its-made/mitosis-sticky-note-frame.webp', width: 1600, height: 900,
     alt: 'A frame from a lesson video on mitosis: a cell dividing, with its chromosomes pulled toward both ends and '
       + 'its parts labeled in the picture itself. The label Spindle fibers points at a chromosome, so the video draws '
       + 'a ring around it and sticks a yellow note beside it, marked with a red exclamation point, that says: Spindle '
-      + 'fibers are the green threads. The narrator says: Neither matches the parent cell, and such cells often die '
-      + 'or work badly.',
+      + 'fibers are the green threads. In the top right corner, a second note says: Only three chromatids belong '
+      + 'here. The narrator says: Neither matches the parent cell, and such cells often die or work badly.',
   },
   tag: {
     src: '/how-its-made/mitosis-hook-frame.webp', width: 960, height: 640,
@@ -302,8 +303,8 @@ export default function HowItsMadePage() {
             <p>
               So when the picture check finds a mistake that could teach you something false, it writes a short note.
               The video sticks it on the picture, right where the mistake is, for as long as the picture is on screen.
-              A note about the whole picture goes on a card beside it. Small things about looks, like a cell drawn
-              oval, are left out.
+              A note about the whole picture, or one with no room beside its place, goes in a corner of the picture.
+              Small things about looks, like a cell drawn oval, are left out.
             </p>
             <p>
               A painted picture labels its own parts, and sometimes it gets a label wrong. When the check finds one,
@@ -320,7 +321,8 @@ export default function HowItsMadePage() {
             <figcaption className="text-xs leading-relaxed mt-2" style={{ color: 'var(--text-muted)' }}>
               A real frame from the lesson video of a test droplet on mitosis. The picture&rsquo;s own &ldquo;Spindle
               fibers&rdquo; label points at a chromosome, so the video circles it and sticks a note beside it saying
-              what&rsquo;s true, for as long as the picture is on screen.
+              what&rsquo;s true. The note in the corner is about the cell&rsquo;s right end, which has one chromatid
+              too many: there was no room for the note beside it.
             </figcaption>
           </figure>
           <figure className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
@@ -472,7 +474,7 @@ function RailStep({ n, step, as, line }: { n: number; step: Step; as?: 'li' | 'd
       {step.kind === 'gate' && <Then color="var(--accent-red)">Fails? Nothing is posted.</Then>}
       {step.discloses && (
         <Then color="var(--accent-yellow)" href="#notice-title">
-          Still wrong in a way that could mislead you? The video says so, right next to the
+          Still wrong in a way that could mislead you? The video says so, right on the
           picture. <span className="not-italic underline whitespace-nowrap">See how ↓</span>
         </Then>
       )}

@@ -180,7 +180,7 @@ def private_files(job: Path) -> tuple[list[str], list[str]]:
     named = list(dict.fromkeys(named))  # the art is named by both
     there = [p for p in named if (job / p).is_file()]
     # What each Muse Image picture's check found, which the timeline discloses beside it: a timeline made
-    # again without them would drop its notice cards. A drawing has none, so none is missing.
+    # again without them would drop its notes. A drawing has none, so none is missing.
     try:
         scenes = jobs.read(job / "bundle.json", Bundle).scenes
     except (OSError, ValueError, ValidationError):

@@ -1006,18 +1006,22 @@ def test_a_dropped_connection_is_asked_again(tmp_path, monkeypatch):
     assert muse.paint(tmp_path, "art hook", "a leaf") == picture() and len(tries) == 2
 
 
-def test_a_note_about_one_place_is_stuck_there_and_leaves_the_card(job, monkeypatch):
+def test_a_note_about_one_place_is_stuck_there_and_one_about_the_whole_picture_keeps_its_short_note(job, monkeypatch):
     # The owner (Nov 1): a note on a card beside the picture left the learner to find the place; one about a place
-    # is a sticky note there, with no ring, and the card keeps only what has no one place.
+    # is a sticky note there, with no ring. One with no one place goes in a corner of the picture as its short note
+    # (Nov 2), or as the sentence where the check wrote none.
     placed = "The picture shows only plus signs outside; the inner face of the membrane is negative."
     whole = "The picture shows far too many pumps for one patch of membrane."
+    sentence = "The picture draws the membrane far too thick for its pumps."
     FakeMuse().install(monkeypatch)
     pin = {"fact": "f2", "text": placed, "note": "The inner face is negative", "left": 0.1, "top": 0.6, "right": 0.9,
            "bottom": 0.7}
-    helper = FakeHelper({"overview": [{"notes": [pin, whole]}]})
+    short = {"fact": "f2", "text": whole, "note": "One patch holds a few pumps", "left": 0, "top": 0, "right": 0,
+             "bottom": 0}
+    helper = FakeHelper({"overview": [{"notes": [pin, short, sentence]}]})
     art.run(job, helper)
     bundle = checks.load(job / "bundle.json")
-    assert art.notices(job, bundle) == {"overview": [whole]}
+    assert art.notices(job, bundle) == {"overview": ["One patch holds a few pumps", sentence]}
     [flag] = art.flags(job, bundle)["overview"]
     assert flag.note == "The inner face is negative" and flag.ring is False
     assert (flag.box.y0, flag.box.y1) == pytest.approx((0.6 * media.ART_HEIGHT, 0.7 * media.ART_HEIGHT))
@@ -1025,12 +1029,10 @@ def test_a_note_about_one_place_is_stuck_there_and_leaves_the_card(job, monkeypa
 
 def test_a_wrong_label_reaches_the_videos_flagged_on_its_picture_and_noted_beside_it(job, monkeypatch):
     # Across the steps: the painted picture labels its own parts, so the video draws none over it; the label the
-    # check found wrong is flagged on the picture with its sticky note, and the card beside the picture keeps only
-    # the notes that are not about it, in both timelines.
-    # The upright hook cut puts that card above the picture, which keeps the frame's width, and the wide song puts
-    # it at the right.
+    # check found wrong is flagged on the picture with its sticky note, and a corner of the picture keeps only the
+    # notes that are not about it, in both timelines, upright and wide, the picture keeping the whole frame.
     from studio.render import primitives as p
-    from studio.render.renderer import NOTICE_GAP, NOTICE_W, Renderer
+    from studio.render.renderer import Renderer
     from studio.steps import timeline as timeline_step
 
     note = "Cytochrome b6f should sit across the membrane, not on it."
@@ -1048,31 +1050,35 @@ def test_a_wrong_label_reaches_the_videos_flagged_on_its_picture_and_noted_besid
     assert (song.flags["overview"][0].box.x0, song.flags["overview"][0].box.y1) == pytest.approx((840, 210))
     assert song.flags["overview"][0].note == "This is cytochrome b6f"
     hook_path = job / media.timeline_path(media.HOOK)
-    amber = p.rgb("#F59E0B")
     hook = jobs.read(hook_path, Timeline)  # the sample's first chorus and the verse line before it
+    yellow = p.rgb("#FFE27A")
+
+    def corner_note(renderer: Renderer, frame: np.ndarray) -> bool:
+        rect = renderer._corners["overview"][0]
+        b, g, r, _ = frame[round(rect[3] - 10), round((rect[0] + rect[2]) / 2)]  # under its words
+        return bool(np.allclose((r, g, b), yellow, atol=12))
+
     upright = Renderer(job, hook, "v")
     beat = next(b for b in hook.beats if b.scene == "overview")
     view = upright.view("overview")
-    assert view[0] == 0 and view[2] == upright.layout.width and view[1] > upright.layout.title_h + NOTICE_GAP
-    frame = upright.frame((beat.t0 + beat.t1) / 2)
-    b, g, r, _ = frame[round(upright.layout.title_h + NOTICE_GAP + 40), round(upright.layout.margin + 3)]
-    assert np.allclose((r, g, b), amber, atol=12)
+    assert view == Renderer(job, hook.model_copy(update={"notices": {}}), "v").view("overview")  # nothing moves
+    assert view[0] == 0 and view[2] == upright.layout.width
+    assert corner_note(upright, upright.frame((beat.t0 + beat.t1) / 2))
     wide = Renderer(job, song)
     beat = next(b for b in song.beats if b.scene == "overview" and b.labels)
     t = (beat.t0 + beat.t1) / 2
-    edge = wide.layout.width - NOTICE_W
     framed = wide.frame(t).copy()
-    b, g, r, _ = framed[round(wide.view("overview")[1] + wide.layout.margin + 48), edge + 3]
-    assert np.allclose((r, g, b), amber, atol=12)
+    assert wide.view("overview")[2] == wide.layout.width and corner_note(wide, framed)
 
     def drawn(timeline: Timeline) -> np.ndarray:
         """Where the frame at t differs from the one the timeline as it is draws: what it adds or leaves out."""
         return np.abs(Renderer(job, timeline).frame(t)[..., :3].astype(int) - framed[..., :3]).sum(axis=2) > 30
 
-    # Unflagged, the frame loses the amber ring in its dark edge and the yellow post-it; labelled by the video, it
+    # The wrong label is above the top of the wide frame, the picture cropped to fill it: never on screen, so its note
+    # goes in the corner with the rest rather than nowhere. Unflagged, the frame loses it; labelled by the video, it
     # gains its label pills.
+    assert wide._corner_notes("overview") == [note, "This is cytochrome b6f"]
     flag = drawn(song.model_copy(update={"flags": {}}))
     shown = framed[flag][..., [2, 1, 0]].astype(int)
-    assert (np.abs(shown - amber).sum(axis=1) < 40).sum() > 500
-    assert (np.abs(shown - p.rgb("#FFE27A")).sum(axis=1) < 30).sum() > 5000
+    assert (np.abs(shown - yellow).sum(axis=1) < 30).sum() > 5000
     assert drawn(song.model_copy(update={"self_labelled": []})).sum() > 1000

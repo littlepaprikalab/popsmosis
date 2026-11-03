@@ -435,12 +435,14 @@ run live on Oct 28 ([test-rounds.md](test-rounds.md)).
 **Saying what is left wrong.** The check also writes, for each problem that would teach the
 student something false, a sentence for them ("The chromosomes' bends point the wrong way:
 each is pulled toward its pole by its middle, so the bend leads."), leaving out matters of
-look. Whatever those notes say of the picture the video uses, after its tries, is shown
-beside it (`Timeline.notices`): a white card at the right under "AI-generated picture", up
-to three notes, for as long as the picture is on screen. The picture moves left to make
-room, and so do the other stages of its process. The check can miss a mistake (round 16's
-anaphase had twice the chromosomes it should); the card says only what it found. So every
-other picture carries a small "AI-generated picture" tag at its bottom left
+look, with a sticky note of under 8 words for it. Whatever those notes say of the picture the
+video uses, after its tries, is stuck on it for as long as it is on screen: beside the place
+it is about, joined to it by a short line, or, for a note about the whole picture or one with
+no room near its place, in a top corner of the picture with no line (`Timeline.notices`,
+`Timeline.flags`). None is left off, and since Nov 2 there is no card beside the picture: it
+left the learner to find the place and moved every stage of its process over. The check can
+miss a mistake (round 16's anaphase had twice the chromosomes it should); a note says only
+what it found. So every picture carries a small "AI-generated picture" tag at its bottom left
 (`Timeline.ai_pictures`), mistakes found or not, and whatever made it: Muse Image's pictures
 and the brain's SVG drawings alike.
 
@@ -869,7 +871,7 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     elsewhere still says where it came from. Always a bottom right corner, out of the way of
     what is read: in 16:9 the core idea band's right end, or, in a video made before it, the
     picture's, across from the "AI-generated picture" tag and about its size, with labels kept
-    clear of it (beside a notice card it is under the card); in the upright hook cut the title
+    clear of it; in the upright hook cut the title
     band's, below the topic and the core idea.
   - **Hook:** frame 0 already shows motion and the hook claim; no title card.
   - **Ending:** the last picture stays on screen 1.5 s after the voice ends.
