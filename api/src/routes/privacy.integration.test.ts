@@ -191,6 +191,9 @@ d('learner privacy', () => {
     })).statusCode).toBe(201);
     expect((await app.inject({ method: 'POST', url: `/api/droplets/${answerId}/plays`, payload: { video: 'song', event: 'started' } })).statusCode).toBe(204);
     expect((await app.inject({ method: 'PUT', url: `/api/droplets/${bens.answerId}/like`, headers: asUser(ben.cookie) })).statusCode).toBe(200);
+    // Grace's card says what deleting it with everything would take from others.
+    const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(grace.cookie) })).json();
+    expect([card.answer.likeCount, card.answer.commentCount]).toEqual([2, 1]);
 
     const del = await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(grace.cookie) });
     expect(del.statusCode).toBe(204);

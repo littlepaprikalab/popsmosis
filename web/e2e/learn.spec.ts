@@ -299,6 +299,7 @@ test.describe('signed in', () => {
     await expect(dialog).toContainText('The lesson stays on the public Droplets tab');
     // Everything is what a delete takes unless the learner picks less.
     await expect(dialog.getByTestId('delete-everything')).toBeChecked();
+    await expect(dialog.getByTestId('delete-engagement')).toHaveCount(0); // nobody has liked or commented on it
     await dialog.getByRole('radio', { name: /Only my request/ }).check();
     await dialog.getByRole('button', { name: 'Delete my request' }).click();
     await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
@@ -336,6 +337,7 @@ test.describe('signed in', () => {
     await card.getByRole('button', { name: 'delete' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('the likes and comments people left on it');
+    await expect(dialog.getByTestId('delete-engagement')).toHaveText('This also deletes 1 like and 1 comment on it.');
     await expect(dialog.getByTestId('delete-everything')).toBeChecked();
     await dialog.getByRole('button', { name: 'Delete everything' }).click();
     await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);

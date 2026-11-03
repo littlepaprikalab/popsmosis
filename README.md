@@ -429,8 +429,9 @@ reads text any learner writes ([the skill file](docs/popsmosis-agent-skill.md#wh
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
 `endToEnd`, how long it took from the request ([End to end](#end-to-end)); `awaitingVideos`, true while the page holds the text back for the videos (below);
-`hidden`, true when an admin took it off the Droplets tab; and `awaitingReview`, true while it waits for an admin to
-approve it. The question carries `progress` while its droplet is being
+`hidden`, true when an admin took it off the Droplets tab; `awaitingReview`, true while it waits for an admin to
+approve it; and `likeCount` and `commentCount`, its thumbs-up and comments on the tab, which the delete dialog names
+since deleting the topic with everything takes them too. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
 the question routes; the reply queue's `context` is the compact part a follow-up needs.

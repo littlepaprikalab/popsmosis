@@ -367,6 +367,10 @@ export interface Answer {
   endToEnd?: EndToEnd | null;
   hidden: boolean; // an admin took it off the public Droplets tab
   awaitingReview?: boolean; // READY, and off the Droplets tab until an admin has looked at it; absent from an older API
+  // The thumbs-up and comments on the Droplets tab, which deleting the topic with everything takes too; absent from an
+  // older API.
+  likeCount?: number;
+  commentCount?: number;
   replies: Reply[];
   awaitingAgent: boolean;
   // True while the page holds the lesson text back until its videos are READY or FAILED (at most an hour after

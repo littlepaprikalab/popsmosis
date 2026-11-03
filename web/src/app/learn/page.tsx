@@ -158,9 +158,17 @@ function TeacherNotesLink({ href }: { href: string }) {
 
 /**
  * What deleting a topic with a lesson takes: everything (the API's ?everything=true), or only the learner's request,
- * leaving the lesson on the Droplets tab naming no one (api/src/lib/privacy.ts).
+ * leaving the lesson on the Droplets tab naming no one (api/src/lib/privacy.ts). When people have liked or commented
+ * on it, Everything says how many, so what it takes from them is plain before it is chosen.
  */
-function DeleteChoice({ everything, onChange }: { everything: boolean; onChange: (everything: boolean) => void }) {
+function DeleteChoice({ everything, onChange, likes = 0, comments = 0 }: {
+  everything: boolean;
+  onChange: (everything: boolean) => void;
+  likes?: number;
+  comments?: number;
+}) {
+  const counted = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const taken = [likes ? counted(likes, 'like') : '', comments ? counted(comments, 'comment') : ''].filter(Boolean).join(' and ');
   const options = [
     {
       value: true, label: 'Everything', testId: 'delete-everything',
@@ -185,6 +193,11 @@ function DeleteChoice({ everything, onChange }: { everything: boolean; onChange:
             <span>
               <span className="block font-semibold" style={{ color: 'var(--text-primary)' }}>{o.label}</span>
               <span className="block text-[13px]">{o.detail}</span>
+              {o.value && taken && (
+                <span className="block text-[13px] mt-1 font-semibold" style={{ color: 'var(--text-primary)' }} data-testid="delete-engagement">
+                  This also deletes {taken} on it.
+                </span>
+              )}
             </span>
           </label>
         ))}
@@ -672,7 +685,8 @@ function LearnContent() {
         open={!!pendingDelete}
         title="Delete topic"
         message={deletingLesson
-          ? <DeleteChoice everything={deleteLesson} onChange={setDeleteLesson} />
+          ? <DeleteChoice everything={deleteLesson} onChange={setDeleteLesson}
+              likes={deleting?.answer?.likeCount} comments={deleting?.answer?.commentCount} />
           : 'Delete this topic request? This cannot be undone.'}
         confirmLabel={!deletingLesson ? 'Delete' : deleteLesson ? 'Delete everything' : 'Delete my request'}
         variant="danger"
