@@ -5,6 +5,9 @@ ground truth, never a source, since a learner can send anything) and the lines: 
 lesson, in one call. Code applies the checker's corrections and re-checks only the lines that
 changed, for at most three rounds. If any line still fails, the job fails.
 
+Each kind of line has its rules in RULES: what a SUPPORTED verdict must rest on, and what happens to a line
+still wrong (corrected or the check fails; corrected or taken out; or just taken out). The rest says why.
+
 The song is checked a couplet at a time (couplets()), since a song makes its claims across its
 lines, and by a question of its own: would a student who sings it come away believing something
 false? A lyric is not held to the facts' words, and may pass on what is true at the audience's
@@ -64,17 +67,51 @@ from studio.steps import songwriter
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
-KEY = "keyline"  # a key line, or the core idea: written on screen in both videos
+
+# The kinds of line.
 LYRIC = "lyric"  # a couplet of the song, its lines joined by "\n"
-KINDS = (LYRIC, "narration", "lesson", "caption", KEY)  # the lines a correction rewrites, besides the below
-TITLE = "title"  # "course: topic", the droplet's public title: fit to go out, corrected like a line
-SCENE = "scene"  # what a picture is painted from: fit to go out, corrected like a line
-STYLE = "style"  # the song's style, free-form words, often the learner's own: fit to go out, corrected like a line
-AVOID = "avoid"  # one thing the song must not sound like: fit to go out, or dropped
-TAG = "tag"  # a video's hashtag: passed, or dropped
-MOTION = "motion"  # what a line's particles show moving: passed, or left out of the video
-NO_SOURCE = (TITLE, SCENE, STYLE, AVOID)  # judged as fit to go out, against no fact, so a SUPPORTED one cites none
-KEPT_OR_DROPPED = (TAG, MOTION, AVOID)  # never corrected, and never failing the check
+KEY = "keyline"  # a key line, or the core idea: written on screen in both videos
+TITLE = "title"  # "course: topic", the droplet's public title
+SCENE = "scene"  # what a picture is painted from
+STYLE = "style"  # the song's style, free-form words, often the learner's own
+AVOID = "avoid"  # one thing the song must not sound like
+TAG = "tag"  # a video's hashtag
+MOTION = "motion"  # what a video shows moving, piling up, turning or turned into, and the words beside an arrow
+
+# What a SUPPORTED verdict must name as its source.
+FACTS = "facts"  # a fact id, or several
+FACTS_OR_COURSE = "facts or course knowledge"  # or what is true at the audience's level (COURSE_KNOWLEDGE)
+NOTHING = "nothing"  # judged as fit to go out, against no fact: a SUPPORTED one cites none
+
+# What happens to a line still wrong.
+FIX_OR_FAIL = "fix or fail"  # corrected; one with no correction fails the check
+FIX_OR_REMOVE = "fix or remove"  # corrected; one with no correction is taken out, never failing the check
+REMOVE = "remove"  # taken out where it is (remove()), never corrected, never failing the check
+
+
+@dataclass(frozen=True)
+class Rule:
+    rests_on: str  # what a SUPPORTED verdict must cite
+    if_wrong: str  # what happens to a line still wrong
+    in_order: bool = False  # read as a run of lines: a re-check sends each with the line before it
+    about: bool = False  # judged with the course, topic, audience and song style (about())
+
+
+# How the check treats each kind of line: every kind's rules, in one place.
+RULES = {
+    LYRIC: Rule(FACTS_OR_COURSE, FIX_OR_FAIL, in_order=True, about=True),  # the songwriter rewrites it first
+    "narration": Rule(FACTS, FIX_OR_FAIL, in_order=True),
+    "lesson": Rule(FACTS, FIX_OR_FAIL, in_order=True),
+    "caption": Rule(FACTS, FIX_OR_FAIL, in_order=True),
+    KEY: Rule(FACTS, FIX_OR_REMOVE, in_order=True),
+    TITLE: Rule(NOTHING, FIX_OR_FAIL),
+    SCENE: Rule(NOTHING, FIX_OR_FAIL),
+    STYLE: Rule(NOTHING, FIX_OR_FAIL),
+    AVOID: Rule(NOTHING, REMOVE),
+    TAG: Rule(FACTS, REMOVE, about=True),
+    MOTION: Rule(FACTS, REMOVE),
+}
+KEPT_OR_DROPPED = tuple(kind for kind, rule in RULES.items() if rule.if_wrong == REMOVE)  # never failing the check
 PASSING = ("SUPPORTED", "FILLER")
 COURSE_KNOWLEDGE = "course knowledge"  # a lyric's source when it is true but the facts do not say it
 SONGWRITER = "songwriter.json"  # the corrections the songwriter wrote (write_songwriter())
@@ -88,6 +125,7 @@ class Line:
     # for a couplet, its lines' ids ("v1-1,v1-2")
     text: str
     members: tuple[str, ...] = ()  # a couplet's lyric ids, in order; its text has a line for each
+    at: tuple = ()  # where a line that is removed when wrong is in the bundle, for remove()
 
     @property
     def key(self) -> str:
@@ -165,7 +203,8 @@ def public_lines(bundle: Bundle) -> list[Line]:
     return ([Line(TITLE, "title", title_text(bundle))]
             + [Line(SCENE, scene.id, scene.described()) for scene in bundle.scenes]
             + [Line(STYLE, str(i), style) for i, style in enumerate(bundle.music.positive_styles, 1)]
-            + [Line(AVOID, str(i), style) for i, style in enumerate(bundle.music.negative_styles, 1)])
+            + [Line(AVOID, str(i), style, at=("negative_styles", i - 1))
+               for i, style in enumerate(bundle.music.negative_styles, 1)])
 
 
 def couplets(bundle: Bundle) -> list[Line]:
@@ -261,27 +300,56 @@ def says_checked(scene: str, says: str, particles: list[str]) -> bool:
 
 
 def motion_lines(bundle: Bundle) -> list[Line]:
-    """What each line's particles show moving (is_checked), and what the video shows piling up and turning."""
-    return [Line(MOTION, d.line_id, _motion(bundle, d)) for d in bundle.direction
-            if is_checked(d.scene, d.carries, d.particles)] + [
-        Line(MOTION, f"{d.line_id}+{k}", _motion(bundle, f)) for d in bundle.direction
-        for k, f in enumerate(d.also, 1) if is_checked(d.scene, f.carries, f.particles)] + [
-        Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
-        Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)] + [
-        Line(MOTION, f"converts-{i}", conversion_text(c.structure, c.inputs, c.outputs))
-        for i, c in enumerate(bundle.conversions, 1)] + [
-        Line(MOTION, f"means-{i}", meaning_text(m.structure, m.text)) for i, m in enumerate(bundle.meanings, 1)] + [
-        Line(MOTION, f"{d.line_id}~says", says_text(d.carries, d.particles, d.says)) for d in bundle.direction
-        if says_checked(d.scene, d.says, d.particles)] + [
-        Line(MOTION, f"{d.line_id}+{k}~says", says_text(f.carries, f.particles, f.says)) for d in bundle.direction
-        for k, f in enumerate(d.also, 1) if says_checked(d.scene, f.says, f.particles)]
+    """What each line's particles show moving (is_checked), what the video shows piling up, turning and turned
+    into, and the words beside an arrow (says_checked). Each keeps where it is (Line.at), for remove()."""
+    # Every flow: a line's own (k 0) and its second ones (k 1 on, Direction.also), the own ones first.
+    flows = sorted(((i, k, d, f) for i, d in enumerate(bundle.direction) for k, f in enumerate([d, *d.also])),
+                   key=lambda flow: flow[1] > 0)
+
+    def named(d, k: int) -> str:
+        return f"{d.line_id}+{k}" if k else d.line_id
+
+    moving = [Line(MOTION, named(d, k), _motion(bundle, f), at=("flow", i, k))
+              for i, k, d, f in flows if is_checked(d.scene, f.carries, f.particles)]
+    shown = ([Line(MOTION, f"builds-{j}", build_up_text(b.carries, b.region), at=("builds_up", j - 1))
+              for j, b in enumerate(bundle.builds_up, 1)]
+             + [Line(MOTION, f"spins-{j}", spin_text(bundle, s.structure), at=("spins", j - 1))
+                for j, s in enumerate(bundle.spins, 1)]
+             + [Line(MOTION, f"converts-{j}", conversion_text(c.structure, c.inputs, c.outputs),
+                     at=("conversions", j - 1)) for j, c in enumerate(bundle.conversions, 1)]
+             + [Line(MOTION, f"means-{j}", meaning_text(m.structure, m.text), at=("meanings", j - 1))
+                for j, m in enumerate(bundle.meanings, 1)])
+    said = [Line(MOTION, f"{named(d, k)}~says", says_text(f.carries, f.particles, f.says), at=("says", i, k))
+            for i, k, d, f in flows if says_checked(d.scene, f.says, f.particles)]
+    return moving + shown + said
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
     """Each video's hashtags, written "#tag". One both videos carry is checked once, like a chorus line."""
-    return [Line(TAG, f"{video}-{i}", f"#{tag}")
+    return [Line(TAG, f"{video}-{i}", f"#{tag}", at=("tags", video, i - 1))
             for video, tags in (("song", bundle.tags.song), ("lesson", bundle.tags.lesson))
             for i, tag in enumerate(tags, 1)]
+
+
+def remove(bundle: Bundle, gone: set[tuple]) -> Bundle:
+    """Take out the lines at these places (Line.at): a tag from its video, a thing to avoid from the song's style,
+    a motion from the video. A line's own flow loses its particles and a second flow goes; an arrow's one-liner is
+    cleared, and its arrow stays unless it failed too."""
+    data = bundle.model_dump()
+    for video in ("song", "lesson"):
+        data["tags"][video] = [t for i, t in enumerate(data["tags"][video]) if ("tags", video, i) not in gone]
+    music = data["music"]
+    music["negative_styles"] = [s for i, s in enumerate(music["negative_styles"]) if ("negative_styles", i) not in gone]
+    for i, d in enumerate(data["direction"]):
+        for k, flow in enumerate([d, *d["also"]]):
+            if ("says", i, k) in gone:
+                flow["says"] = ""
+        if ("flow", i, 0) in gone:
+            d["particles"], d["carries"] = [], ""
+        d["also"] = [f for k, f in enumerate(d["also"], 1) if ("flow", i, k) not in gone]
+    for field in ("builds_up", "spins", "conversions", "meanings"):
+        data[field] = [x for j, x in enumerate(data[field]) if (field, j) not in gone]
+    return Bundle.model_validate(data)
 
 
 def about(bundle: Bundle) -> dict[str, str]:
@@ -355,11 +423,8 @@ def check_bundle(
         checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context, was, written_from, heard)
         for line in pending:
             check = checks.get(line.key)
-            # A missing verdict, or SUPPORTED without a real source, is asked again next round. A lyric may rest
-            # on what is true at the audience's level; the public text rests on nothing; every other line rests
-            # on the facts.
-            if check and (check.verdict != "SUPPORTED" or line.kind in NO_SOURCE or cites(check.source, facts)
-                          or (line.kind == LYRIC and COURSE_KNOWLEDGE in check.source.lower())):
+            # A missing verdict, or SUPPORTED without the source its kind needs (Rule.rests_on), is asked again.
+            if check and (check.verdict != "SUPPORTED" or rests_on(RULES[line.kind].rests_on, check.source, facts)):
                 verdicts[(line.kind, line.text)] = (check, round_no)
         for line in pending:
             if line.key in heard:
@@ -368,16 +433,17 @@ def check_bundle(
                                       reason=heard[line.key], upheld=upheld))
                 if upheld:
                     del appealing[line.key]  # sung as it was written
-        # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
+        # A line removed when wrong is taken out below, never corrected: only the other lines get fixes.
         wrong = [line for line in pending
-                 if line.kind not in KEPT_OR_DROPPED and _verdict(verdicts, line) == "UNSUPPORTED"]
+                 if RULES[line.kind].if_wrong != REMOVE and _verdict(verdicts, line) == "UNSUPPORTED"]
         if not wrong or round_no == max_rounds:
             continue
 
-        # A narration, lesson or public line with no correction fails the check: found before a songwriter is paid.
+        # A line with no correction that fails the check without one fails it now: found before a songwriter is
+        # paid. A couplet waits for the songwriter's rewrite.
         for line in wrong:
             check = verdicts[(line.kind, line.text)][0]
-            if line.kind not in (LYRIC, KEY) and not corrected(line, check):
+            if RULES[line.kind].if_wrong == FIX_OR_FAIL and line.kind != LYRIC and not corrected(line, check):
                 reason = f"{line.kind} {line.id} is unsupported and has no correction: {check.problem}"
                 break
         if reason:
@@ -405,8 +471,8 @@ def check_bundle(
                              else (corrected(line, check), "checker"))
             if not after and line.kind == LYRIC and to_songwriter.get(line.id, line.text) != line.text:
                 after = to_songwriter[line.id]  # the songwriter's rewrite failed with no fix: the checker's first
-            if line.kind == KEY and not after:
-                after = ""  # taken off the screen: a key line is a help, never worth failing the droplet
+            if not after and RULES[line.kind].if_wrong == FIX_OR_REMOVE:
+                after = ""  # taken out: a key line is a help, never worth failing the droplet
             elif not after:
                 reason = f"{line.kind} {_shown(line.id)} is unsupported and has no correction: {check.problem}"
                 break
@@ -424,57 +490,25 @@ def check_bundle(
             break
         corrections += made
 
+    final = lines_of(bundle)
     checked = []
-    for line in lines_of(bundle):
+    for line in final:
         check, round_no = verdicts.get((line.kind, line.text), (None, 0))
         checked.append(CheckedLine(kind=line.kind, id=line.id, text=line.text,
                                    verdict=check.verdict if check else None,
                                    source=check.source if check else "", round=round_no,
                                    problem=check.problem if check and check.verdict == "UNSUPPORTED" else ""))
-    # Only checked tags are posted: one that failed, or never got a verdict, leaves both videos.
-    passed_tags = {c.text.removeprefix("#") for c in checked if c.kind == TAG and c.verdict in PASSING}
-    tags = bundle.tags
-    if any(t not in passed_tags for t in [*tags.song, *tags.lesson]):
-        bundle = bundle.model_copy(update={"tags": tags.model_copy(update={
-            "song": [t for t in tags.song if t in passed_tags],
-            "lesson": [t for t in tags.lesson if t in passed_tags]})})
-    # Only checked things to avoid go to the singer: one that failed, or never got a verdict, is dropped.
-    passed_avoid = {c.text for c in checked if c.kind == AVOID and c.verdict in PASSING}
-    music = bundle.music
-    if any(s not in passed_avoid for s in music.negative_styles):
-        bundle = bundle.model_copy(update={"music": music.model_copy(update={
-            "negative_styles": [s for s in music.negative_styles if s in passed_avoid]})})
-    # Only checked motions are shown: one that failed, or never got a verdict, has its particles taken out.
-    passed_motions = {c.text for c in checked if c.kind == MOTION and c.verdict in PASSING}
-    if any(line.text not in passed_motions for line in motion_lines(bundle)):
-        data = bundle.model_dump()
-        for d in data["direction"]:
-            blocked = bool(d["particles"]) and d["particles"][-1] in {b["structure"] for b in data["blocks"]}
-            if (is_checked(d["scene"], d["carries"], d["particles"])
-                    and motion_text(d["carries"], d["particles"], blocked) not in passed_motions):
-                d["particles"], d["carries"] = [], ""
-            stoppers = {b["structure"] for b in data["blocks"]}
-            d["also"] = [f for f in d["also"] if not is_checked(d["scene"], f["carries"], f["particles"])
-                         or motion_text(f["carries"], f["particles"], f["particles"][-1] in stoppers) in passed_motions]
-        data["builds_up"] = [b for b in data["builds_up"]
-                             if build_up_text(b["carries"], b["region"]) in passed_motions]
-        data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]
-        data["conversions"] = [c for c in data["conversions"]
-                               if conversion_text(c["structure"], c["inputs"], c["outputs"]) in passed_motions]
-        data["meanings"] = [m for m in data["meanings"] if meaning_text(m["structure"], m["text"]) in passed_motions]
-        # An arrow's one-liner that failed is left off the video, as a meaning is; its arrow stays, as its motion
-        # passed on its own.
-        for d in data["direction"]:
-            for flow in [d, *d["also"]]:
-                if (says_checked(d["scene"], flow.get("says", ""), flow["particles"])
-                        and says_text(flow["carries"], flow["particles"], flow["says"]) not in passed_motions):
-                    flow["says"] = ""
-        bundle = Bundle.model_validate(data)
+    # Only what passed goes out: a tag, a thing to avoid or a motion that failed, or never got a verdict, is taken out.
+    gone = {line.at for line in final
+            if RULES[line.kind].if_wrong == REMOVE and _verdict(verdicts, line) not in PASSING}
+    if gone:
+        bundle = remove(bundle, gone)
     # A key line still not passed after the last round is taken off the screen, as one with no correction is.
-    unpassed = {(KEY, c.text): "" for c in checked if c.kind == KEY and c.verdict not in PASSING}
+    unpassed = {(c.kind, c.text): "" for c in checked
+                if RULES[c.kind].if_wrong == FIX_OR_REMOVE and c.verdict not in PASSING}
     if unpassed and not reason:
         bundle = apply_fixes(bundle, unpassed)  # the report keeps them, with their verdicts
-    failing = [c for c in checked if c.kind not in KEPT_OR_DROPPED + (KEY,) and c.verdict not in PASSING]
+    failing = [c for c in checked if RULES[c.kind].if_wrong == FIX_OR_FAIL and c.verdict not in PASSING]
     if failing and not reason:
         reason = f"after {rounds} round(s), {len(failing)} line(s) still fail: " + "; ".join(
             _describe(c, verdicts) for c in failing[:3]
@@ -490,7 +524,7 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
     previous: dict[str, str] = {}
     if round_no > 1:
         # A re-check sends lines without their neighbours, so each brings the one before it.
-        for kind in KINDS:
+        for kind in (kind for kind, rule in RULES.items() if rule.in_order):
             same = [line for line in lines if line.kind == kind]
             for before, line in zip(same, same[1:]):
                 previous.setdefault(line.key, before.text)
@@ -499,7 +533,7 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
                                for i, text in facts.items()]}
     if study_guide:
         payload["study_guide"] = study_guide
-    if context and any(line.kind in (TAG, LYRIC) for line in pending):
+    if context and any(RULES[line.kind].about for line in pending):
         payload["about"] = context  # for the tags and the lyrics: every other line is judged by the facts alone
     payload["lines"] = [
         {"id": line.key, "text": line.text, **({"previous": previous[line.key]} if line.key in previous else {}),
@@ -561,6 +595,13 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     if lesson:
         data["lesson_markdown"] = replace_sentences(data["lesson_markdown"], lesson)
     return Bundle.model_validate(data)
+
+
+def rests_on(needs: str, source: str, facts: dict[str, str]) -> bool:
+    """Whether a SUPPORTED verdict's source is what its kind needs (Rule.rests_on): a real fact id, a lyric's course
+    knowledge, or, for what is judged as fit to go out, nothing."""
+    return (needs == NOTHING or cites(source, facts)
+            or (needs == FACTS_OR_COURSE and COURSE_KNOWLEDGE in source.lower()))
 
 
 def cites(source: str, facts: dict[str, str]) -> bool:
