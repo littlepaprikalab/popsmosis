@@ -1,7 +1,8 @@
 """The knobs an admin sets on /admin/studio over this machine's environment (api/src/lib/knobs.ts).
 
 Each is an environment variable the studio reads: STUDIO_VIDEOS, ELEVENLABS_VOICE_ID, GEMINI_SONG_MODEL,
-GEMINI_TTS_VOICE, ELEVENLABS_USD_PER_1K_CREDITS and STUDIO_CLAUDE_DRAWS (studio/steps/art.py).
+GEMINI_TTS_VOICE, ELEVENLABS_USD_PER_1K_CREDITS, STUDIO_CLAUDE_DRAWS (studio/steps/art.py) and STUDIO_SESSION_FALLBACK
+(studio/session.py).
 Set on the page, its value wins; cleared there, the variable is read again, else the code's default.
 
 The page's values come with the studio's settings, as `knobs`, by name: from GET /api/studio/settings

@@ -24,6 +24,9 @@ export interface BreakdownModel {
   calls: number;
   costUsd: number | null; // null: the provider charged in credits and no price was set for them
   credits: number | null; // what the provider charged in its own credits (ElevenLabs), when it said
+  // 'session': calls the teacher's own Claude session answered after the API failed (studio/session.py), on the
+  // routine's plan rather than the studio's API key, so they add nothing to the bill. Absent: the API answered.
+  via?: 'session';
 }
 
 /** Software a step ran on the studio's machine besides its models (studio/ledger.py's TOOLS). */
@@ -106,6 +109,7 @@ function readModel(raw: unknown): BreakdownModel | null {
     calls: Math.max(0, Math.round(amount(raw.calls) ?? 0)),
     costUsd: amount(raw.costUsd),
     credits: amount(raw.credits),
+    ...(raw.via === 'session' && { via: 'session' as const }),
   };
 }
 

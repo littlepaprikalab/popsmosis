@@ -40,6 +40,7 @@ export function duration(seconds: number | null): string {
 const credits = (n: number) => `${n.toLocaleString('en-US')} cr`;
 
 function modelCost(m: BreakdownModel): string {
+  if (m.via === 'session') return 'in session';
   if (m.costUsd === null) return m.credits !== null ? credits(m.credits) : 'n/a';
   return m.costUsd === 0 ? 'free' : usd(m.costUsd);
 }
@@ -313,7 +314,10 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
     bill && bill.seconds !== null && stepSeconds > bill.seconds + 1
       && `The steps’ times add up to more than ${making ? 'the time so far' : 'the studio’s work'}: the diagrams and the audio are made at the same time.`,
     steps.some((s) => s.tries > 1) && 'A step tried more than once counts every try, in time and in cost.',
-    steps.some((s) => s.models.some((m) => m.costUsd === 0)) && '“free”: the model runs on the studio’s own machine, so nothing is billed.',
+    steps.some((s) => s.models.some((m) => m.costUsd === 0 && m.via !== 'session'))
+      && '“free”: the model runs on the studio’s own machine, so nothing is billed.',
+    steps.some((s) => s.models.some((m) => m.via === 'session'))
+      && '“in session”: the API could not answer, so the teacher’s own Claude session did, on its plan rather than the studio’s API key; those calls add nothing to the total.',
     steps.some((s) => s.tools?.some((t) => t.version))
       && 'The lighter number after a tool’s name is its version, as installed on the machine that made the videos.',
     bill && bill.credits !== null && 'cr: credits on the ElevenLabs plan, which bills by credit.',

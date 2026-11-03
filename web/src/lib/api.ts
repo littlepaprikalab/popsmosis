@@ -217,6 +217,7 @@ export interface BreakdownModel {
   calls: number;
   costUsd: number | null; // null: charged in credits, with no price set for them
   credits: number | null; // what the provider charged in its own credits (ElevenLabs)
+  via?: 'session'; // answered by the teacher's own Claude session after the API failed: on its plan, not the API key
 }
 
 /** Software a step ran on the studio's machine besides its models, at the version installed there. */

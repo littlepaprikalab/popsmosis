@@ -172,6 +172,10 @@ class Call:
     stop_reason: str
     fell_back: bool = False
     credits: float | None = None  # what the provider charged in its own credits (ElevenLabs), when it says
+    # "session": answered by the operator's own Claude session after the API failed (studio/session.py), on the
+    # routine's plan, so cost_usd is 0 and the tokens are estimated; api_usd is what they would have cost on the API.
+    via: str = ""
+    api_usd: float | None = None
 
 
 calls: list[Call] = []
@@ -330,16 +334,18 @@ def art_problem(art: dict | None = None) -> str | None:
             "structures (an admin can pick another painter on /admin/studio)")
 
 
-def settings_problem() -> str | None:
+def settings_problem(keys: bool = True) -> str | None:
     """What keeps the brain in force from running here (a name this studio does not have, an effort Claude does
     not take, its provider's key missing), or None. The runners ask about the default brain before they claim
-    anything, so a setting left wrong stops the run instead of failing, and giving up, one topic after another."""
+    anything, so a setting left wrong stops the run instead of failing, and giving up, one topic after another.
+    keys=False leaves the key out: in a run the operator's session answers when the API cannot (studio/session.py)."""
     try:
         if provider() == "meta":
-            meta_key()
+            if keys:
+                meta_key()
         else:
             claude_brain()
-            if not claude_key():
+            if keys and not claude_key():
                 raise BrainError(f"{_who()} needs {' or '.join(CLAUDE_KEY_VARS)}")
     except BrainError as e:
         return str(e)

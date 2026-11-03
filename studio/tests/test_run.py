@@ -212,7 +212,7 @@ def test_only_a_line_that_starts_with_style_names_the_songs_style(content, split
 def test_each_step_tells_the_page_it_is_running_with_the_bill_so_far_and_whether_videos_follow(jobs_root, monkeypatch):
     from studio import videos
 
-    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: None)
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None, **_: None)
     api = FakeApi()
     assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
     assert [[r["step"] for r in report["running"]] for report in api.reports] == [
@@ -222,7 +222,7 @@ def test_each_step_tells_the_page_it_is_running_with_the_bill_so_far_and_whether
     assert "breakdown" not in api.reports[0] or api.reports[0]["breakdown"]["steps"] == []
     assert [s["step"] for s in api.reports[2]["breakdown"]["steps"]] == ["request", "bundle"]
 
-    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: "the videos are turned off here (STUDIO_VIDEOS)")
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None, **_: "the videos are turned off here (STUDIO_VIDEOS)")
     api = FakeApi()
     operator_run.run("q2", api=api, ask=FakeBrain())
     assert api.reports and all(r["videos"] is False for r in api.reports)  # a text-only droplet: the page need not wait
@@ -794,10 +794,12 @@ def test_the_command_line_hands_the_note_to_the_run(monkeypatch):
     from studio.__main__ import main
 
     got = {}
-    monkeypatch.setattr(operator_run, "run", lambda question, note="": got.update(question=question, note=note)
-                        or ("DONE", "post", "lesson posted as answer ans1"))
+    monkeypatch.setattr(operator_run, "run", lambda question, note="", session_answers=False: got.update(
+        question=question, note=note, session=session_answers) or ("DONE", "post", "lesson posted as answer ans1"))
     assert main(["run", "q1", "--note", "keep labels out of the image prompts"]) == 0
-    assert got == {"question": "q1", "note": "keep labels out of the image prompts"}
+    assert got == {"question": "q1", "note": "keep labels out of the image prompts", "session": False}
+    # The detached run of `run --background` is told an operator waits on it (studio/session.py).
+    assert main(["run", "q1", "--session"]) == 0 and got["session"] is True
 
 
 def test_each_step_keeps_the_line_it_ended_on_and_a_failed_one_its_reason(jobs_root):

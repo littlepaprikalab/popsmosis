@@ -58,7 +58,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain, jobs, knobs, ledger, media
+from studio import brain, jobs, knobs, ledger, media, session
 from studio.api import Api, ApiError
 from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, failure_code, job_chosen,
                         job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl, record_interrupted)
@@ -76,17 +76,20 @@ WAIT_MINUTES = 9.0  # under the 10 minutes one tool command may take
 REPO = Path(__file__).resolve().parent.parent
 
 
-def unavailable(job: Path | None = None, studio: dict | None = None) -> str | None:
+def unavailable(job: Path | None = None, studio: dict | None = None, session_answers: bool = False) -> str | None:
     """Why the videos cannot be made here, or None. Checks the step modules exist without importing them, and the
     keys the brain in force and the art's painter need: the job's painter, or without a job, the one the studio
-    settings name (the defaults without them)."""
+    settings name (the defaults without them). session_answers: an operator waits on the run, so its session answers
+    the model calls the API cannot while the admin's knob allows it (studio/session.py), and the brain's key is not
+    needed here; a painter's and the song's still are, since no session paints or sings."""
     if knobs.env("STUDIO_VIDEOS").strip().lower() in ("off", "0", "false", "no"):
         return f"the videos are turned off here ({knobs.named('STUDIO_VIDEOS')})"
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
     settings = jobs.studio_settings(job) if job else studio or {}
-    problem = brain.retired_problem() or brain.settings_problem() or brain.art_problem(settings.get("art"))
+    keys = not (session_answers and session.allowed())
+    problem = brain.retired_problem() or brain.settings_problem(keys=keys) or brain.art_problem(settings.get("art"))
     song = settings.get("song") if isinstance(settings.get("song"), dict) else {}
     lyria = not media.lesson_only(job) and (song.get("provider") or media.DEFAULT_SONG_PROVIDER) == "gemini"  # the lesson alone has no song
     if not problem and lyria and not os.environ.get("GEMINI_API_KEY"):
@@ -145,7 +148,7 @@ def claim(api: Api, job: Path) -> dict:
 def start_after_post(job: Path, api: Api) -> str:
     """`run` calls this once the lesson is posted: claim the first attempt, so the page says the videos
     are coming and a routine that dies before `videos` starts is still recovered later. Best effort."""
-    why = unavailable(job)
+    why = unavailable(job, session_answers=True)  # `videos --background` is what makes them
     if why:
         return f"no videos: {why}"
     try:
@@ -223,8 +226,10 @@ class Record:
         return result, step, reason
 
 
-def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
-    """Run the media steps that are not done; return (DONE | FAILED | STOPPED, step, reason)."""
+def videos(question_id: str, api: Api | None = None, ask=None, session_answers: bool = False) -> tuple[str, str, str]:
+    """Run the media steps that are not done; return (DONE | FAILED | STOPPED, step, reason). session_answers: an
+    operator waits on this run (`videos --background`), so its session answers a model call the API fails, while the
+    admin's knob allows it (studio/session.py)."""
     job = job_dir(question_id)
     if not (job / "posted.json").exists():
         return STOPPED, "videos", ("no lesson for this topic was posted from this machine; "
@@ -234,13 +239,14 @@ def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str
             return STOPPED, "videos", "a run of this topic is still going"
         record_interrupted(job)
         with job_chosen(job):
-            return _videos(job, api, ask or logged_ask(job))
+            return _videos(job, api, ask or logged_ask(job, session_answers=session_answers),
+                           session_answers=session_answers)
 
 
-def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
+def _videos(job: Path, api: Api | None, ask, session_answers: bool = False) -> tuple[str, str, str]:
     record = Record(job)
     api = refresh_settings(job, api)
-    why = unavailable(job)
+    why = unavailable(job, session_answers=session_answers)
     if why:
         return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
     try:
@@ -259,7 +265,7 @@ def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
         name = claimed.get("brain") or brain.choice_for_model(lesson_model(job) or claimed.get("model")) or default
         keep_brain(job, name, effort)
         brain.choose(name, effort)
-    why = unavailable(job)  # a painter the setting just changed to may need a key this machine lacks
+    why = unavailable(job, session_answers=session_answers)  # a painter the setting just changed to may need a key
     if why:  # the render goes quiet and `recover` hands it on once the setting or the key is fixed
         return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
 
@@ -359,7 +365,7 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
         return STOPPED, "videos", "no lesson for this topic was posted from this machine"
     api = refresh_settings(job, api)
     with job_chosen(job):  # the detached run reads brain.json itself
-        why = unavailable(job)
+        why = unavailable(job, session_answers=True)
     if why:
         return STOPPED, "videos", why
     if _alive(_background_pid(job)):
@@ -372,7 +378,8 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
         return FAILED, "claim", str(e)
     except ApiError as e:
         return _outcome(e, "claim")
-    command = [sys.executable, "-m", "studio", "videos", question_id]
+    # --session: the operator waits on this run, so its session answers a model call the API fails (studio/session.py).
+    command = [sys.executable, "-m", "studio", "videos", question_id, "--session"]
     with (job / LOG).open("a", encoding="utf-8") as log:
         # A session of its own, so the tool that started it can end its command without ending the run.
         process = subprocess.Popen(command, cwd=REPO, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
@@ -406,15 +413,20 @@ def _alive(pid: int | None) -> bool:
 
 
 def wait(question_id: str, minutes: float = WAIT_MINUTES, poll_s: float = 5.0) -> tuple[str, str, str]:
-    """The background run's outcome line once it ends, or RUNNING after `minutes`."""
+    """The background run's outcome line once it ends, ASK while model calls wait for the operator's session
+    (studio/session.py), or RUNNING after `minutes`."""
     job = job_dir(question_id)
     try:
         started = json.loads((job / BACKGROUND).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return STOPPED, "videos", "no videos were started in the background for this topic here"
     deadline, clock = time.monotonic() + minutes * 60, time.monotonic()
+    asking = session.Asking(job)
     while True:
-        if not _alive(started.get("pid")):
+        alive = _alive(started.get("pid"))
+        if alive and asking.settled():
+            return session.ASK, _step_now(job), asking.reason(question_id)
+        if not alive:
             with only_run(job) as mine:
                 if mine:  # else a run started by hand holds the job: wait for it too
                     record_interrupted(job)
@@ -431,13 +443,16 @@ def wait(question_id: str, minutes: float = WAIT_MINUTES, poll_s: float = 5.0) -
                                               "steps": []}) + "\n")
                     return FAILED, "videos", reason
         if time.monotonic() >= deadline:
-            try:
-                step = json.loads((job / "run.current.json").read_text(encoding="utf-8")).get("step", "videos")
-            except (OSError, ValueError):
-                step = "videos"
-            return RUNNING, step, (f"still going after {(time.monotonic() - clock) / 60:.0f} min; "
-                                   f"run `python -m studio wait {question_id}` again")
-        time.sleep(poll_s)
+            return RUNNING, _step_now(job), (f"still going after {(time.monotonic() - clock) / 60:.0f} min; "
+                                             f"run `python -m studio wait {question_id}` again")
+        time.sleep(min(poll_s, session.SETTLE_S))
+
+
+def _step_now(job: Path) -> str:
+    try:
+        return json.loads((job / "run.current.json").read_text(encoding="utf-8")).get("step", "videos")
+    except (OSError, ValueError, AttributeError):
+        return "videos"
 
 
 # --- a render that died with its machine ------------------------------------------------------
@@ -452,7 +467,7 @@ def recover(api: Api | None = None) -> tuple[str, str, str]:
         return _outcome(e, "recover")
     knobs.use(studio)
     with brain.chosen(*default_brain(studio)):
-        why = unavailable(studio=studio)
+        why = unavailable(studio=studio, session_answers=True)  # `videos --background` makes what it takes
     if why:  # taking one would spend an attempt this machine cannot use
         return NONE, "recover", why
     try:

@@ -66,7 +66,7 @@ import time
 import traceback
 from pathlib import Path
 
-from studio import brain, checks, jobs, knobs, ledger, review
+from studio import brain, checks, jobs, knobs, ledger, review, session
 from studio.api import Api, ApiError
 from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
@@ -117,6 +117,8 @@ def failure_code(e: BaseException) -> str:
     all made from what a learner sent."""
     if isinstance(e, StepFailed):  # the spend ceiling, the fact-check, a provider, a media step: each names its own
         return e.code
+    if isinstance(e, session.NoAnswer):
+        return "the session did not answer"
     if isinstance(e, brain.Refused):
         return "the model declined"
     if isinstance(e, brain.Truncated):
@@ -197,10 +199,14 @@ def record_interrupted(job: Path) -> None:
     current.unlink()
 
 
-def run(question_id: str, api: Api | None = None, ask=None, note: str = "") -> tuple[str, str, str]:
+def run(question_id: str, api: Api | None = None, ask=None, note: str = "",
+        session_answers: bool = False) -> tuple[str, str, str]:
     """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason). note: the
-    operator's observation for the brain, given to the bundle if this run writes one."""
+    operator's observation for the brain, given to the bundle if this run writes one. session_answers: an operator
+    waits on this run (`run --background`), so a model call the API fails is answered by its session while the
+    admin's knob allows it (studio/session.py), and a brain whose key is missing here is no reason to stop."""
     note = clean_note(note)
+    keys = True  # whether the brain's key must be here
     if ask is None:  # the real brain: the default brain is checked before the topic is claimed
         retired = brain.retired_problem()
         if retired:
@@ -213,10 +219,14 @@ def run(question_id: str, api: Api | None = None, ask=None, note: str = "") -> t
             # Down or failing, the API is no reason to fail this topic: nothing about it was tried.
             return STOPPED, "run", reason if result == STOPPED else f"the studio's settings could not be read: {reason}"
         knobs.use(studio)
+        keys = not (session_answers and session.allowed())
         with brain.chosen(*default_brain(studio)):
-            problem = brain.settings_problem()
+            problem = brain.settings_problem(keys=keys)
+            missing = brain.settings_problem() if not keys and not problem else None
         if problem:
             return STOPPED, "run", f"the studio's settings are wrong: {problem}"
+        if missing:
+            print(f"brain: {missing}; its calls go to the operator's session (studio/session.py)", file=sys.stderr)
     job = job_dir(question_id)
     job.mkdir(parents=True, exist_ok=True)
     with only_run(job) as mine:
@@ -224,7 +234,8 @@ def run(question_id: str, api: Api | None = None, ask=None, note: str = "") -> t
             return STOPPED, "run", "a run of this topic started earlier is still going; it posts the lesson when it finishes"
         record_interrupted(job)
         with job_chosen(job):
-            return _run(job, question_id, api, ask or logged_ask(job), check_brain=ask is None, note=note)
+            return _run(job, question_id, api, ask or logged_ask(job, session_answers=session_answers),
+                        check_brain=ask is None, note=note, keys=keys)
 
 
 def default_brain(studio: dict | None) -> tuple[str | None, str | None]:
@@ -265,7 +276,7 @@ def keep_brain(job: Path, name: str | None, effort: str | None = None) -> None:
         jobs.write(job / BRAIN_FILE, record)
 
 
-def use_brain(job: Path, question: dict, check: bool) -> None:
+def use_brain(job: Path, question: dict, check: bool, keys: bool = True) -> None:
     """Make the rest of this run on the brain the claim says: the topic's own, else the default brain, except that
     a lesson already begun (its bundle written) stays on the brain that began it, so its fact-check and its videos
     are that brain's whatever the default has become since. With check, a brain that cannot run here stops the run
@@ -284,11 +295,11 @@ def use_brain(job: Path, question: dict, check: bool) -> None:
     jobs.keep_studio_settings(job, studio)  # who paints, for `videos`
     if not check:
         return
-    problem = brain.settings_problem()
+    problem = brain.settings_problem(keys=keys)  # keys=False: the operator's session answers what the API cannot
     if problem and begun and begun != (default or brain.DEFAULT_BRAIN):
         print(f"brain: {problem}; the lesson goes on with the default", file=sys.stderr)
         _put_brain(job, default, effort, "the default")
-        problem = brain.settings_problem()
+        problem = brain.settings_problem(keys=keys)
     if problem and own:
         raise StepFailed(f"the studio cannot run this topic's brain here: {problem}", code="brain cannot run here")
     if problem:
@@ -314,7 +325,7 @@ def clean_note(note: str) -> str:
 
 
 def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = False,
-         note: str = "") -> tuple[str, str, str]:
+         note: str = "", keys: bool = True) -> tuple[str, str, str]:
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
     reporter = ledger.Reporter()
@@ -335,7 +346,7 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
             with ledger.at_step(step):
                 question = claim(api, question_id) if step != "post" else None
                 if question is not None:
-                    use_brain(job, question, check_brain)
+                    use_brain(job, question, check_brain, keys=keys)
                 if step != "post":  # the post makes the answer, which the videos' reports go on
                     report_progress(reporter, job, api, {step: step_clock})
                 with renewing(api, question_id) if step != "post" else contextlib.nullcontext():
@@ -455,7 +466,8 @@ def background(question_id: str, note: str = "") -> tuple[str, str, str]:
     with only_run(job) as mine:
         if not mine:
             return STOPPED, "run", "a run of this topic started earlier is still going; it posts the lesson when it finishes"
-    command = [sys.executable, "-m", "studio", "run", question_id, *(["--note", note] if note else [])]
+    # --session: the operator waits on this run, so its session answers a model call the API fails (studio/session.py).
+    command = [sys.executable, "-m", "studio", "run", question_id, "--session", *(["--note", note] if note else [])]
     with (job / OUTCOME).open("w", encoding="utf-8") as outcome, (job / LOG).open("a", encoding="utf-8") as log:
         # A session of its own, so the tool that started it can end its command without ending the run.
         process = subprocess.Popen(command, cwd=REPO, stdin=subprocess.DEVNULL, stdout=outcome, stderr=log,
@@ -482,8 +494,9 @@ def waits_on_lesson(question_id: str) -> bool:
 
 
 def wait(question_id: str, minutes: float | None = None, poll_s: float = 5.0) -> tuple[str, str, str]:
-    """The background lesson's outcome line once its run ends, or RUNNING after `minutes` (the videos'
-    WAIT_MINUTES, under the 10 minutes one tool command may take)."""
+    """The background lesson's outcome line once its run ends, ASK while model calls wait for the operator's session
+    (studio/session.py), or RUNNING after `minutes` (the videos' WAIT_MINUTES, under the 10 minutes one tool command
+    may take)."""
     from studio.videos import RUNNING, WAIT_MINUTES, _alive  # it imports this module
 
     job = job_dir(question_id)
@@ -493,19 +506,27 @@ def wait(question_id: str, minutes: float | None = None, poll_s: float = 5.0) ->
         return STOPPED, "run", "no lesson was started in the background for this topic here"
     clock = time.monotonic()
     deadline = clock + (WAIT_MINUTES if minutes is None else minutes) * 60
+    asking = session.Asking(job)
     while True:
-        if not _alive(started.get("pid")):
+        alive = _alive(started.get("pid"))
+        if not alive:
             with only_run(job) as mine:
                 if mine:  # else a run started by hand holds the job: wait for it too
                     return _ended(job, started)
+        if alive and asking.settled():
+            return session.ASK, current_step(job, "run"), asking.reason(question_id)
         if time.monotonic() >= deadline:
-            try:
-                step = json.loads((job / "run.current.json").read_text(encoding="utf-8")).get("step", "run")
-            except (OSError, ValueError):
-                step = "run"
-            return RUNNING, step, (f"still going after {(time.monotonic() - clock) / 60:.0f} min; "
-                                   f"run `python -m studio wait {question_id}` again")
-        time.sleep(poll_s)
+            return RUNNING, current_step(job, "run"), (f"still going after {(time.monotonic() - clock) / 60:.0f} min; "
+                                                       f"run `python -m studio wait {question_id}` again")
+        time.sleep(min(poll_s, session.SETTLE_S))
+
+
+def current_step(job: Path, default: str) -> str:
+    """The step a run of the job is on now, as run.current.json says."""
+    try:
+        return json.loads((job / "run.current.json").read_text(encoding="utf-8")).get("step", default)
+    except (OSError, ValueError, AttributeError):
+        return default
 
 
 def _ended(job: Path, started: dict) -> tuple[str, str, str]:
@@ -752,6 +773,9 @@ def summary(question_id: str) -> str:
     calls = [c for c in ledger.read(job) if c.get("role") != "local"]  # Demucs and MMS run here, unbilled
     if calls:
         parts.append(f"{len(calls)} model call(s), {ledger.cost_text(calls)}.")
+        answered = session.summary(calls)  # the calls the operator's session answered after the API failed
+        if answered:
+            parts.append(answered)
     inside = inside_steps(runs)
     return _short(" ".join(parts), CYCLE_LOG_MAX) + (f"\n\n{inside}" if inside else "")
 
@@ -788,16 +812,23 @@ def unquoted(text: str) -> str:
 # --- shared with python -m studio ---------------------------------------------------
 
 
-def logged_ask(job: Path):
+def logged_ask(job: Path, session_answers: bool = False):
     """brain.ask, logging each call to the job's calls.jsonl (tagged with its step) and stderr as it ends. Each call
-    first checks the topic is under its spend ceiling (ledger.check_ceiling)."""
+    first checks the topic is under its spend ceiling (ledger.check_ceiling). session_answers: an operator waits on
+    this run, so a call the API fails (brain.BrainError) is asked of its session instead, while the admin's knob
+    allows it (studio/session.py), and logged with the session's bill."""
 
     def ask(*args, **kwargs):
         ledger.check_ceiling(job)
         # Only this thread's calls: another thread may be asking at the same time.
         with brain.collect() as mine:
             try:
-                return brain.ask(*args, **kwargs)
+                try:
+                    return brain.ask(*args, **kwargs)
+                except brain.BrainError as e:
+                    if not (session_answers and session.allowed()):
+                        raise
+                    return session.ask(job, e, *args, **kwargs)
             finally:
                 ledger.log(job, mine)
 

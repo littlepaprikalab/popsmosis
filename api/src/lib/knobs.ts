@@ -61,6 +61,8 @@ export const KNOBS = {
   ELEVENLABS_USD_PER_1K_CREDITS: { where: 'studio', kind: 'number', default: null, min: 0, max: 100 },
   // Which scenes Claude draws as SVG whatever paints the rest (studio/steps/art.py, claude_draws()).
   STUDIO_CLAUDE_DRAWS: { where: 'studio', kind: 'choice', default: 'math', choices: ['math', 'charts', 'brain'] },
+  // Whether a model call the API fails waits for the teacher's own Claude session to answer it (studio/session.py).
+  STUDIO_SESSION_FALLBACK: { where: 'studio', kind: 'choice', default: 'on', choices: ['on', 'off'] },
 } as const satisfies Record<string, Spec>;
 
 export type KnobName = keyof typeof KNOBS;
