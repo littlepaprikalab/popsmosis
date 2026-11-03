@@ -100,6 +100,20 @@ describe('serializeBreakdown', () => {
     expect(serializeBreakdown(null, music)).toMatchObject({ costUsd: 0, credits: null, unpriced: 1, complete: false });
   });
 
+  it('keeps the calls the teacher\'s session answered on a line of their own, at nothing on the bill', () => {
+    const b = serializeBreakdown({ steps: [{ step: 'bundle', seconds: 400, tries: 2, models: [
+      { model: 'claude-opus-5-5', calls: 1, costUsd: 0.6, credits: null },
+      { model: 'claude-opus-5-5', calls: 1, costUsd: 0, credits: null, via: 'session' },
+      { model: 'claude-sonnet-5-5', calls: 1, costUsd: 0, credits: null, via: 'something else' }, // not a via: dropped
+    ] }], seconds: 400 }, undefined)!;
+    expect(b.steps[0].models).toEqual([
+      { model: 'claude-opus-5-5', maker: 'Anthropic', calls: 1, costUsd: 0.6, credits: null },
+      { model: 'claude-opus-5-5', maker: 'Anthropic', calls: 1, costUsd: 0, credits: null, via: 'session' },
+      { model: 'claude-sonnet-5-5', maker: 'Anthropic', calls: 1, costUsd: 0, credits: null },
+    ]);
+    expect(b.costUsd).toBe(0.6);
+  });
+
   it('works out each step from its models, and keeps only what it knows', () => {
     const b = serializeBreakdown({
       steps: [

@@ -31,6 +31,13 @@ def no_knobs(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_waits(monkeypatch):
+    """A step an outage failed is tried again at once (studio/retry.py), not after minutes; a test of the waits
+    sets its own scale."""
+    monkeypatch.setenv("STUDIO_RETRY_SCALE", "0")
+
+
+@pytest.fixture(autouse=True)
 def no_paid_keys(monkeypatch):
     if LIVE:
         return

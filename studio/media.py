@@ -51,10 +51,13 @@ first one that is not done, as it already does for the bundle.
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import hashlib
 import importlib
 import json
 import re
+import threading
 from pathlib import Path
 from types import ModuleType
 
@@ -122,6 +125,35 @@ def videos(job: Path | None = None) -> tuple[str, ...]:
 def timed(job: Path | None = None) -> tuple[str, ...]:
     """The audio files a job makes and times: the song and the narration, or the narration alone."""
     return ("narration",) if lesson_only(job) else TIMED
+
+
+CPU_TURN = ".cpu.lock"  # beside the jobs: the CPU-heavy steps of the jobs on one machine take turns
+_waiting_turn: set[int] = set()  # the threads of this process waiting for their turn
+
+
+@contextlib.contextmanager
+def cpu_turn(job: Path):
+    """Wait for this machine's other jobs to finish their CPU-heavy step (the timing step's Demucs and aligner, the
+    render's workers): each uses every core, and two at once take many times as long each (8 times, for two songs
+    timed side by side), where taking turns costs only the wait. A routine runs on a machine of its own, so it never
+    waits; jobs side by side on one machine (a test round, runs that overlap on a machine they share) are staggered.
+    The step's time limit stops while it waits (studio/retry.py)."""
+    with open(job.parent / CPU_TURN, "a") as lock:
+        me = threading.get_ident()
+        _waiting_turn.add(me)
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        finally:
+            _waiting_turn.discard(me)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def waiting_for_cpu() -> bool:
+    """Whether a step of this process is waiting for its turn (cpu_turn())."""
+    return bool(_waiting_turn)
 
 
 class StepFailed(Exception):

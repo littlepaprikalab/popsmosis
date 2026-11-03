@@ -60,6 +60,8 @@ services:
         sync: false
       - key: QUESTION_CLAIM_MINUTES  # optional: how long the queue leases a question to one run (default 20); also a knob on /admin/studio
         sync: false
+      - key: QUESTION_MAX_RUNS       # optional: how many runs may start on one topic before it is given up (default 3); also a knob on /admin/studio
+        sync: false
       - key: POPSMOSIS_ROUTINE_FIRE_URL   # optional: the teacher routine's API-trigger URL, so a topic wakes it at once
         sync: false
       - key: POPSMOSIS_ROUTINE_FIRE_TOKEN # optional: that trigger's bearer token, shown once when you generate it

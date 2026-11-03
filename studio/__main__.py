@@ -5,7 +5,10 @@
     python -m studio fail <question-id>          # give it up with its last run's reason
     python -m studio summary <question-id>       # what its runs did, for the operator's record
     python -m studio videos <question-id>        # a posted lesson's videos; --background on a routine
-    python -m studio wait <question-id>          # the background lesson's or videos' outcome, waiting up to 9 minutes
+    python -m studio wait <question-id>          # the background lesson's or videos' outcome, waiting up to 9 minutes;
+                                                 # ASK while model calls wait for the operator's session to answer
+    python -m studio session list <question-id>  # those calls (studio/session.py); `save <id> --model M` saves the
+                                                 # answers written to their folders, `decline <id> <call>` declines one
     python -m studio recover                     # take a render that died with its machine, rebuild its job
     python -m studio fetch <attachment-id> ...   # a follow-up's files, saved by id (studio/files.py)
     python -m studio reply <answer-id> <reply-to-id> --file F   # post the teacher's follow-up answer from a file
@@ -42,12 +45,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import textwrap
 import time
 from pathlib import Path
 
-from studio import ass_fallback, brain, checks, files, jobs, knobs, ledger, media, post, scorecard, styles
+from studio import ass_fallback, brain, checks, files, jobs, knobs, ledger, media, post, scorecard, session, styles
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.ledger import call_row
@@ -63,7 +67,9 @@ STEPS = {"bundle": bundle_step.run, "check": checks.run, "narration": narration_
          "factcheck": factcheck_step.run}
 # STARTED: the lesson or the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
 EXIT_CODES = {**operator_run.EXIT_CODES, operator_videos.STARTED: 0, operator_videos.RECOVER: 0,
-              operator_videos.NONE: 0, operator_videos.RUNNING: 4}
+              operator_videos.NONE: 0, operator_videos.RUNNING: 4, session.ASK: 5}
+SESSION_HELP = ("an operator waits on this run, so its session answers a model call the API fails, while "
+                "STUDIO_SESSION_FALLBACK allows it (studio/session.py); --background passes it on")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -78,9 +84,22 @@ def main(argv: list[str] | None = None) -> int:
             command.add_argument("--note", default="", help=f"the operator's observation for the brain, ending the "
                                  f"bundle prompt (at most {operator_run.NOTE_MAX} characters)")
             command.add_argument("--background", action="store_true", help="start the run detached and return at once")
+            command.add_argument("--session", action="store_true", help=SESSION_HELP)
     make = commands.add_parser("videos", help="a posted lesson's videos; resumes at the first media step not done")
     make.add_argument("question")
     make.add_argument("--background", action="store_true", help="claim, start the run detached, and return at once")
+    make.add_argument("--session", action="store_true", help=SESSION_HELP)
+    asked = commands.add_parser("session", help="model calls waiting for the operator's session (studio/session.py)")
+    asked_actions = asked.add_subparsers(dest="action", required=True)
+    asked_list = asked_actions.add_parser("list", help="the calls waiting, one line each, and the brief for answering one")
+    asked_list.add_argument("question")
+    asked_save = asked_actions.add_parser("save", help="check and save the answers written to the waiting calls' folders")
+    asked_save.add_argument("question")
+    asked_save.add_argument("--model", required=True, help="the model that wrote the answers, as its id")
+    asked_decline = asked_actions.add_parser("decline", help="decline one waiting call: it fails as a refusal does")
+    asked_decline.add_argument("question")
+    asked_decline.add_argument("call", help="the call's folder, as `session list` gives it, or its name")
+    asked_decline.add_argument("--reason", default="", help="why, in a few words of your own")
     waiting = commands.add_parser("wait", help="the outcome line of the lesson or the videos, whichever went to the "
                                                "background last, or RUNNING after --minutes")
     waiting.add_argument("question")
@@ -154,6 +173,26 @@ def main(argv: list[str] | None = None) -> int:
         lines, ok = files.fetch(args.attachment)
         print("\n".join(lines))
         return 0 if ok else 1
+    if args.command == "session":
+        if not operator_run.ID_RE.fullmatch(args.question):
+            parser.error(f"{args.question!r} is not a question id")
+        job = operator_run.job_dir(args.question)
+        if args.action == "list":
+            lines = session.listing(job)
+            print("\n".join(lines) if lines else "NONE: no call is waiting")
+            return 0
+        if args.action == "decline":
+            name = Path(args.call).name  # the folder `session list` gives, or its name alone
+            if not operator_run.ID_RE.fullmatch(name):
+                parser.error(f"{args.call!r} is not a call's name")
+            print(session.decline(job, name, args.reason))
+            return 0
+        try:
+            lines = session.save(job, args.model)
+        except ValueError as e:
+            parser.error(str(e))
+        print("\n".join(lines))
+        return 1 if any(line.startswith("NOT VALID") for line in lines) else 0
     if args.command == "recover":
         result, question, reason = operator_videos.recover()
         print(f"{result} {question}: {reason}")
@@ -168,9 +207,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.background:
             result, step, reason = operator_videos.background(args.question)
         else:
-            result, step, reason = operator_videos.videos(args.question)
+            result, step, reason = operator_videos.videos(args.question, session_answers=args.session)
         print(f"{result} {step}: {reason}")
-        return EXIT_CODES[result]
+        return detached_end(EXIT_CODES[result], args.command == "videos" and args.session)
     if args.command in ("run", "fail", "summary"):
         if not operator_run.ID_RE.fullmatch(args.question):
             parser.error(f"{args.question!r} is not a question id")
@@ -184,9 +223,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.background:
             result, step, reason = operator_run.background(args.question, note=args.note)
         else:
-            result, step, reason = operator_run.run(args.question, note=args.note)
+            result, step, reason = operator_run.run(args.question, note=args.note, session_answers=args.session)
         print(f"{result} {step}: {reason}")
-        return EXIT_CODES[result]
+        return detached_end(EXIT_CODES[result], args.session and not args.background)
 
     if args.command == "make":
         job = jobs.ROOT / args.job
@@ -242,6 +281,17 @@ def main(argv: list[str] | None = None) -> int:
             ok = run_steps(job, [args.name]) if args.command == "step" else True
     print_job(job, brief=args.brief)
     return 0 if ok else 1
+
+
+def detached_end(code: int, detached: bool) -> int:
+    """The exit code; a run detached for an operator (--session) ends here, its outcome written, without waiting for a
+    thread left behind (an early audit still waiting on the session for a bundle that failed), which would keep it
+    alive and `wait` from reading its outcome."""
+    if detached:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(code)
+    return code
 
 
 def run_steps(job: Path, names: list[str]) -> bool:

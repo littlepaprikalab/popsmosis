@@ -190,7 +190,9 @@ def check_ceiling(job: Path) -> None:
 def call_row(call: brain.Call) -> str:
     cost = f"${call.cost_usd:.4f}" if call.cost_usd is not None else "n/a"
     flags = "".join([" fell back" if call.fell_back else "",
-                     f" ({call.stop_reason})" if call.stop_reason not in ("end_turn", "stop", "completed", "") else "",
+                     (f" in session (~${call.api_usd:.4f} at API prices)" if call.api_usd is not None else " in session")
+                     if call.via == "session" else "",
+                     f" ({call.stop_reason})" if call.stop_reason not in ("end_turn", "stop", "completed", "session", "") else "",
                      f" {call.credits:g} credits" if call.credits is not None else ""])
     return (f"{call.label:<20} {call.model:<17} {call.input_tokens:>7} {call.output_tokens:>7} {cost:>8} "
             f"{call.seconds:>6.1f}s{flags}")
@@ -361,17 +363,19 @@ def version(tool: str) -> str | None:
 
 
 def _models(rows: list[dict]) -> list[dict]:
-    """The calls grouped by the model that answered, in the order each model first appears."""
-    out: dict[str, dict] = {}
+    """The calls grouped by the model that answered, in the order each model first appears. Calls the operator's
+    session answered (studio/session.py) are a line of their own, `via: "session"`, at $0 on the API key."""
+    out: dict[tuple[str, str], dict] = {}
     for row in rows:
-        m = out.setdefault(row.get("model") or "unknown", {"calls": 0, "costUsd": 0.0, "credits": None})
+        via = "session" if row.get("via") == "session" else ""
+        m = out.setdefault((row.get("model") or "unknown", via), {"calls": 0, "costUsd": 0.0, "credits": None})
         m["calls"] += 1
         if m["costUsd"] is not None:
             m["costUsd"] = None if row.get("cost_usd") is None else m["costUsd"] + row["cost_usd"]
         if row.get("credits") is not None:
             m["credits"] = (m["credits"] or 0) + row["credits"]
     return [{"model": name, "calls": m["calls"], "costUsd": None if m["costUsd"] is None else round(m["costUsd"], 6),
-             "credits": m["credits"]} for name, m in out.items()]
+             "credits": m["credits"], **({"via": via} if via else {})} for (name, via), m in out.items()]
 
 
 def _part_of(run: dict) -> str:

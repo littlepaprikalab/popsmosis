@@ -5,7 +5,7 @@ import pytest
 
 pytest.importorskip("skia", reason="skia-python is not installed (or its libEGL is missing)")
 
-from studio import media, repair, svg
+from studio import brain, media, repair, svg
 from studio.schemas import BuildUp
 from studio.steps.art import ArtCheck
 from studio.tests import sample_media
@@ -116,6 +116,28 @@ def test_a_flip_that_turns_a_label_over_with_its_part_is_undone(tmp_path):
     before = (job / media.art_path(scene.id)).read_bytes()
     assert repair.repair(job, bundle, scene, located, helper, helper.check) == []
     assert (job / media.art_path(scene.id)).read_bytes() == before
+
+
+def test_a_flip_whose_check_fails_is_undone_and_the_failure_goes_on(tmp_path):
+    # Left flipped, the retry would judge the turned picture by the record's check of the one before it.
+    job, bundle, scene, located = scene_job(tmp_path, ["ATP synthase head above the membrane"], builds_up=["Stroma"])
+    space = np.zeros((media.ART_HEIGHT, media.ART_WIDTH), bool)
+    space[:380] = True
+    pixels = repair.read_rgb(job / media.art_path(scene.id))
+    pixels[100:106, 100:106] = GOLD  # a speck it clears first: not kept either
+    (job / media.art_path(scene.id)).write_bytes(svg.png(pixels))
+    located["Stroma"] = (space, svg.locate(space))
+    helper = Helper(["ATP synthase"], after=[])
+    picture, record = (job / media.art_path(scene.id)).read_bytes(), (job / "art" / f"{scene.id}.json").read_bytes()
+
+    def fails(job, bundle, scene):
+        assert (job / media.art_path(scene.id)).read_bytes() != picture  # it looks at the flipped picture
+        raise brain.BrainError("the helper did not answer")
+
+    with pytest.raises(brain.BrainError, match="did not answer"):
+        repair.repair(job, bundle, scene, located, helper, fails)
+    assert (job / media.art_path(scene.id)).read_bytes() == picture
+    assert (job / "art" / f"{scene.id}.json").read_bytes() == record
 
 
 def test_nothing_out_of_place_asks_nothing_and_a_space_that_fills_is_cleared_for_free(tmp_path):

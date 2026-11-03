@@ -207,15 +207,18 @@ def test_a_wrong_fact_without_a_correction_fails_after_one_call(job):
     assert report.reason == "fact f2 is wrong and the audit gave no correction: not so"
 
 
-def test_a_run_whose_audit_fails_never_reaches_the_fact_check_and_retries_the_audit(jobs_root):
+def test_a_run_whose_audit_fails_never_reaches_the_fact_check_and_the_retry_writes_the_lesson_again(jobs_root):
     first = Studio(lambda text: {"verdict": "WRONG", "problem": "not so"} if "hand-off" in text
                    else {"verdict": "CORRECT"})
     result, step, reason = operator_run.run("q1", api=FakeApi(), ask=first)
     assert (result, step) == ("FAILED", "audit") and reason.startswith("fact f2 is wrong")
     assert first.labels == ["script", "bundle", "narration edit", "fact audit"]
+    # Until Nov 3 the retry audited the same bundle again, and a lesson refused once was refused again: it is set
+    # aside now, and written again (docs/operator-failures.md).
+    assert (jobs_root / "q1" / "bundle.rejected-1.json").exists()
     second = Studio()
     assert operator_run.run("q1", api=FakeApi(), ask=second)[0] == "DONE"
-    assert second.labels[0] == "fact audit"  # the bundle was kept
+    assert second.labels[:2] == ["script", "bundle"]
 
 
 def test_an_unsure_fact_is_kept_and_recorded_never_failing_the_droplet(job):
@@ -384,6 +387,9 @@ def test_a_run_killed_in_the_audit_audits_again(jobs_root):
                    else {"verdict": "CORRECT"})
     operator_run.run("q1", api=FakeApi(), ask=first)
     job = jobs_root / "q1"
+    # Killed in the audit rather than failed by it: the bundle stays (one the audit refused is set aside, so the
+    # retry writes it again).
+    (job / "bundle.rejected-1.json").replace(job / "bundle.json")
     (job / "run.current.json").write_text(json.dumps({"started": "t", "step": "audit", "steps": []}))
     ask = Studio()
     assert operator_run.run("q1", api=FakeApi(), ask=ask)[0] == "DONE"
