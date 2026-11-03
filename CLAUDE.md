@@ -83,6 +83,5 @@ pairing and the summary), and `tools/insession/SCORE_WRITER.md` and `SCORE_JUDGE
 It costs no API money but a lot of session usage (about 24 subagents, 40 minutes), so when a
 change you make could move its scores, offer a run once and wait for the answer. That means a
 change to the bundle prompt (`studio/prompts/bundle.md`), the script prompt
-(`studio/prompts/script.md`), the rubric, the code checks (`studio/checks.py`), the learner
-test (`studio/steps/learner.py`), the bundle step, or the brain, its model or its effort
-(`studio/brain.py`). The learner test and the narration edit are skipped; say so.
+(`studio/prompts/script.md`), the rubric, the code checks (`studio/checks.py`), the bundle step,
+or the brain, its model or its effort (`studio/brain.py`). The narration edit is skipped; say so.

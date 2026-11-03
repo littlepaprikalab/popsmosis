@@ -43,9 +43,9 @@ from studio.schemas import Bundle, FactAudit, FactCheck, LessonBundle
 from studio.steps import art, audio, timing
 from studio.tests.test_run import FakeApi
 
-# Seconds each call takes on a live run. Measured on the job of Oct 29: the bundle with its learner test 8.7 min,
-# the fact-check 1.4, Demucs 1.6, the alignment 3.1 (its model's load and about ten windows), locate 1 min (a
-# SAM call each structure, the scenes at once). The rest are estimates from docs/test-rounds.md.
+# Seconds each call takes on a live run. Measured on the job of Oct 29: the bundle 8.7 min (with the learner test
+# it had then), the fact-check 1.4, Demucs 1.6, the alignment 3.1 (its model's load and about ten windows), locate
+# 1 min (a SAM call each structure, the scenes at once). The rest are estimates from docs/test-rounds.md.
 WAITS = {
     "bundle": 522.0,
     "audit": 40.0,  # the fact audit, one call (estimate)

@@ -7,11 +7,10 @@ run costs session usage, not API money (`CLAUDE.md` says how). Run it when one o
 below applies.
 
 It runs a fixed set of 12 topics (`studio/scorecards/topics.json`) through the bundle step only:
-the brain writes each bundle, the learner test reads its lesson, and the code checks run. There is
-no fact-check, art or audio. Each droplet is then scored three ways:
+the brain writes each bundle and the code checks run. There is no fact-check, art or audio. Each
+droplet is then scored two ways:
 
 - **Checks:** the problems the code checks leave for the prompt, by rule.
-- **Learner test:** whether a first-time learner got the core idea and the why chain's links.
 - **Judge:** Claude Opus 5.5 (Claude Sonnet 5.5 until Oct 31) reads the droplet against a written rubric
   (`studio/prompts/rubric.md`). It scores hook, frame, why chain, key lines, accuracy,
   singability and lesson clarity from 1 to 5, gives a reason for each, and lists the claims it
@@ -21,8 +20,8 @@ The real pipeline (`run`, `plan`, `videos`) never calls the scorecard or its jud
 
 ## When to run it
 
-- Before merging a change to the bundle prompt (`studio/prompts/bundle.md`), the code checks
-  (`studio/checks.py`) or the learner test (`studio/steps/learner.py`).
+- Before merging a change to the bundle prompt (`studio/prompts/bundle.md`) or the code checks
+  (`studio/checks.py`).
 - When the brain or its effort changes, or a new model comes out.
 - After several small changes that were each tried on only a few topics: together they can
   move the others.
@@ -63,8 +62,10 @@ Each run is a folder in `studio/scorecards/runs/`, named for when it started and
 
 - `scorecard.md`: start here. The summary, a table by topic, and the reason behind every score.
 - `scorecard.json`: the same data, which `compare` reads.
-- A folder per topic: the whole droplet (`bundle.json`), its checks, the learner test, the
-  judge's scores and every call's cost.
+- A folder per topic: the whole droplet (`bundle.json`), its checks, the judge's scores and
+  every call's cost. Runs before Nov 3 also kept a learner test (`learner.json`): a helper read
+  only the lesson as a first-time learner, and the lesson was rewritten once if it missed the
+  core idea. It passed every topic on the first read in every run, so it was taken out.
 
 `compare` shows each criterion's mean and each topic's scores before and after. A change is
 worth merging when the means go up without other topics going down.

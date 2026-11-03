@@ -1,13 +1,10 @@
 """The scorecard: did a prompt change make droplets better overall, not just one?
 
 A fixed set of topics across subjects and levels (studio/scorecards/topics.json) goes through the bundle step
-alone, as `python -m studio plan` runs it but with no fact-check, art or audio: the brain writes each bundle, a
-learner reads its lesson (rewritten once if they missed its essence) and the code checks run. Each droplet is then
-scored three ways:
+alone, as `python -m studio plan` runs it but with no fact-check, art or audio: the brain writes each bundle and
+the code checks run. Each droplet is then scored two ways:
 
 - the code checks (checks.json): the problems left for the prompt, by rule, and how many the code repaired;
-- the learner test (learner.json): whether a first-time learner got the core idea and each link of the why chain,
-  and whether the lesson needed its rewrite;
 - a judge (studio/prompts/rubric.md): one call that reads the droplet against a written rubric and gives each of
   seven criteria (CRITERIA) a score from 1 to 5 with its reason, and lists every error it finds.
 
@@ -19,7 +16,7 @@ scored three ways:
 
 A run is saved in studio/scorecards/runs/<run>/, named for when it started and the commit it ran on:
 scorecard.md (a table per topic, each score's reason, and the summary), scorecard.json (the same, for compare), and
-each topic's job folder (request, bundle, checks, learner test, judge, calls). The commit is recorded, with the diff
+each topic's job folder (request, bundle, checks, judge, calls). The commit is recorded, with the diff
 of anything uncommitted under studio/ (prompt.diff), so a prompt tried before it is committed is on record too.
 
 The judge is the same model on every run, whatever the brain (brain.CLAUDE["judge"]), so two runs on different
@@ -156,7 +153,7 @@ def run(topics: list[Topic], folder: Path, ask_for=None, about: dict | None = No
 
 
 def make(topic: Topic, job: Path, ask, judge_only: bool = False) -> None:
-    """The topic's bundle (with its learner test and checks), then the judge's scores: whichever is missing.
+    """The topic's bundle (with its checks), then the judge's scores: whichever is missing.
     A step that fails is recorded in failed.json and the topic goes no further; the run goes on."""
     job.mkdir(parents=True, exist_ok=True)
     if judge_only and not (job / "bundle.json").exists():
@@ -179,7 +176,7 @@ def make(topic: Topic, job: Path, ask, judge_only: bool = False) -> None:
 
 
 def judge(job: Path, ask) -> Judgement:
-    """The judge reads the droplet as it was written, after the learner test's rewrite, against the rubric."""
+    """The judge reads the droplet as it was written, against the rubric."""
     bundle = checks.load(job / "bundle.json")
     request = read(job / "request.json", Request)
     try:
@@ -280,7 +277,7 @@ def topic_row(topic: Topic, job: Path) -> dict:
     """One topic's scores, from the files its job wrote."""
     row: dict = {"id": topic.id, "subject": topic.subject, "level": topic.level, "topic": topic.topic,
                  "course": topic.course, "made": (job / "bundle.json").exists(), "failed": None, "checks": None,
-                 "learner": None, "rubric": None, "errors": None}
+                 "rubric": None, "errors": None}
     if (job / FAILED).exists():
         row["failed"] = json.loads((job / FAILED).read_text(encoding="utf-8"))
     elif not row["made"]:
@@ -303,7 +300,6 @@ def topic_row(topic: Topic, job: Path) -> dict:
             row["checks"] = {"left": len(left), "repaired": len(problems) - len(left),
                              "by_rule": dict(Counter(p.rule for p in left)),
                              "problems": [f"{p.line_id} {p.rule}: {p.detail}" for p in left]}
-        row["learner"] = learner_result(job, len(bundle.why_chain))
     if (job / JUDGE).exists():
         try:
             judgement = read(job / JUDGE, Judgement)
@@ -320,28 +316,9 @@ def topic_row(topic: Topic, job: Path) -> dict:
     return row
 
 
-def learner_result(job: Path, links: int) -> dict | None:
-    """The learner test's two reads, as counts: None for a bundle it did not run on (no why chain)."""
-    if not (job / "learner.json").exists():
-        return None
-    record = json.loads((job / "learner.json").read_text(encoding="utf-8"))
-    if "error" in record:
-        return {"error": record["error"]}
-
-    def read_of(key: str) -> dict | None:
-        if key not in record:
-            return None
-        grade = record[key]["grade"]
-        return {"core_idea": grade["core_idea"], "links": sum(grade["links"][:links]), "of": links,
-                "passed": record[key]["passed"], "missing": grade["missing"]}
-
-    return {"first": read_of("first"), "rewritten": read_of("rewritten")}
-
-
 def summarize(rows: list[dict]) -> dict:
     judged = [r for r in rows if r["rubric"]]
     checked = [r for r in rows if r["checks"]]
-    tested = [r for r in rows if r["learner"] and r["learner"].get("first")]
     rubric = {}
     for key in CRITERIA:
         scores = [r["rubric"][key]["score"] for r in judged]
@@ -350,7 +327,6 @@ def summarize(rows: list[dict]) -> dict:
     rules = Counter()
     for r in checked:
         rules.update(r["checks"]["by_rule"])
-    rewritten = [r for r in tested if r["learner"]["rewritten"]]
     return {
         "topics": len(rows), "made": sum(r["made"] for r in rows), "judged": len(judged),
         "failed": {r["id"]: r["failed"]["step"] for r in rows if r["failed"]},
@@ -359,13 +335,6 @@ def summarize(rows: list[dict]) -> dict:
                    "repaired": sum(r["checks"]["repaired"] for r in checked),
                    "per_droplet": round(statistics.mean(r["checks"]["left"] for r in checked), 1) if checked else None,
                    "by_rule": dict(rules.most_common())},
-        "learner": {"tested": len(tested),
-                    "first_passed": sum(r["learner"]["first"]["passed"] for r in tested),
-                    "first_core_idea": sum(r["learner"]["first"]["core_idea"] for r in tested),
-                    "first_links": sum(r["learner"]["first"]["links"] for r in tested),
-                    "of": sum(r["learner"]["first"]["of"] for r in tested),
-                    "rewritten": len(rewritten),
-                    "passed_after_rewrite": sum(r["learner"]["rewritten"]["passed"] for r in rewritten)},
         "errors": sum(len(r["errors"]) for r in judged),
         "cost": {"bundle": round(sum(r["cost"]["bundle"] for r in rows), 2),
                  "judge": round(sum(r["cost"]["judge"] for r in rows), 2),
@@ -391,16 +360,11 @@ def markdown(card: dict) -> str:
            "## Summary", "", "| | |", "|---|---|",
            f"| Droplets made | {s['made']} of {s['topics']}"
            + (f"; failed: {', '.join(f'{k} ({v})' for k, v in s['failed'].items())}" if s["failed"] else "") + " |"]
-    c, learner = s["checks"], s["learner"]
+    c = s["checks"]
     if c["per_droplet"] is not None:
         out.append(f"| Checks left for the prompt | {c['left']} ({c['per_droplet']} a droplet); "
                    f"{c['repaired']} repaired by code |")
         out.append("| ... by rule | " + (", ".join(f"{rule} {n}" for rule, n in c["by_rule"].items()) or "none") + " |")
-    if learner["tested"]:
-        out.append(f"| Learner test, first read | {learner['first_passed']} of {learner['tested']} passed; core idea "
-                   f"{learner['first_core_idea']} of {learner['tested']}; links {learner['first_links']} of "
-                   f"{learner['of']} |")
-        out.append(f"| Lessons rewritten | {learner['rewritten']}; {learner['passed_after_rewrite']} passed after |")
     out.append(f"| Errors the judge found | {s['errors']} in {s['judged']} droplets |")
     out.append(f"| Cost | bundle step ${s['cost']['bundle']:.2f}, judge ${s['cost']['judge']:.2f} |")
     out += ["", "| Criterion | Mean | Lowest | At 2 or below |", "|---|---|---|---|"]
@@ -408,11 +372,11 @@ def markdown(card: dict) -> str:
         r = s["rubric"][key]
         out.append(f"| {name} | {r['mean']:.2f} | {r['lowest']} | {r['low']} |" if r else f"| {name} | - | - | - |")
     out += ["", "## By topic", "",
-            "| Topic | Level | Checks | Learner | " + " | ".join(CRITERIA.values()) + " | Cost |",
-            "|---|---|---|---|" + "---|" * len(CRITERIA) + "---|"]
+            "| Topic | Level | Checks | " + " | ".join(CRITERIA.values()) + " | Cost |",
+            "|---|---|---|" + "---|" * len(CRITERIA) + "---|"]
     for r in rows:
         scores = [str(r["rubric"][key]["score"]) if r["rubric"] else "-" for key in CRITERIA]
-        out.append(f"| {r['id']} | {r['level']} | {checks_cell(r)} | {learner_cell(r)} | " + " | ".join(scores)
+        out.append(f"| {r['id']} | {r['level']} | {checks_cell(r)} | " + " | ".join(scores)
                    + f" | ${r['cost']['bundle'] + r['cost']['judge']:.2f} |")
     out += ["", "## Why each score", ""]
     for r in rows:
@@ -424,19 +388,6 @@ def checks_cell(row: dict) -> str:
     if not row["checks"]:
         return "-"
     return f"{row['checks']['left']} ({row['checks']['repaired']} fixed)"
-
-
-def learner_cell(row: dict) -> str:
-    learner = row["learner"]
-    if not learner:
-        return "-"
-    if learner.get("error"):
-        return "error"
-
-    def one(read_: dict) -> str:
-        return f"{'pass' if read_['passed'] else 'miss'} {read_['links']}/{read_['of']}"
-
-    return one(learner["first"]) + (f" (rewrite: {one(learner['rewritten'])})" if learner["rewritten"] else "")
 
 
 def topic_section(r: dict) -> list[str]:
@@ -453,13 +404,6 @@ def topic_section(r: dict) -> list[str]:
     if r["checks"] and r["checks"]["problems"]:
         out.append("- Checks left for the prompt:")
         out += [f"  - {p}" for p in r["checks"]["problems"]]
-    learner = r["learner"]
-    if learner and learner.get("error"):
-        out.append(f"- Learner test failed: {learner['error']}")
-    elif learner:
-        for when, read_ in (("first read", learner["first"]), ("after the rewrite", learner["rewritten"])):
-            if read_ and read_["missing"]:
-                out.append(f"- Learner, {when}, missed: " + " ".join(read_["missing"]))
     return out + [""]
 
 
@@ -492,9 +436,6 @@ def compare(a: dict, b: dict) -> str:
     for label, va, vb in (
         ("Droplets made", sa["made"], sb["made"]),
         ("Checks left a droplet", sa["checks"]["per_droplet"], sb["checks"]["per_droplet"]),
-        ("Learner passed on the first read", sa["learner"]["first_passed"], sb["learner"]["first_passed"]),
-        ("Learner links on the first read", sa["learner"]["first_links"], sb["learner"]["first_links"]),
-        ("Lessons rewritten", sa["learner"]["rewritten"], sb["learner"]["rewritten"]),
         ("Errors the judge found", sa["errors"], sb["errors"]),
         ("Cost ($)", round(sa["cost"]["bundle"] + sa["cost"]["judge"], 2),
          round(sb["cost"]["bundle"] + sb["cost"]["judge"], 2)),
@@ -506,11 +447,11 @@ def compare(a: dict, b: dict) -> str:
         out.append("| Checks by rule | " + ", ".join(f"{r} {sa['checks']['by_rule'].get(r, 0)}" for r in rules)
                    + " | " + ", ".join(f"{r} {sb['checks']['by_rule'].get(r, 0)}" for r in rules) + " | |")
     out += ["", "## By topic (A → B)", "",
-            "| Topic | Checks | Learner | " + " | ".join(CRITERIA.values()) + " |",
-            "|---|---|---|" + "---|" * len(CRITERIA)]
+            "| Topic | Checks | " + " | ".join(CRITERIA.values()) + " |",
+            "|---|---|" + "---|" * len(CRITERIA)]
     for i in ids:
         ra, rb = rows_a[i], rows_b[i]
-        cells = [_pair(checks_cell(ra), checks_cell(rb)), _pair(learner_cell(ra), learner_cell(rb))]
+        cells = [_pair(checks_cell(ra), checks_cell(rb))]
         cells += [_pair(str(ra["rubric"][k]["score"]) if ra["rubric"] else "-",
                         str(rb["rubric"][k]["score"]) if rb["rubric"] else "-") for k in CRITERIA]
         out.append(f"| {i} | " + " | ".join(cells) + " |")
