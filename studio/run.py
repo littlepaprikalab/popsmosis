@@ -319,9 +319,14 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     done_steps: list[dict] = []
     reporter = ledger.Reporter()
     result, step, reason, code = DONE, "post", "the lesson was already posted", ""
-    # From the first step that is not done, every step runs: a new bundle makes the fact-check stale.
+    # From the first step that is not done, every step runs: a new bundle makes the fact-check stale. All but the
+    # audit, when the bundle step's early audit passed the facts the bundle kept (studio/steps/audit.py): until Nov 2
+    # it was billed twice on every topic.
     first = next((i for i, name in enumerate(STEPS) if not is_done(job, name)), len(STEPS))
     for step in STEPS[first:] if not is_done(job, "post") else ():
+        if step == "audit" and is_done(job, "audit"):
+            print("audit: done beside the bundle", file=sys.stderr)
+            continue
         print(f"{step}: running", file=sys.stderr)
         jobs.write(job / "run.current.json", {"started": started, "step": step, "steps": done_steps})
         step_clock = time.monotonic()
