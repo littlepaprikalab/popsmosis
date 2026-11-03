@@ -379,14 +379,22 @@ def version(tool: str) -> str | None:
 # words mean different work: the longest match wins. "again" in a label is a retry of the same work, so it is passed
 # over ("learner again grade" grades, as "learner grade" does). A label none matches leaves its line unlabelled.
 TASKS = {
-    "script": "writes the script", "bundle": "writes the lesson and/or song", "lesson rewrite": "rewrites the lesson",
-    "narration edit": "edits the narration", "lyric rewrite": "rewrites the lyrics",
+    "script": "writes the script", "bundle": "writes the lesson and/or song",
+    "lesson rewrite": "writes the lesson and/or song",  # the learner missed its essence: the lesson written again
+    "narration edit": "edits the narration",
     "learner": "takes the lesson as a student", "learner grade": "grades the student's answers",
-    "fact audit": "audits the facts", "factcheck": "fact-checks every line",
-    "art": "makes the pictures", "art check": "checks the pictures", "art rewrite": "rewrites a scene's words",
-    "locate": "finds the parts", "locate box": "boxes a part SAM missed", "label check": "checks the labels",
-    # studio/repair.py: the helper says which out-of-place parts are upside down; the checker looks again once flipped
-    "repair": "finds upside-down parts", "repair check": "checks the flipped picture",
+    "fact audit": "audits the facts",
+    "factcheck": "fact-checks and fixes every line",
+    "lyric rewrite": "fact-checks and fixes every line",  # songwriter.py: a couplet the fact-check failed, sung again
+    "art": "makes the pictures", "art check": "checks the pictures",
+    "art rewrite": "fixes the description of a failed picture",  # for the next try at painting it
+    "locate": "finds the parts",
+    # The helper's work in the step: each name on the right part (label check); a part SAM missed, boxed for it to
+    # find (locate box); a part painted upside down, to turn over (repair.py). A fix-up that runs only when something
+    # went wrong shares the line of the work it backs up (the owner, Nov 3: the bill said too much).
+    "label check": "checks and fixes the parts and labels", "locate box": "checks and fixes the parts and labels",
+    "repair": "checks and fixes the parts and labels",
+    "repair check": "checks a fixed picture",  # the checker's look once a part is turned over: kept only if better
     "arrows point": "places the arrows", "arrows look": "checks the arrows",
     ("audio", "song"): "sings the song", ("audio", "narration"): "reads the narration",
     # Demucs takes the singing out of the mix; MMS then lines the lyrics up with it

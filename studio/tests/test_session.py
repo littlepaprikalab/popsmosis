@@ -66,7 +66,7 @@ def test_a_call_the_api_fails_waits_for_the_session_and_is_billed_to_its_plan(qu
     # On the bill, a line of its own, at nothing: the API key paid for none of it.
     assert ledger._models(ledger.read(job)) == [
         {"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.0, "credits": None, "via": "session",
-         "task": "fact-checks every line"}]
+         "task": "fact-checks and fixes every line"}]
     assert "1 call(s) answered in session by claude-opus-5-5" in session.summary(ledger.read(job))
     # The same call asked again on a later run, failing on the API again, takes the saved answer at once.
     with brain.collect():

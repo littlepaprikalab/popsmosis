@@ -82,7 +82,7 @@ def test_the_lesson_counts_every_try_and_every_model_that_answered(tmp_path):
         {"model": "claude-opus-5", "calls": 1, "costUsd": 0.5, "credits": None,
          "task": "writes the lesson and/or song"}]  # after a refusal fell back
     assert steps["factcheck"]["models"] == [{"model": "claude-opus-5-5", "calls": 2, "costUsd": 0.25, "credits": None,
-                                             "task": "fact-checks every line"}]
+                                             "task": "fact-checks and fixes every line"}]
     assert steps["request"]["models"] == [] and steps["request"]["costUsd"] == 0
 
 
@@ -441,7 +441,7 @@ def test_each_line_says_what_its_calls_did_and_the_checker_is_apart_from_the_pai
     art = ledger.breakdown(tmp_path, "videos")["steps"][0]
     assert [(m["model"], m["calls"], m.get("task")) for m in art["models"]] == [
         ("muse-image-1.0", 1, "makes the pictures"), ("claude-sonnet-5-5", 2, "checks the pictures"),
-        ("claude-opus-5-5", 1, "rewrites a scene's words")]
+        ("claude-opus-5-5", 1, "fixes the description of a failed picture")]
     # The same words mean different work by step; a label it does not know leaves the line unlabelled.
     assert ledger.task_of({"label": "song", "step": "audio"}) == "sings the song"
     assert ledger.task_of({"label": "song", "step": "timing"}) == "times the song"
@@ -456,21 +456,21 @@ def test_every_label_the_studio_logs_says_what_its_call_did():
         ("bundle", "fact audit"): "audits the facts", ("bundle", "fact audit again"): "audits the facts",  # audit.py
         ("bundle", "learner"): "takes the lesson as a student",  # steps/learner.py: the student, then its grader
         ("bundle", "learner grade"): "grades the student's answers",
-        ("bundle", "lesson rewrite"): "rewrites the lesson",
+        ("bundle", "lesson rewrite"): "writes the lesson and/or song",  # a fix-up: on the line it backs up
         ("bundle", "learner again"): "takes the lesson as a student",
         ("bundle", "learner again grade"): "grades the student's answers",
         ("bundle", "narration edit"): "edits the narration",  # steps/narration.py
-        ("factcheck", "factcheck round 1"): "fact-checks every line",  # steps/factcheck.py
-        ("factcheck", "lyric rewrite round 1"): "rewrites the lyrics",  # steps/songwriter.py
+        ("factcheck", "factcheck round 1"): "fact-checks and fixes every line",  # steps/factcheck.py
+        ("factcheck", "lyric rewrite round 1"): "fact-checks and fixes every line",  # steps/songwriter.py
         ("art", "art overview try 2"): "makes the pictures",  # steps/art.py
         ("art", "art check overview"): "checks the pictures",
-        ("art", "art rewrite overview"): "rewrites a scene's words",
+        ("art", "art rewrite overview"): "fixes the description of a failed picture",
         ("locate", "locate overview pump try 2"): "finds the parts",  # steps/locate.py: SAM
         ("locate", "locate overview pump box"): "finds the parts",  # SAM again, in the helper's box
-        ("locate", "locate box overview pump"): "boxes a part SAM missed",  # the helper's box
-        ("locate", "label check overview"): "checks the labels",
-        ("locate", "repair overview"): "finds upside-down parts",  # repair.py
-        ("locate", "repair check overview"): "checks the flipped picture",
+        ("locate", "locate box overview pump"): "checks and fixes the parts and labels",  # the helper's box
+        ("locate", "label check overview"): "checks and fixes the parts and labels",
+        ("locate", "repair overview"): "checks and fixes the parts and labels",  # repair.py
+        ("locate", "repair check overview"): "checks a fixed picture",
         ("audio", "song"): "sings the song", ("audio", "narration"): "reads the narration",  # steps/audio.py
         ("timing", "song vocals"): "separates the vocals so the words can be timed",  # steps/timing.py: Demucs
         ("timing", "song alignment"): "times the song",  # MMS
@@ -492,3 +492,22 @@ def test_every_tool_on_the_bill_says_what_it_did_in_its_step():
     for step, tools in ledger.TOOLS.items():
         for tool, task in tools.items():
             assert task.strip() and len(task) <= 60, (step, tool)  # the API keeps 60 characters
+
+
+def test_a_fix_up_shares_the_line_of_the_work_it_backs_up(tmp_path):
+    """A call that runs only when something went wrong is on its model's line for that work, not a line of its own
+    (the owner, Nov 3: the bill said too much)."""
+    with ledger.at_step("locate"):
+        ledger.log(tmp_path, [call("locate overview pump", model="sam-3.1", cost=0.0025, role="meta"),
+                              call("label check overview", model="muse-spark-1.3", cost=0.01, role="helper"),
+                              call("locate box overview pump", model="muse-spark-1.3", cost=0.01, role="helper"),
+                              call("repair overview", model="muse-spark-1.3", cost=0.01, role="helper"),
+                              call("repair check overview", model="claude-sonnet-5-5", cost=0.003, role="checker")])
+    with ledger.at_step("factcheck"):
+        ledger.log(tmp_path, [call("factcheck round 1"), call("lyric rewrite round 1"), call("factcheck round 2")])
+    steps = {s["step"]: s for s in ledger.breakdown(tmp_path, "videos")["steps"]}
+    assert [(m["model"], m["calls"], m["task"]) for m in steps["locate"]["models"]] == [
+        ("sam-3.1", 1, "finds the parts"), ("muse-spark-1.3", 3, "checks and fixes the parts and labels"),
+        ("claude-sonnet-5-5", 1, "checks a fixed picture")]
+    [factcheck] = ledger.breakdown(tmp_path, "lesson")["steps"]
+    assert [(m["calls"], m["task"]) for m in factcheck["models"]] == [(3, "fact-checks and fixes every line")]
