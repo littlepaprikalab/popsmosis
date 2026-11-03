@@ -226,6 +226,7 @@ export interface BreakdownTool {
   name: string; // demucs, torchaudio, torch, skia-python, ffmpeg
   version: string | null;
   maker: string | null;
+  task?: string; // what it did in the step ("runs htdemucs"); absent on a bill from before the studio said
 }
 
 export interface BreakdownStep {

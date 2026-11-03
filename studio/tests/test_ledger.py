@@ -216,10 +216,15 @@ def test_each_media_step_lists_the_software_it_runs_at_the_version_installed_her
         ledger.log(tmp_path, [call("song vocals", model="htdemucs", cost=0.0, role="local")])
     steps = {s["step"]: s for s in ledger.breakdown(tmp_path, "videos")["steps"]}
     assert steps["timing"]["models"] == [{"model": "htdemucs", "calls": 1, "costUsd": 0.0, "credits": None,
-                                          "task": "separates the vocals"}]
-    assert steps["timing"]["tools"] == [{"name": "demucs", "version": "4.1.0"}, {"name": "torchaudio", "version": "2.11.0"},
-                                        {"name": "torch", "version": "2.11.0+cpu"}, {"name": "ffmpeg", "version": "7.1.1"}]
-    assert steps["render"]["tools"] == [{"name": "skia-python", "version": "144.1"}, {"name": "ffmpeg", "version": "7.1.1"}]
+                                          "task": "separates the vocals so the words can be timed"}]
+    # Each tool with what it did in the step: the bill says what Demucs is for (the owner, Nov 3).
+    assert steps["timing"]["tools"] == [
+        {"name": "demucs", "version": "4.1.0", "task": "runs htdemucs"},
+        {"name": "torchaudio", "version": "2.11.0", "task": "runs mms-fa"},
+        {"name": "torch", "version": "2.11.0+cpu", "task": "runs both models"},
+        {"name": "ffmpeg", "version": "7.1.1", "task": "decodes the audio for them"}]
+    assert steps["render"]["tools"] == [{"name": "skia-python", "version": "144.1", "task": "draws the frames"},
+                                        {"name": "ffmpeg", "version": "7.1.1", "task": "encodes the videos"}]
     assert steps["timeline"]["tools"] == []  # the studio's own code
 
 
@@ -260,7 +265,7 @@ def test_a_broken_install_costs_its_version_never_the_bill(tmp_path, monkeypatch
     ledger.version.cache_clear()
     (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [{"step": "art", "seconds": 1.0}]}))
     [art] = ledger.try_breakdown(tmp_path, "videos")["steps"]
-    assert art["tools"] == [{"name": "skia-python", "version": None}]
+    assert art["tools"] == [{"name": "skia-python", "version": None, "task": "renders and sizes the pictures"}]
     ledger.version.cache_clear()  # what the fake said is not this machine's
 
 
@@ -449,10 +454,16 @@ def test_every_label_the_studio_logs_says_what_its_call_did():
         ("locate", "repair overview"): "finds upside-down parts",  # repair.py
         ("locate", "repair check overview"): "checks the flipped picture",
         ("audio", "song"): "sings the song", ("audio", "narration"): "reads the narration",  # steps/audio.py
-        ("timing", "song vocals"): "separates the vocals",  # steps/timing.py: Demucs
+        ("timing", "song vocals"): "separates the vocals so the words can be timed",  # steps/timing.py: Demucs
         ("timing", "song alignment"): "times the song",  # MMS
         ("timing", "narration alignment"): "times the narration",
         ("arrows", "arrows point overview"): "places the arrows",  # steps/arrows.py
         ("arrows", "arrows look overview ATP pump > cell"): "checks the arrows",
     }
     assert {key: ledger.task_of({"label": key[1], "step": key[0]}) for key in said} == said
+
+
+def test_every_tool_on_the_bill_says_what_it_did_in_its_step():
+    for step, tools in ledger.TOOLS.items():
+        for tool, task in tools.items():
+            assert task.strip() and len(task) <= 60, (step, tool)  # the API keeps 60 characters

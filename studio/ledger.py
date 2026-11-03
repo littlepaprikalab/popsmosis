@@ -18,7 +18,8 @@ it filling in while the droplet is made (api/src/lib/progress.ts).
                 "models": [{"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.5213, "credits": null}],
                 "tools": []},
                {"step": "render", "seconds": 157.0, "tries": 1, "costUsd": 0, "models": [],
-                "tools": [{"name": "skia-python", "version": "144.1"}, {"name": "ffmpeg", "version": "7.1.1"}]},
+                "tools": [{"name": "skia-python", "version": "144.1", "task": "draws the frames"},
+                          {"name": "ffmpeg", "version": "7.1.1", "task": "encodes the videos"}]},
                ...],
      "seconds": 312.4}
 
@@ -55,14 +56,19 @@ MAX_BYTES = 16 * 1024  # what the API takes (api/src/lib/breakdown.ts); a bigger
 LESSON_STEPS = ("request", "bundle", "audit", "factcheck", "post")  # studio/run.py's STEPS
 PARTS = {"lesson": LESSON_STEPS, "videos": media.MEDIA_STEPS}
 # The software each media step runs on this machine besides its models, by the name it is
-# installed under. The bill lists each with the version installed here (version()); the API
+# installed under, and what it does there, for its line on the bill as a model's task is (the owner, Nov 3: the
+# bill did not say what Demucs is for). The bill lists each with the version installed here (version()); the API
 # adds who made it. Steps that are the studio's own code alone have none.
 TOOLS = {
-    "art": ("skia-python",),  # draws the SVG art (studio/svg.py), or fits Muse Image's picture to the art
-    "audio": ("ffmpeg",),  # ffprobe reads each file's length; ffmpeg re-encodes a Lyria song
-    "timing": ("demucs", "torchaudio", "torch", "ffmpeg"),  # Demucs, the MMS aligner, ffmpeg decoding the song
-    "arrows": ("skia-python",),  # draws a still of each arrow to look at (studio/steps/arrows.py)
-    "render": ("skia-python", "ffmpeg"),  # draws the frames, encodes the videos (studio/render/)
+    # Draws the SVG art (studio/svg.py), or fits a painted picture to the art's size (art.fit)
+    "art": {"skia-python": "renders and sizes the pictures"},
+    # ffprobe reads each file's length; ffmpeg re-encodes a Lyria song
+    "audio": {"ffmpeg": "measures and converts the audio"},
+    # Demucs's package runs its model; torchaudio has the MMS aligner; ffmpeg decodes the audio they hear
+    "timing": {"demucs": "runs htdemucs", "torchaudio": "runs mms-fa", "torch": "runs both models",
+               "ffmpeg": "decodes the audio for them"},
+    "arrows": {"skia-python": "draws each arrow to check"},  # a still of each arrow, to look at (studio/steps/arrows.py)
+    "render": {"skia-python": "draws the frames", "ffmpeg": "encodes the videos"},  # studio/render/
 }
 SONG_TOOLS = {"timing"}  # steps whose tools work on the song alone: none run for the lesson video alone
 
@@ -70,7 +76,7 @@ SONG_TOOLS = {"timing"}  # steps whose tools work on the song alone: none run fo
 def tools(step: str, job: Path | None = None) -> tuple[str, ...]:
     """What the step ran on besides its models (TOOLS). The lesson alone (STUDIO_VIDEOS=lesson, or a bundle with no
     song) times the voice from its character timings, with no song to separate or align."""
-    return () if step in SONG_TOOLS and media.lesson_only(job) else TOOLS.get(step, ())
+    return () if step in SONG_TOOLS and media.lesson_only(job) else tuple(TOOLS.get(step, {}))
 # How a call logged before calls were tagged with their step is told apart: by its label.
 LABEL_STEPS = {"bundle": "bundle", "factcheck": "factcheck", "art": "art",
                "song": "audio", "narration": "audio", "frq": "audio"}
@@ -285,7 +291,8 @@ def breakdown(job: Path, part: str, running: tuple[str, float] | None = None) ->
         cost = round(sum(m["costUsd"] for m in models if m["costUsd"] is not None), 6)
         steps.append({"step": name, **timed.get(name, {"seconds": None, "tries": 0}),
                       "costUsd": cost, "models": models,
-                      "tools": [{"name": tool, "version": version(tool)} for tool in tools(name, job)]})
+                      "tools": [{"name": tool, "version": version(tool), "task": TOOLS[name][tool]}
+                                for tool in tools(name, job)]})
     seconds = [_run_seconds(r) for r in runs]
     return {"steps": steps, "seconds": round(sum(s for s in seconds if s is not None), 1) if runs else None}
 
@@ -377,7 +384,7 @@ TASKS = {
     "arrows point": "places the arrows", "arrows look": "checks the arrows",
     ("audio", "song"): "sings the song", ("audio", "narration"): "reads the narration",
     # Demucs takes the singing out of the mix; MMS then lines the lyrics up with it
-    ("timing", "song vocals"): "separates the vocals",
+    ("timing", "song vocals"): "separates the vocals so the words can be timed",
     ("timing", "song"): "times the song", ("timing", "narration"): "times the narration",
     "judge": "grades the droplet",
 }

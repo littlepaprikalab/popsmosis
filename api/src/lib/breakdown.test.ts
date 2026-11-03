@@ -114,6 +114,24 @@ describe('serializeBreakdown', () => {
     expect(b.costUsd).toBe(0.6);
   });
 
+  it('keeps what each model and tool did in its step, as the studio said it, and none for an older bill', () => {
+    const b = serializeBreakdown(null, { steps: [{ step: 'timing', seconds: 110, tries: 1, models: [
+      { model: 'htdemucs', calls: 1, costUsd: 0, credits: null, task: 'separates the vocals so the words can be timed' },
+      { model: 'mms-fa', calls: 1, costUsd: 0, credits: null }, // a bill from before the studio said
+      { model: 'mms-fa', calls: 1, costUsd: 0, credits: null, task: 7 }, // not text: none
+    ], tools: [
+      { name: 'demucs', version: '4.1.0', task: 'runs htdemucs' },
+      { name: 'torch', version: '2.11.0', task: 'x'.repeat(200) }, // kept to 60 characters
+      { name: 'ffmpeg', version: '7.1.1' },
+    ] }], seconds: 110 })!;
+    expect(b.steps[0].models.map((m) => m.task)).toEqual(['separates the vocals so the words can be timed', undefined, undefined]);
+    expect(b.steps[0].tools).toEqual([
+      { name: 'demucs', version: '4.1.0', maker: 'Meta', task: 'runs htdemucs' },
+      { name: 'torch', version: '2.11.0', maker: 'Meta', task: 'x'.repeat(60) },
+      { name: 'ffmpeg', version: '7.1.1', maker: 'FFmpeg' },
+    ]);
+  });
+
   it('works out each step from its models, and keeps only what it knows', () => {
     const b = serializeBreakdown({
       steps: [

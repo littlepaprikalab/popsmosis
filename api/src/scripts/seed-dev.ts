@@ -81,12 +81,14 @@ const SAMPLE_BREAKDOWN = {
         { model: 'lyria-3.5', calls: 1, costUsd: 0.08, credits: null },
         { model: 'eleven_multilingual_v2', calls: 2, costUsd: null, credits: 3214 },
       ], tools: [{ name: 'ffmpeg', version: '6.1.1-3ubuntu5' }] },
-      { step: 'timing', seconds: 110.2, tries: 1, costUsd: 0, models: [
-        { model: 'htdemucs', calls: 1, costUsd: 0, credits: null },
-        { model: 'mms-fa', calls: 1, costUsd: 0, credits: null },
+      { step: 'timing', seconds: 110.2, tries: 1, costUsd: 0, models: [ // each line says what it did, as the studio does now
+        { model: 'htdemucs', calls: 1, costUsd: 0, credits: null, task: 'separates the vocals so the words can be timed' },
+        { model: 'mms-fa', calls: 1, costUsd: 0, credits: null, task: 'times the song' },
       ], tools: [
-        { name: 'demucs', version: '4.1.0' }, { name: 'torchaudio', version: '2.11.0+cpu' },
-        { name: 'torch', version: '2.11.0+cpu' }, { name: 'ffmpeg', version: '6.1.1-3ubuntu5' },
+        { name: 'demucs', version: '4.1.0', task: 'runs htdemucs' },
+        { name: 'torchaudio', version: '2.11.0+cpu', task: 'runs mms-fa' },
+        { name: 'torch', version: '2.11.0+cpu', task: 'runs both models' },
+        { name: 'ffmpeg', version: '6.1.1-3ubuntu5', task: 'decodes the audio for them' },
       ] },
       { step: 'timeline', seconds: 0.3, tries: 1, costUsd: 0, models: [] },
       { step: 'render', seconds: 157.0, tries: 1, costUsd: 0, models: [],
