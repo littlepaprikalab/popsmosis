@@ -1937,8 +1937,25 @@ With it back (0bd2ba4), one more run on each droplet kept the rhyme word on 27 o
 full prompt's verdicts, but "the wall breaks down", the borderline line that also moved in copies
 missing unrelated rules.
 
-The prompt is 1,769 words, from 2,643. What remains untested is Muse: the same rules may matter more to a
-weaker checker, and only a paid run on Muse Wonder and Muse Spark can say.
+**On Muse Spark** (the owner asked for it; $1.78 on `MODEL_API_KEY`, every other key unset). The fact-check as a
+Muse topic asks it, through `brain.ask` at high effort, on the same three payloads: the full prompt (30f88bb) and
+the trimmed one (0bd2ba4) once on round 1's, twice on each droplet, then the prompt as it now stands twice on
+mitosis. Every call answered on its first try, in 95 to 291 s, for $0.07 to $0.16.
+
+- Muse Spark is a fair checker of these lines: with the full prompt it got 46 or 47 of mitosis's 47 probes, 41 of
+  the war's 43 (both runs missed the same two) and 61 of round 1's 62. The one it missed
+  there is the documented one: it failed "NADPH piles up for a while, you know" with the rule on cases or
+  without it. Unlike Opus, it passed the four "as Campbell Biology draws it" pictures.
+- **Three cut rules change what Spark does**, where none had changed Opus: how to hear an appeal (right 8 times
+  in 8 with it, 6 without: it failed "Sister chromatids, two of a kind / Split to the poles, none left behind"
+  as "ignoring nondisjunction" when the songwriter's appeal said the bridge covers that); unmarked "Something
+  travels" (13 in 13, 11 without: "Something travels from Metaphase plate to Pole" failed as "no such route in
+  facts"); and a neighbouring topic in a tag ("#meiosis" on mitosis passed in 3 runs of 4 without the list's
+  first clause, in none with it). The first two went back in their own words, and the tag list's first clause.
+- With them back, two runs on mitosis gave the full prompt's verdict on every line, and every probe right.
+
+The prompt is 1,936 words, from 2,643. What the cut takes out was tested on Opus and Muse Spark, not on Muse
+Wonder.
 
 ## Not tested
 

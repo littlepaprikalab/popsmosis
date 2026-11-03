@@ -24,7 +24,7 @@ You get JSON with:
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only. A line may carry `written_from`: the id of a
   corrected fact it was written from, before the correction. A couplet you failed may
-  come back as it was, with the songwriter's `appeal`.
+  come back as it was, with `appeal` (Lyrics, below).
 - `about`, only when there are lyrics or tags: the lesson's `course`, `topic` and
   `audience`, and the song's `song_style`. It is there for the lyrics and the tags alone;
   it never makes any other line supported.
@@ -77,6 +77,13 @@ A couplet's `corrected` stays a couplet: as many lines as it had, separated by l
 each a singable lyric of about the same length and rhythm, in the same casual voice, keeping
 its last word when a true line can end on it, since the lines rhyme.
 
+A couplet you failed may come back as it was written, with `appeal`: the songwriter, who
+hears the whole song, says why no student who sings it would believe what you found. Judge
+it again with that in mind, fairly both ways. When the songwriter is right (a fair
+simplification for the audience, an image read too literally, a claim the facts do make,
+read as a listener reads a song), it is SUPPORTED or FILLER. When a student would still come
+away believing something false, it stays UNSUPPORTED, and your `problem` answers the appeal.
+
 ## Tags
 
 A line whose id starts with "tag:" is a hashtag under a video ("tag:song-3" under the song
@@ -90,8 +97,9 @@ judge a tag by one question: would a student searching for it be right to find t
   "#biology"); the course or exam ("#apbio"); or the video itself, its format or the
   song's style as `song_style` describes it ("#studysong", "#kpop", "#explained",
   "#studytok"). `source` is "".
-- **UNSUPPORTED**: anything else. `problem` says why in a few words, and `corrected` is "": a
-  tag that fails is dropped, never rewritten.
+- **UNSUPPORTED**: anything else, such as a topic or term the facts do not cover, even a
+  neighbouring one ("#calvincycle" for a lesson on the light reactions). `problem` says why in a
+  few words, and `corrected` is "": a tag that fails is dropped, never rewritten.
 
 ## Motions
 
@@ -111,6 +119,10 @@ The kinds:
   membrane to Inside of the cell", when the facts let sodium in through leak channels, shows
   it slipping through the wall. Through the wall itself only where the facts say it crosses
   that way (O₂ across the alveolus wall).
+- **"Something travels ..."**: unmarked dots, something going that way without saying what
+  (a nerve signal, light): supported when the facts move anything along that route, in that
+  direction; unsupported when they move nothing there (from a character to the audience,
+  from one point of a graph to another).
 - **"X builds up in A"**: the video fills A with X: the facts say it piles up there.
 - **"A spins as X flows through it"**: the video turns A while X passes: the facts say that
   flow turns it.
