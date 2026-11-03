@@ -92,6 +92,10 @@ facts do not support, even if it is true; a line it cannot fix fails the droplet
 - Say where each thing happens, part by part, since the pictures show it in a place: "the
   proximal tubule takes back glucose and secretes H⁺ into the filtrate", not "the tubule
   secretes". A step no fact places cannot be shown anywhere.
+- A process the course teaches as named stages has every stage it names in the facts, each in
+  its place, even one the learner's question leaves out (the four phases of mitosis, the
+  three stages of cellular respiration), and the narration walks each as a step: the exam
+  asks for each.
 - Be precise, in the words the course or exam uses (plain but exact for a young audience),
   with exact quantities, exceptions and limits ("most of the water is taken back in the
   proximal tubule", not "the kidney takes back water"). Never invent figures, dates, names or quotes; leave out what
