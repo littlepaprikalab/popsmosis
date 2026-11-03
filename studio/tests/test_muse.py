@@ -733,7 +733,9 @@ def test_the_plainer_words_are_the_structures_colour_and_the_phrases_last_noun()
              "#DC143C": "red",
              # Nov 1: the browns the writer named so ("orange" until then), and water's cyan beside a teal
              "#A0703C": "brown", "#A86B32": "brown", "#A0522D": "brown", "#00ACC1": "cyan", "#00897B": "teal",
-             "#17A2A2": "teal"}
+             "#17A2A2": "teal",
+             # Nov 2: the beetles' leaves, "light green" to the writer, were painted teal; teal itself stays teal
+             "#43AA8B": "green", "#008080": "teal"}
     assert {h: art.colour_word(h) for h in words} == words
 
 
