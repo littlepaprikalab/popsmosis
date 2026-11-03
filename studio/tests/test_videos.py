@@ -418,9 +418,11 @@ def meta_job(setup, monkeypatch):
     fake = SimpleNamespace(muse=FakeMuse().install(monkeypatch), helper=FakeHelper(), artist=FakeArtist())
 
     def ask(role, prompt, schema=None, images=(), *, system=None, label=None):
-        """brain.ask: answers as the helper or the SVG artist, and records the call as brain.ask does."""
-        answer = (fake.helper if role == "helper" else fake.artist)(role, prompt, schema, images,
-                                                                      system=system, label=label)
+        """brain.ask: answers as the helper or the SVG artist, and records the call as brain.ask does. The writer's
+        look at each first picture (art.rewrite()) is the helper's to answer, as in test_muse: it keeps a picture the
+        check found nothing wrong in."""
+        answering = fake.helper if role == "helper" or system == art.REWRITE_PROMPT else fake.artist
+        answer = answering(role, prompt, schema, images, system=system, label=label)
         model = "muse-spark-1.3" if role == "helper" else "claude-opus-5-5"
         brain._record(brain.Call(label, role, model, 1000, 100, brain.cost(model, 1000, 100), 0.1, "stop"))
         return answer
