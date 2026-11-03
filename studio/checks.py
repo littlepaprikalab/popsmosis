@@ -1401,9 +1401,16 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
 
 
 def arrow(carries: str, moves: str) -> bool:
-    """Whether a flow is drawn as an arrow (renderer: _travels): it travels, or what moves has no short symbol to
-    write on a particle (a word, "glucose", or nothing). A crossing ion ("Na⁺") is particles."""
-    return moves == "travels" or sum(ch.isalpha() for ch in notation(carries)) > SYMBOL_LETTERS or not carries.strip()
+    """Whether a flow is drawn as an arrow, as the renderer decides it (_travels): what moves has no short symbol to
+    write on a particle (a word, "glucose", or nothing), or it is a short word ("air") that travels. A symbol ("Na⁺",
+    "O₂") is particles whatever `moves` says: Muse Wonder's lungs bundle (Nov 2) marked its O₂ "travels" on 30 lines
+    with no one-liner, each reported as a bare arrow the video then drew as O₂ dots."""
+    written = notation(carries)
+    if not written.strip() or sum(ch.isalpha() for ch in written) > SYMBOL_LETTERS:
+        return True
+    if not (written.isalpha() and written.islower()):  # a symbol, as the renderer's symbol() reads it
+        return False
+    return moves == "travels"
 
 
 def _check_says(line_id: str, flow: dict, problems: list[Problem]) -> None:

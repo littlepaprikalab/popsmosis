@@ -40,6 +40,7 @@ import base64
 import contextlib
 import json
 import os
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -568,28 +569,49 @@ def claude_texts(message) -> list[str]:
 
 
 # --- Meta ---------------------------------------------------------------------
-# First run live on Oct 28 (muse-spark-1.3). Muse takes OpenAI-style chat completions. No
-# effort is sent: the effort on /admin/studio is Claude's, and Muse keeps its own default.
+# First run live on Oct 28 (muse-spark-1.3). No effort is sent: the effort on /admin/studio is Claude's, and Muse
+# keeps its own default (high, as its answers say).
+#
+# The writer's calls run in the background on Meta's Responses API, and are polled for their answers (Nov 2). Muse
+# reasons in silence and sends its answer only at the end, streamed or not, so a call it thinks long about holds a
+# connection with nothing on it: Muse Wonder's lungs bundle, asked on chat completions, came back "Connection error."
+# after 15 minutes, about what three tries cut at 5 minutes each take (the SDK tries twice more by itself), each
+# perhaps billed with no answer. Polled, no connection stays open while it thinks.
+#
+# The helper's calls (a picture's check, a part's box: 30 to 100 s) are asked and answered in one request, as they
+# were on chat completions. In the background about a third of Muse Spark's calls on the lungs' videos stayed queued
+# and never started, while the same calls sent again were answered in 30 s; none of Muse Wonder's did. So a writer's
+# call still queued after META_QUEUED_S has not started, and is cancelled and sent again; one in progress past its
+# wait (well past the slowest answer seen: the bundle 221 s, the narration edit 209 s) too, up to META_TRIES tries.
+META_BACKGROUND = ("brain",)  # the roles whose calls run in the background
+META_POLL_S = 3.0  # between looks at a call that is not done
+META_QUEUED_S = 90.0  # a call still queued this long never started (one that starts does so within seconds)
+META_WAIT_S = 1800.0  # how long one try of a call may take before it is cancelled
+META_TRIES = 3  # tries of a call that Meta does not finish
+META_NOTE_S = 120.0  # a call still not done says so every this many seconds, with its id
+META_POLL_FAILURES = 5  # looks in a row that may fail (the call runs on regardless) before the call is given up
+META_RUNNING = ("queued", "in_progress")
+_sleep = time.sleep  # tests stand in
 
 
 def meta_request(
     role: str, prompt: str, schema: type[BaseModel] | None, images: Sequence[str | Path], system: str | None
 ) -> dict:
-    """The keyword arguments for client.chat.completions.create()."""
+    """The keyword arguments for client.responses.create(): the writer's call run in the background."""
     content: list[dict] = [
-        {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{data}"}}
+        {"type": "input_image", "image_url": f"data:{media_type};base64,{data}"}
         for media_type, data in map(_image, images)
     ]
-    content.append({"type": "text", "text": prompt})
-    messages = [{"role": "system", "content": system}] if system else []
-    messages.append({"role": "user", "content": content})
+    content.append({"type": "input_text", "text": prompt})
     model = brain_model() if role == "brain" else META[role]["model"]
-    request = {"model": model, "messages": messages}
+    request = {"model": model, "input": [{"role": "user", "content": content}]}
+    if role in META_BACKGROUND:
+        request["background"] = True
+    if system:
+        request["instructions"] = system
     if schema is not None:
-        request["response_format"] = {
-            "type": "json_schema",
-            "json_schema": {"name": schema.__name__, "schema": strict_schema(schema), "strict": True},
-        }
+        request["text"] = {"format": {"type": "json_schema", "name": schema.__name__,
+                                      "schema": strict_schema(schema), "strict": True}}
     return request
 
 
@@ -599,24 +621,82 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
     request = meta_request(role, prompt, schema, images, system)
     if "meta" not in _clients:
         _clients["meta"] = openai.OpenAI(api_key=meta_key(), base_url=META_BASE_URL)
+    client = _clients["meta"]
     started = time.monotonic()
-    try:
-        response = _clients["meta"].chat.completions.create(**request)
-    except openai.APIError as e:
-        raise BrainError(f"{request['model']}: {e}") from e
+    for attempt in range(1, META_TRIES + 1):
+        response, why = _meta_answer(client, request, label)
+        if response is not None:
+            break
+        print(f"  {label}: {why}" + (", so it was asked again" if attempt < META_TRIES else ""), file=sys.stderr)
+    else:
+        raise BrainError(f"{request['model']}: no answer in {META_TRIES} tries: {why}")
     seconds = time.monotonic() - started
-    choice = response.choices[0]
-    model = response.model or request["model"]
-    usage = response.usage
-    input_tokens = usage.prompt_tokens if usage else 0
-    output_tokens = usage.completion_tokens if usage else 0
+    model = getattr(response, "model", None) or request["model"]
+    usage = getattr(response, "usage", None)
+    input_tokens = (getattr(usage, "input_tokens", 0) or 0) if usage else 0
+    output_tokens = (getattr(usage, "output_tokens", 0) or 0) if usage else 0
     # Priced as answered, or as asked if Meta names the model some other way (a dated id).
     price = cost(model, input_tokens, output_tokens)
     if price is None:
         price = cost(request["model"], input_tokens, output_tokens)
-    _record(Call(label, role, model, input_tokens, output_tokens, price, round(seconds, 1), choice.finish_reason or ""))
-    if choice.message.refusal or choice.finish_reason == "content_filter":
-        raise Refused(model, explanation=choice.message.refusal)
-    if choice.finish_reason == "length":
+    status = getattr(response, "status", None) or ""
+    incomplete = getattr(getattr(response, "incomplete_details", None), "reason", None)
+    _record(Call(label, role, model, input_tokens, output_tokens, price, round(seconds, 1), incomplete or status))
+    text, refusal = meta_output(response)
+    if refusal is not None or incomplete == "content_filter":
+        raise Refused(model, explanation=refusal)
+    if incomplete == "max_output_tokens":
         raise Truncated(f"{model} hit its output limit ({output_tokens} output tokens)")
-    return [choice.message.content or ""]
+    if status != "completed":
+        error = getattr(response, "error", None)
+        raise BrainError(f"{model} did not finish: {status}" + (f" ({incomplete})" if incomplete else "")
+                         + (f": {getattr(error, 'message', error)}" if error else ""))
+    return [text]
+
+
+def _meta_answer(client, request: dict, label: str):
+    """One try of a call: (the response once it is done: completed, failed or cut off, None) or (None, why) when a
+    call in the background never started (META_QUEUED_S) or ran past META_WAIT_S, cancelled then."""
+    import openai
+
+    started = noted = time.monotonic()
+    try:
+        response = client.responses.create(**request)
+    except openai.APIError as e:
+        raise BrainError(f"{request['model']}: {e}") from e
+    failures = 0
+    while getattr(response, "status", None) in META_RUNNING:
+        took = time.monotonic() - started
+        why = (f"{response.id} still queued after {took:.0f}s, so it never started" if response.status == "queued"
+               and took > META_QUEUED_S else f"{response.id} not done in {took / 60:.0f} min" if took > META_WAIT_S
+               else "")
+        if why:
+            with contextlib.suppress(openai.APIError):
+                client.responses.cancel(response.id)
+            return None, why
+        if time.monotonic() - noted >= META_NOTE_S:
+            noted = time.monotonic()
+            print(f"  {label}: {response.id} still {response.status} after {took / 60:.0f} min", file=sys.stderr)
+        _sleep(META_POLL_S)
+        try:
+            response = client.responses.retrieve(response.id)
+            failures = 0
+        except openai.APIError as e:
+            failures += 1
+            if failures >= META_POLL_FAILURES:
+                raise BrainError(f"{request['model']}: lost the call {response.id} after {failures} looks: {e}") from e
+    return response, ""
+
+
+def meta_output(response) -> tuple[str, str | None]:
+    """A Responses API answer's text (every output_text part of its messages, in order) and its refusal, if any."""
+    texts, refusal = [], None
+    for item in getattr(response, "output", None) or []:
+        if getattr(item, "type", None) != "message":
+            continue
+        for part in getattr(item, "content", None) or []:
+            if getattr(part, "type", None) == "output_text":
+                texts.append(part.text or "")
+            elif getattr(part, "type", None) == "refusal":
+                refusal = getattr(part, "refusal", None) or ""
+    return "".join(texts), refusal

@@ -231,12 +231,15 @@ def test_an_arrow_has_a_short_one_liner_beside_it():
         return next(d.says for d in bundle.direction if d.line_id == "v1-1"), [f for f in found if f[1] == "says"]
 
     assert saying("H⁺", "") == ("", [])  # a marked ion crosses as particles: no arrow, nothing to say
-    assert saying("H⁺", "", moves="travels") == ("", [("v1-1", "says", False)])  # an arrow, bare
+    assert saying("H⁺", "", moves="travels") == ("", [])  # an ion is particles whatever it is marked, as drawn
+    assert saying("air", "", moves="travels") == ("", [("v1-1", "says", False)])  # a short word travels: an arrow
+    assert saying("air", "") == ("", [])
     assert saying("glucose", "") == ("", [("v1-1", "says", False)])  # a word moves as an arrow
     assert saying("glucose", "  Glucose rides in   with sodium ") == ("Glucose rides in with sodium", [])
     assert saying("glucose", "x" * (checks.SAYS_MAX + 1)) == ("", [("v1-1", "says", True), ("v1-1", "says", False)])
     assert checks.arrow("Ca²⁺", "") is False and checks.arrow("NAD⁺", "crosses") is False  # three letters at most
     assert checks.arrow("NADPH", "crosses") is True and checks.arrow("", "") is True
+    assert checks.arrow("O₂", "travels") is False and checks.arrow("CO2", "travels") is False
 
 
 def test_a_picture_asking_for_two_moments_side_by_side_is_recorded():

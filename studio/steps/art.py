@@ -556,6 +556,11 @@ CAMPBELL_STYLE = "clean biology Campbell style"  # the owner's words for it
 BIOLOGY_COURSE = re.compile(r"biolog|anatomy|physiolog|life science|genetic|microbio|ecolog|botany|zoology", re.I)
 CELL_PARTS = re.compile(r"\b(?:cell membrane|organelles?|proteins?|chloroplasts?|mitochondri\w*|enzymes?|DNA|RNA"
                         r"|ribosomes?|neurons?|chromosomes?|phospholipid\w*|bilayer|cytoplasm)\b", re.I)
+# The look the brief ends a cell or molecular scene with says "the membrane a phospholipid bilayer" (prompts/bundle.md).
+# Said of a scene with no membrane among its parts, it has the painter make a bilayer of whatever wall is there: the
+# lungs' red blood cell close-up (Nov 2) came back with its capillary's wall painted as one, which no capillary is.
+BILAYER = re.compile(r"[;,]?\s*the membrane (?:is )?a phospholipid bilayer", re.I)
+MEMBRANE = re.compile(r"membrane|bilayer", re.I)
 EVERYDAY = ("hook",)  # the everyday picture; no picture draws the analogy since Nov 1 (checks._no_analogy_scene)
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
@@ -1025,6 +1030,7 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     (inline()), and is left out of the Colours line and the labels line; a scene with no tags is asked for as
     before."""
     words, left = inline(scene)
+    words = without_bilayer(scene, words)
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in left)
     parts = [campbell_styled(bundle, words).strip().rstrip(".") + "."]
     if left or not scene.structures:
@@ -1071,6 +1077,13 @@ def is_diagram(scene: Scene) -> bool:
     """Whether the scene is a science diagram or a graph, as the brief has its picture asked for: the parts of one
     fill in as they are named; an everyday sight, a history or a story is shown as painted."""
     return SCIENCE_STYLE in scene.image_prompt.lower() or bool(scene.axes.x or scene.axes.y)
+
+
+def without_bilayer(scene: Scene, words: str) -> str:
+    """The scene's words without the look's bilayer (BILAYER) when none of its parts is a membrane."""
+    if any(MEMBRANE.search(name) for s in scene.structures for name in (s.name, *s.aliases)):
+        return words
+    return BILAYER.sub("", words)
 
 
 def campbell_styled(bundle: Bundle, image_prompt: str) -> str:

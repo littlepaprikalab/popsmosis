@@ -226,16 +226,18 @@ def test_meta_request_shape(tmp_path, monkeypatch):
     image = tmp_path / "notes.png"
     image.write_bytes(PNG)
     request = brain.meta_request("brain", "Check.", FactCheck, [image], "You check.")
-    assert request["model"] == "muse-wonder-1.0"
-    assert request["messages"][0] == {"role": "system", "content": "You check."}
-    content = request["messages"][1]["content"]
-    assert content[0]["image_url"]["url"].startswith("data:image/png;base64,")
-    assert content[1] == {"type": "text", "text": "Check."}
-    assert request["response_format"]["json_schema"] == {
-        "name": "FactCheck", "schema": brain.strict_schema(FactCheck), "strict": True,
+    assert request["model"] == "muse-wonder-1.0" and request["background"] is True  # polled, never held open
+    assert request["instructions"] == "You check."
+    [turn] = request["input"]
+    assert turn["role"] == "user"
+    assert turn["content"][0]["type"] == "input_image"
+    assert turn["content"][0]["image_url"].startswith("data:image/png;base64,")
+    assert turn["content"][1] == {"type": "input_text", "text": "Check."}
+    assert request["text"]["format"] == {
+        "type": "json_schema", "name": "FactCheck", "schema": brain.strict_schema(FactCheck), "strict": True,
     }
-    assert brain.meta_request("helper", "Hi", None, [], None) == {
-        "model": "muse-spark-1.3", "messages": [{"role": "user", "content": [{"type": "text", "text": "Hi"}]}],
+    assert brain.meta_request("helper", "Hi", None, [], None) == {  # a short call, answered in the one request
+        "model": "muse-spark-1.3", "input": [{"role": "user", "content": [{"type": "input_text", "text": "Hi"}]}],
     }
 
 
@@ -246,10 +248,125 @@ def test_each_muse_brain_has_its_model_and_the_helper_stays_spark():
             assert brain.meta_request("helper", "Look.", None, [], None)["model"] == "muse-spark-1.3"
 
 
-def test_a_meta_answer_naming_its_model_another_way_is_priced_as_asked(monkeypatch):
-    answer = NS(model="muse-spark-1.3-20261001", usage=NS(prompt_tokens=1_000_000, completion_tokens=0),
-                choices=[NS(finish_reason="stop", message=NS(content="{}", refusal=None))])
-    monkeypatch.setitem(brain._clients, "meta", NS(chat=NS(completions=NS(create=lambda **request: answer))))
+def meta_response(text="{}", status="completed", model="muse-spark-1.3", input_tokens=10, output_tokens=5,
+                  reason=None, refusal=None, id="resp_1"):
+    """A Responses API answer, as Meta's comes back."""
+    content = [NS(type="refusal", refusal=refusal)] if refusal is not None else [NS(type="output_text", text=text)]
+    return NS(id=id, status=status, model=model, usage=NS(input_tokens=input_tokens, output_tokens=output_tokens),
+              incomplete_details=NS(reason=reason) if reason else None, error=None,
+              output=[NS(type="reasoning", summary=[]), NS(type="message", content=content)])
+
+
+class FakeResponses:
+    """Stands in for Meta's client.responses: each call is queued, then in progress, then `answer`."""
+
+    def __init__(self, answer, looks=2, fail_looks=0):
+        self.answer, self.looks, self.fail_looks = answer, looks, fail_looks
+        self.created, self.retrieved, self.cancelled = [], 0, []
+
+    def create(self, **request):
+        self.created.append(request)
+        return NS(id=self.answer.id, status="queued") if request.get("background") else self.answer
+
+    def retrieve(self, id):
+        import openai
+
+        self.retrieved += 1
+        if self.fail_looks:
+            self.fail_looks -= 1
+            raise openai.APIConnectionError(request=None)
+        return self.answer if self.retrieved > self.looks else NS(id=self.answer.id, status="in_progress")
+
+    def cancel(self, id):
+        self.cancelled.append(id)
+
+
+@pytest.fixture
+def meta(monkeypatch):
+    """Meta's client, stood in for, with no wait between looks."""
+    monkeypatch.setattr(brain, "_sleep", lambda s: None)
+    monkeypatch.setenv("MODEL_API_KEY", "k")
+
+    def install(answer, **kw):
+        fake = FakeResponses(answer, **kw)
+        monkeypatch.setitem(brain._clients, "meta", NS(responses=fake))
+        return fake
+
+    return install
+
+
+def test_a_meta_call_runs_in_the_background_and_is_polled_for_its_answer(meta, monkeypatch):
+    fake = meta(meta_response(ANSWER, model="muse-wonder-1.0", input_tokens=1000, output_tokens=2000))
+    monkeypatch.setattr(brain, "calls", [])
+    with brain.chosen("muse-wonder"):
+        answer = brain.ask("brain", "Check.", FactCheck, label="fact-check")
+    assert answer["checks"][0]["verdict"] == "FILLER"
+    assert fake.created[0]["background"] is True and fake.retrieved == 3
+    [call] = brain.calls
+    assert (call.label, call.model, call.input_tokens, call.output_tokens) == ("fact-check", "muse-wonder-1.0", 1000, 2000)
+    assert call.cost_usd == pytest.approx(0.044) and call.stop_reason == "completed"
+
+
+def test_a_look_that_fails_is_tried_again_while_the_call_runs_on(meta):
+    meta(meta_response("ok"), looks=0, fail_looks=2)
+    with brain.chosen("muse-spark"):
+        assert brain.ask("brain", "Hi") == {"text": "ok"}
+    meta(meta_response("ok"), looks=0, fail_looks=brain.META_POLL_FAILURES)
+    with brain.chosen("muse-spark"), pytest.raises(brain.BrainError, match="lost the call resp_1"):
+        brain.ask("brain", "Hi")
+
+
+class StuckFirst(FakeResponses):
+    """Meta never starts the first try (it stays queued), and answers the next at once."""
+
+    def create(self, **request):
+        self.created.append(request)
+        return NS(id=f"resp_{len(self.created)}", status="queued")
+
+    def retrieve(self, id):
+        self.retrieved += 1
+        return NS(id=id, status="queued") if id == "resp_1" else self.answer
+
+
+def test_a_writers_call_that_never_starts_is_cancelled_and_asked_again(meta, monkeypatch, capsys):
+    clock = iter(range(0, 10**7, 20))  # 20 s a look
+    monkeypatch.setattr(brain.time, "monotonic", lambda: next(clock))
+    fake = StuckFirst(meta_response("ok"))
+    monkeypatch.setitem(brain._clients, "meta", NS(responses=fake))
+    with brain.chosen("muse-wonder"):
+        assert brain.ask("brain", "Write.", label="bundle") == {"text": "ok"}
+    assert fake.cancelled == ["resp_1"] and len(fake.created) == 2
+    assert "bundle: resp_1 still queued after" in capsys.readouterr().err
+
+    fake = meta(meta_response("ok"), looks=10**6)  # started, never done
+    with brain.chosen("muse-wonder"), pytest.raises(brain.BrainError, match="no answer in 3 tries: resp_1 not done"):
+        brain.ask("brain", "Hi")
+    assert len(fake.created) == 3 and len(fake.cancelled) == 3
+
+
+def test_a_helpers_call_is_answered_in_the_one_request(meta):
+    fake = meta(meta_response("seen"))
+    with brain.chosen("muse-wonder"):
+        assert brain.ask("helper", "Any text in it?") == {"text": "seen"}
+    assert "background" not in fake.created[0] and fake.retrieved == 0
+
+
+@pytest.mark.parametrize("answer, error", [
+    (meta_response(refusal="I can't help with that."), brain.Refused),
+    (meta_response(status="incomplete", reason="content_filter"), brain.Refused),
+    (meta_response('{"checks": [', status="incomplete", reason="max_output_tokens"), brain.Truncated),
+    (meta_response(status="failed"), brain.BrainError),
+])
+def test_a_meta_answer_that_is_not_an_answer_is_an_error_and_still_billed(meta, monkeypatch, answer, error):
+    meta(answer, looks=0)
+    monkeypatch.setattr(brain, "calls", [])
+    with brain.chosen("muse-spark"), pytest.raises(error):
+        brain.ask("brain", "Check.", FactCheck)
+    assert len(brain.calls) == 1 and brain.calls[0].input_tokens == 10
+
+
+def test_a_meta_answer_naming_its_model_another_way_is_priced_as_asked(meta, monkeypatch):
+    meta(meta_response(model="muse-spark-1.3-20261001", input_tokens=1_000_000, output_tokens=0), looks=0)
     monkeypatch.setattr(brain, "_chosen", "muse-spark")
     monkeypatch.setattr(brain, "calls", [])
     brain.ask("brain", "Hi")
@@ -399,14 +516,12 @@ def test_the_helper_is_the_brains_whoever_paints(monkeypatch):
         message([text('{"seen": true}')], model="claude-haiku-5-5"), sent)))))
     brain.ask("helper", "Any text in it?")
     assert sent[-1]["model"] == "claude-sonnet-5-5"
-    answer = NS(model="muse-spark-1.3", usage=NS(prompt_tokens=10, completion_tokens=5),
-                choices=[NS(finish_reason="stop", message=NS(content="seen", refusal=None))])
-    seen = []
-    monkeypatch.setitem(brain._clients, "meta", NS(chat=NS(completions=NS(create=lambda **r: seen.append(r) or answer))))
+    fake = FakeResponses(meta_response("seen"), looks=0)
+    monkeypatch.setitem(brain._clients, "meta", NS(responses=fake))
     monkeypatch.setenv("MODEL_API_KEY", "k")
     with brain.chosen("muse-wonder"):
         brain.ask("helper", "Any text in it?")
-    assert seen[-1]["model"] == "muse-spark-1.3"
+    assert fake.created[-1]["model"] == "muse-spark-1.3"
 
 
 @pytest.mark.parametrize("brain_name, art, keys, problem", [
