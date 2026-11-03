@@ -40,6 +40,7 @@ import base64
 import contextlib
 import json
 import os
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -576,8 +577,15 @@ def claude_texts(message) -> list[str]:
 # with nothing on it: Muse Wonder's lungs bundle, asked on chat completions, came back "Connection error." after 15
 # minutes, about what three tries cut at 5 minutes each take (the SDK tries twice more by itself), each perhaps
 # billed with no answer. Polled, no connection stays open while it thinks.
+#
+# A call Meta never finishes is asked again, once. On the lungs' videos two Muse Spark picture checks, which take
+# about 30 s, sat queued or in progress for 17 minutes while a fresh call beside them finished in 6 s. So each role
+# has a wait, well past its slowest answer seen (the writer's bundle 221 s, its narration edit 209 s; a check 30 s),
+# after which the call is cancelled and sent again, and a call that outlasts its wait twice fails.
 META_POLL_S = 3.0  # between looks at a call that is not done
-META_WAIT_S = 3600.0  # how long a call may take before it is cancelled
+META_WAIT_S = {"brain": 1800.0, "helper": 300.0}  # how long one try of a call may take before it is cancelled
+META_TRIES = 2  # tries of a call that Meta does not finish in its wait
+META_NOTE_S = 120.0  # a call still not done says so every this many seconds, with its id
 META_POLL_FAILURES = 5  # looks in a row that may fail (the call runs on regardless) before the call is given up
 META_RUNNING = ("queued", "in_progress")
 _sleep = time.sleep  # tests stand in
@@ -610,24 +618,15 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
         _clients["meta"] = openai.OpenAI(api_key=meta_key(), base_url=META_BASE_URL)
     client = _clients["meta"]
     started = time.monotonic()
-    try:
-        response = client.responses.create(**request)
-    except openai.APIError as e:
-        raise BrainError(f"{request['model']}: {e}") from e
-    failures = 0
-    while getattr(response, "status", None) in META_RUNNING:
-        if time.monotonic() - started > META_WAIT_S:
-            with contextlib.suppress(openai.APIError):
-                client.responses.cancel(response.id)
-            raise BrainError(f"{request['model']}: no answer after {META_WAIT_S / 60:.0f} minutes, so it was cancelled")
-        _sleep(META_POLL_S)
-        try:
-            response = client.responses.retrieve(response.id)
-            failures = 0
-        except openai.APIError as e:
-            failures += 1
-            if failures >= META_POLL_FAILURES:
-                raise BrainError(f"{request['model']}: lost the call {response.id} after {failures} looks: {e}") from e
+    wait = META_WAIT_S.get(role, META_WAIT_S["brain"])
+    for attempt in range(1, META_TRIES + 1):
+        response = _meta_answer(client, request, label, wait)
+        if response is not None:
+            break
+        print(f"  {label}: no answer from {request['model']} in {wait / 60:.0f} min"
+              + (", asked again" if attempt < META_TRIES else ""), file=sys.stderr)
+    else:
+        raise BrainError(f"{request['model']}: no answer in {META_TRIES} tries of {wait / 60:.0f} minutes each")
     seconds = time.monotonic() - started
     model = getattr(response, "model", None) or request["model"]
     usage = getattr(response, "usage", None)
@@ -650,6 +649,38 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
         raise BrainError(f"{model} did not finish: {status}" + (f" ({incomplete})" if incomplete else "")
                          + (f": {getattr(error, 'message', error)}" if error else ""))
     return [text]
+
+
+def _meta_answer(client, request: dict, label: str, wait: float):
+    """One try of a call in the background: the response once it is done (completed, failed, cut off), or None when
+    it is still not done after `wait` seconds, cancelled then."""
+    import openai
+
+    started = noted = time.monotonic()
+    try:
+        response = client.responses.create(**request)
+    except openai.APIError as e:
+        raise BrainError(f"{request['model']}: {e}") from e
+    failures = 0
+    while getattr(response, "status", None) in META_RUNNING:
+        now = time.monotonic()
+        if now - started > wait:
+            with contextlib.suppress(openai.APIError):
+                client.responses.cancel(response.id)
+            return None
+        if now - noted >= META_NOTE_S:
+            noted = now
+            print(f"  {label}: {response.id} still {response.status} after {(now - started) / 60:.0f} min",
+                  file=sys.stderr)
+        _sleep(META_POLL_S)
+        try:
+            response = client.responses.retrieve(response.id)
+            failures = 0
+        except openai.APIError as e:
+            failures += 1
+            if failures >= META_POLL_FAILURES:
+                raise BrainError(f"{request['model']}: lost the call {response.id} after {failures} looks: {e}") from e
+    return response
 
 
 def meta_output(response) -> tuple[str, str | None]:

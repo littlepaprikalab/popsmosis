@@ -317,13 +317,33 @@ def test_a_look_that_fails_is_tried_again_while_the_call_runs_on(meta):
         brain.ask("brain", "Hi")
 
 
-def test_a_meta_call_that_runs_too_long_is_cancelled(meta, monkeypatch):
-    fake = meta(meta_response("ok"), looks=10**6)
-    clock = iter(range(0, 10**7, 600))
+class StuckFirst(FakeResponses):
+    """Meta never finishes the first try (it stays queued), and answers the next at once."""
+
+    def create(self, **request):
+        self.created.append(request)
+        return NS(id=f"resp_{len(self.created)}", status="queued")
+
+    def retrieve(self, id):
+        self.retrieved += 1
+        return NS(id=id, status="queued") if id == "resp_1" else self.answer
+
+
+def test_a_meta_call_never_finished_is_cancelled_and_asked_again_once(meta, monkeypatch, capsys):
+    clock = iter(range(0, 10**7, 60))  # a minute a look
     monkeypatch.setattr(brain.time, "monotonic", lambda: next(clock))
-    with brain.chosen("muse-spark"), pytest.raises(brain.BrainError, match="no answer after 60 minutes"):
+    fake = StuckFirst(meta_response("ok"))
+    monkeypatch.setitem(brain._clients, "meta", NS(responses=fake))
+    with brain.chosen("muse-spark"):
+        assert brain.ask("helper", "Look.", label="art check overview") == {"text": "ok"}
+    assert fake.cancelled == ["resp_1"] and len(fake.created) == 2  # past the helper's 5 minutes
+    said = capsys.readouterr().err
+    assert "art check overview: resp_1 still queued after" in said and "asked again" in said
+
+    fake = meta(meta_response("ok"), looks=10**6)  # never done
+    with brain.chosen("muse-spark"), pytest.raises(brain.BrainError, match="no answer in 2 tries of 30 minutes"):
         brain.ask("brain", "Hi")
-    assert fake.cancelled == ["resp_1"]
+    assert len(fake.created) == 2 and len(fake.cancelled) == 2
 
 
 @pytest.mark.parametrize("answer, error", [
