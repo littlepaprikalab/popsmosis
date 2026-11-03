@@ -7,7 +7,7 @@
  * current, and the web app asks once, at the next visit, before anything else (components/TermsGate.tsx). A typo fix
  * moves LAST_UPDATED in web/src/lib/legal.ts and leaves this alone.
  */
-export const TERMS_VERSION = '2026-10-27';
+export const TERMS_VERSION = '2026-11-03';
 
 export function termsCurrent(user: { termsVersion: string | null }): boolean {
   return user.termsVersion === TERMS_VERSION;

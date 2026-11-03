@@ -279,7 +279,7 @@ Lyria sings (`/admin/studio`) Google's terms for Lyria's songs (docs/PLAN.md, se
 ## 7. Before launch: the Privacy Policy and Terms of Use
 
 `/privacy`, `/consumer-health-data` and `/terms` read their facts from
-`web/src/lib/legal.ts`. `OPERATOR_NAME` (Little Paprika Lab), `OPERATOR_LOCATION`,
+`web/src/lib/legal.ts`. `OPERATOR_NAME` (Spicy Ginger Labs), `OPERATOR_LOCATION`,
 `GOVERNING_LAW` (Washington), `COURTS` (King County) and `CONTACT_EMAIL` are set. Before
 the site is public:
 
@@ -287,8 +287,8 @@ the site is public:
    within 45 days, and a legal claim's first step (Terms, section 17) and copyright notices
    arrive there too.
 2. Register the copyright agent with the US Copyright Office
-   (copyright.gov/dmca-directory, a small fee, renewed every three years): Little Paprika
-   Lab, at the contact address. The Terms name it (section 12), and the registration is what
+   (copyright.gov/dmca-directory, a small fee, renewed every three years): Spicy Ginger
+   Labs, at the contact address. The Terms name it (section 12), and the registration is what
    protects you from liability for what people post in comments.
 3. If `ATTACHMENT_RETENTION_DAYS` is not the default 30 on the API, set the same number in
    `legal.ts`.

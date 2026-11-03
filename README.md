@@ -839,8 +839,8 @@ who has to make someone else an admin first.
 
 `/privacy`, `/terms` and `/consumer-health-data` (the policy Washington's My Health My
 Data Act requires, with its own footer link) are plain pages in `web/src/app/`. The facts
-they rest on are in `web/src/lib/legal.ts`: who runs Popsmosis and where (Little Paprika
-Lab, Washington State), the contact address, the governing law (Washington, King County
+they rest on are in `web/src/lib/legal.ts`: who runs Popsmosis and where (Spicy Ginger
+Labs, Washington State), the contact address, the governing law (Washington, King County
 courts), the minimum age (13), the file retention (keep it equal to
 `ATTACHMENT_RETENTION_DAYS`) and the license the droplets are shared under
 (CC BY-NC-SA 4.0), and the contact address, which is also the copyright (DMCA) agent's.
