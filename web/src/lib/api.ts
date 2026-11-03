@@ -433,7 +433,7 @@ export interface Question {
 export type Painter = 'gemini' | 'muse' | 'svg';
 export type ArtSettings = { claude: Painter; meta: Painter };
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-// The brain that writes a topic no admin sent to a brain of its own, and Claude's effort when it is Claude's.
+// The brain that writes a topic not sent to a brain of its own, and Claude's effort when it is Claude's.
 export type BrainSettings = { default: Brain; effort: Effort };
 // Who makes the audio, the song and the narration together: ElevenLabs (Eleven Music and its voices) or Gemini (Lyria and
 // Gemini's text-to-speech). Named `song` from before the narration followed it.

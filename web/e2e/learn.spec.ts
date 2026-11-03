@@ -56,6 +56,9 @@ test.describe('signed out', () => {
     page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/api/questions')) sent.push(r.url()); });
     await page.goto('/learn');
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill('How do vaccines train the immune system?');
+    // The brain is picked signed out too, from what a learner may pick.
+    await expect(page.getByTestId('brain-picker').getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Spark']);
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' }).click();
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     await page.getByTestId('sign-in-prompt').getByRole('link', { name: 'Sign in with Google' }).click();
     await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
@@ -67,6 +70,7 @@ test.describe('signed out', () => {
     await expect(page.getByText('@Ben')).toBeVisible();
     const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
     await expect(box).toHaveValue('How do vaccines train the immune system?');
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByText('Your topic is still in the box: press Submit to send it.')).toBeVisible();
     await expect(box).toBeFocused();
     await expect(page.getByTestId('sign-in-prompt')).toHaveCount(0);
@@ -529,6 +533,11 @@ test.describe('signed in', () => {
     // Remembered on this browser, so a run of test topics stays on it.
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
+    // Muse Wonder too, though the page knows it is an admin's only once the sign-in is read.
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' }).click();
+    await page.reload();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('brain-note')).toContainText('Admins only.');
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');

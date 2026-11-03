@@ -4,7 +4,7 @@
  * key (GET /api/studio/settings) before it claims anything, and from its claims (POST /api/questions/:id/claim, the
  * video claim and the video queue), as `studio`.
  *
- * `brain`: the brain that writes and fact-checks a topic no admin sent to a brain of its own (lib/brains.ts), and
+ * `brain`: the brain that writes and fact-checks a topic not sent to a brain of its own (lib/brains.ts), and
  * how hard Claude thinks when it is Claude's (studio/brain.py).
  *
  * `song`: who makes the audio (studio/steps/audio.py), the song and the narration together, so one switch moves the
