@@ -228,17 +228,28 @@ d('droplet endpoints', () => {
       tools: [{ name: 'demucs', version: '4.1.0' }, { name: 'ffmpeg', version: null }] }], seconds: 300 };
     expect((await answer(keyA, { content: 'A lesson.', bundle: BUNDLE, factcheck: FACTCHECK, breakdown: [] })).json().error.message)
       .toMatch(/breakdown/);
+    // Asked ten minutes ago, so the time from the request is ten minutes and the few seconds this test takes.
+    await prisma.question.update({ where: { id: questionId }, data: { createdAt: new Date(Date.now() - 600_000) } });
     const answerId = (await answer(keyA, { content: 'A lesson.', bundle: BUNDLE, factcheck: FACTCHECK, breakdown: lessonSteps })).json().id;
     const card = async () => (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
     expect((await card()).answer.breakdown).toMatchObject({
       steps: [{ step: 'bundle', part: 'lesson', seconds: 180, costUsd: 0.5 }], seconds: 180, costUsd: 0.5, complete: true,
     });
+    // How long it took from the request: the lesson's, with no videos time until they are READY.
+    const lessonTook = (await card()).answer.endToEnd;
+    expect(lessonTook.videos).toBeNull();
+    expect(lessonTook.lesson).toBeGreaterThanOrEqual(600);
+    expect(lessonTook.lesson).toBeLessThan(660);
 
     const song = 'https://media.popsmosis.com/a/out/song_h.mp4';
     expect((await video(keyA, answerId, { status: 'RENDERING', breakdown: videoSteps })).json().error.message).toMatch(/only for status READY/);
     expect((await video(keyA, answerId, { status: 'READY', songVideoUrl: song, breakdown: { steps: 'audio' } })).statusCode).toBe(400);
     expect((await video(keyA, answerId, { status: 'READY', songVideoUrl: song, breakdown: videoSteps })).statusCode).toBe(200);
-    const b = (await card()).answer.breakdown;
+    const done = await card();
+    const b = done.answer.breakdown;
+    expect(done.answer.endToEnd.lesson).toBe(lessonTook.lesson);
+    expect(done.answer.endToEnd.videos).toBeGreaterThanOrEqual(lessonTook.lesson);
+    expect(done.answer.endToEnd.videos).toBeLessThan(660);
     expect(b.steps.map((s: { part: string; step: string }) => `${s.part}:${s.step}`)).toEqual(['lesson:bundle', 'videos:audio', 'videos:timing']);
     expect(b).toMatchObject({ seconds: 480, costUsd: 0.58, credits: 3300, complete: false });
     // Who made each model and tool, and the tools' versions as the studio sent them.
@@ -249,6 +260,7 @@ d('droplet endpoints', () => {
     // A droplet's bill stays on /learn: the public tab shows only the title, lesson, videos and lyrics.
     const listed = (await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).json();
     expect(listed).not.toHaveProperty('breakdown');
+    expect(listed).not.toHaveProperty('endToEnd');
   });
 
   it('signs upload URLs for its own answers once storage is configured', async () => {

@@ -17,7 +17,9 @@ import { bundleTags } from '../lib/tags.js';
 // ATP droplet's hook clip, the song's cut upright (hook.mp4), for its tile and the Clips feed.
 // Usage: npm --workspace api run seed:dev
 
-const hoursAgo = (h: number) => new Date(Date.now() - h * 3600e3);
+// One clock for the whole seed, so the time between two of its rows is what is written here, however long it takes.
+const NOW = Date.now();
+const hoursAgo = (h: number) => new Date(NOW - h * 3600e3);
 
 // What the studio saves with a lesson (docs/PLAN.md, step 1), cut down to what the
 // pages read: the title comes from course and topic, the song's words from lyrics, and
@@ -95,6 +97,11 @@ const SAMPLE_BREAKDOWN = {
   },
 };
 
+// The ATP droplet from its request, as long as a run takes (the bill's 4.6 and 6.3 min, and the waits between):
+// asked 3 hours ago, its lesson posted 7.5 min later, its videos READY at 15.2 min.
+const ATP_ASKED = hoursAgo(3);
+const atpAfter = (minutes: number) => new Date(ATP_ASKED.getTime() + minutes * 60e3);
+
 // Ada and Ben have agreed to the current Terms; Cal has no record of it, like an account from before the box, so the
 // web app asks Cal first (components/TermsGate.tsx).
 const agreed = termsAccepted();
@@ -107,8 +114,8 @@ const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, 
 
 await prisma.question.deleteMany({ where: { userId: { in: [ada.id, ben.id, cal.id] } } });
 
-const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: hoursAgo(3), content: 'ATP synthesis: how do cells actually make ATP?' } });
-const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), bundle: ATP_BUNDLE, ...bundleTags(ATP_BUNDLE), factcheck: PASSED, ...SAMPLE_VIDEO, ...SAMPLE_HOOK, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
+const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: ATP_ASKED, content: 'ATP synthesis: how do cells actually make ATP?' } });
+const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: atpAfter(7.5), bundle: ATP_BUNDLE, ...bundleTags(ATP_BUNDLE), factcheck: PASSED, ...SAMPLE_VIDEO, videoUpdatedAt: atpAfter(15.2), ...SAMPLE_HOOK, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
 
 1. The electron transport chain pumps protons (H+) out of the matrix, building up a **gradient** across the membrane.
 2. The protons can only flow back in through ATP synthase, and that flow spins its rotor.

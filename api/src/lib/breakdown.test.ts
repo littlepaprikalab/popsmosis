@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { billModels, breakdownError, madeWithOf, makerOf, serializeBreakdown, BREAKDOWN_MAX_BYTES, MADE_WITH_MAX_MODELS } from './breakdown.js';
+import { billModels, breakdownError, endToEndOf, madeWithOf, makerOf, serializeBreakdown, BREAKDOWN_MAX_BYTES, MADE_WITH_MAX_MODELS } from './breakdown.js';
 
 const lesson = {
   steps: [
@@ -199,5 +199,29 @@ describe('makerOf', () => {
   it('names no maker for a name it does not know', () => {
     expect(makerOf('gpt-9')).toBeNull();
     expect(makerOf('')).toBeNull();
+  });
+});
+
+describe('endToEndOf', () => {
+  const asked = new Date('2026-11-02T12:00:00.000Z');
+  const at = (minutes: number) => new Date(asked.getTime() + minutes * 60_000);
+
+  it('counts from the request to the lesson posted and to the videos READY, waits and all', () => {
+    expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: 'READY', videoUpdatedAt: at(15.2) }))
+      .toEqual({ lesson: 450, videos: 912 });
+  });
+  it('has no videos time until they are READY, nor for a droplet without them', () => {
+    expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: 'RENDERING', videoUpdatedAt: at(12) })).toEqual({ lesson: 450, videos: null });
+    expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: 'FAILED', videoUpdatedAt: at(30) })).toEqual({ lesson: 450, videos: null });
+    expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: null, videoUpdatedAt: null })).toEqual({ lesson: 450, videos: null });
+    expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: 'READY', videoUpdatedAt: null })).toEqual({ lesson: 450, videos: null });
+  });
+  it('never has the videos before the lesson, whatever the two clocks say', () => {
+    expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: 'READY', videoUpdatedAt: new Date(at(7.5).getTime() - 300) }))
+      .toEqual({ lesson: 450, videos: 450 });
+  });
+  it('rounds to a tenth of a second, and is never less than nothing', () => {
+    expect(endToEndOf(asked, { createdAt: new Date(asked.getTime() + 1234), videoStatus: null, videoUpdatedAt: null }).lesson).toBe(1.2);
+    expect(endToEndOf(asked, { createdAt: at(-1), videoStatus: null, videoUpdatedAt: null }).lesson).toBe(0);
   });
 });

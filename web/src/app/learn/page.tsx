@@ -277,7 +277,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                   The lesson is written and checked; the teacher is making its videos.
                 </p>
                 <DropletMeter progress={q.progress} />
-                <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={q.progress} defaultOpen />
+                <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={q.progress} endToEnd={answer.endToEnd} defaultOpen />
                 {isAdmin && <DropletReview answerId={answer.id} />}
               </div>
               <div className="flex justify-end mt-2">
@@ -331,7 +331,8 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                 )}
                 {/* Still rendering after the text was shown (a second attempt, or an hour on): the bill keeps filling in under it. */}
                 {(answer.breakdown || q.progress) && (
-                  <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={answer.video?.status === 'RENDERING' ? q.progress : null} />
+                  <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={answer.video?.status === 'RENDERING' ? q.progress : null}
+                    endToEnd={answer.endToEnd} />
                 )}
                 {/* What the studio's checks found, beside approve and hide: only an admin's page has it. */}
                 {isAdmin && <DropletReview answerId={answer.id} />}

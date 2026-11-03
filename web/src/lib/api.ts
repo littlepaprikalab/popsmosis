@@ -241,6 +241,16 @@ export interface Breakdown {
   complete: boolean; // every call priced
 }
 
+/**
+ * How long a droplet took from its request, in seconds (api/src/lib/breakdown.ts): to the lesson posted, and to the
+ * videos READY. Unlike the bill's time, which is the studio's steps alone, it counts the waits too: for the studio to
+ * start, and between the lesson and its videos.
+ */
+export interface EndToEnd {
+  lesson: number;
+  videos: number | null; // null: the videos are not READY, or there are none
+}
+
 /** One line the fact-check judged: a sentence of the lesson or the narration, a couplet, a key line, a tag... */
 export interface FactcheckLine {
   kind: string; // lesson, narration, lyric, keyline, scene, caption, title, style, tag, motion, avoid
@@ -353,6 +363,8 @@ export interface Answer {
   video: Video | null; // null: a text-only droplet
   tags?: DropletTags; // each video's hashtags; absent from an API older than them
   breakdown: Breakdown | null; // null: the studio sent none (a lesson written by hand, or an older one)
+  // How long it took from the request, by the API's clock; on a question's answer only, absent from an older API.
+  endToEnd?: EndToEnd | null;
   hidden: boolean; // an admin took it off the public Droplets tab
   awaitingReview?: boolean; // READY, and off the Droplets tab until an admin has looked at it; absent from an older API
   replies: Reply[];
