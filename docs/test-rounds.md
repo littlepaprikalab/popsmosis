@@ -1749,13 +1749,139 @@ writer (Claude) would say nothing about Muse Spark.
 Not good enough to show judges as it is: the pictures, timing and karaoke are clean, but the ending misses the
 question the learner asked, and round 22's droplet answered it.
 
+## Round, Nov 2: the lungs on Muse Wonder, end to end
+
+The owner's hackathon demo topic, **AP Biology: how the lungs get oxygen into the blood**, asked for in K-pop, run
+locally on Meta's models wherever the studio can, all on the real APIs, the paid calls approved for this run:
+
+```bash
+python -m studio plan --topic "how the lungs get oxygen into the blood" --course "AP Biology" \
+  --request "How do the lungs get oxygen into the blood? For AP Biology" --style "K-pop" \
+  --brain muse-wonder --videos
+```
+
+Muse Wonder 1.0 wrote (script, bundle, fact audit, narration edit, fact-check, picture rewrites), Muse Spark 1.3
+checked (learner test, picture checks, label checks, boxes, arrow looks), Muse Image painted, SAM 3.1 found the parts,
+Lyria 3.5 sang, Gemini 3.8 Flash TTS read, and MMS and Demucs timed both, on this machine. `MODEL_API_KEY` and
+`GEMINI_API_KEY` set; `POPSMOSIS_ANTHROPIC_API_KEY`, `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` unset, so a call to
+Claude or ElevenLabs would fail rather than bill; `STUDIO_CLAUDE_DRAWS=brain`, so nothing was Claude's to draw. A
+local job has no `settings.json`: Muse Image painted and Google made the audio by default. No call went anywhere else.
+It ran beside the kidneys above, the same evening, on another branch.
+
+| | |
+|---|---|
+| Spend | $3.04 for the finished job (`lungs-wonder-2`): the lesson $2.02 (Muse Wonder $2.00), art $0.38, locate $0.33, arrows $0.18, audio $0.12. The first try (`lungs-wonder`) logged $0.32 before its bundle call was cut (below), and the probes of Meta's API about $0.02. Not in the ledger: whatever Meta billed for that cut bundle call's three tries, which it does not report |
+| Time | 2 h 15 min from the first command to the last frame, most of it lost to Meta's API and the fixes below. The lesson took 12.5 min (script 125 s, bundle 221 s, narration edit 209 s, fact-check 100 s); the videos would have taken about 14 (audio 40 s and timing 6.3 min beside the art's 3.6 min and locate's 5, then arrows 142 s and render 158 s) |
+| Fact audit | 4 facts, all correct, by course knowledge |
+| Fact-check | passed in 1 round: 86 lines supported, 8 filler, 0 unsupported, nothing corrected |
+| Song | Lyria, 3:00, every line sung as written; 45 lines timed, the aligner unsure of 14 (every chorus line), chorus drift at most 1.3 s |
+| Pictures | 5 scenes in 6 paintings; 17 of 21 parts located (10 in the helper's box) |
+
+### What worked
+
+- **The lesson reads as one explanation.** A hook from the learner's world ("When you sprint, your leg muscles use
+  oxygen much faster than at rest. You breathe harder, yet inhaled air itself never enters your blood"), an analogy
+  that says where it stops ("Think of an alveolus as a loading station and hemoglobin as its shuttle"; the lesson:
+  "The comparison stops at the wall: the shuttle does not carry oxygen across it"), partial pressure defined before
+  it is used, the steps signposted, the case after the path (emphysema: fewer, larger sacs, less surface, less
+  oxygen during exercise) and an ending that answers the question: "So fresh air and oxygen-poor blood go in, and
+  oxygen-rich blood and carbon-dioxide-rich air go out."
+- **The misconception is corrected where it forms**, on the alveolus close-up, right after the gradient is taught
+  and before any dot moves: "If both sides reached equal partial pressure, would oxygen still keep entering blood?
+  A common answer is yes because the body needs it, but need cannot move gases." Muse Wonder chose the body's need
+  pulling oxygen in as the mistake, not round 21's lungs pumping it; the song's pre-chorus sings it ("It's not your
+  need that pulls it through").
+- **O₂ and CO₂ cross in opposite directions**, where the narration says each: O₂ rides its arrow from the air in the
+  alveolus down across the wall into the capillary at 86 s, and CO₂ its arrow up into the alveolus at 93 s
+  ([stills](test-rounds-nov2/lungs-o2-down-co2-up.jpg)). The arrows look placed both right. Round 21's gases ran along
+  the capillary, not across the membrane.
+- **The labels are on their parts** in all five pictures: alveolus, pulmonary capillary, red blood cell, oxygen and
+  carbon dioxide on the close-up; windpipe, branching airways, lungs, heart, alveolus and capillary web on the
+  overview.
+- **The rapped verses are timed.** Verse lines take about 2 s each at 3 to 4 words a second, the sung chorus lines 3
+  to 5 s. Every line's window has singing in it on Demucs's vocal track, and no gap over 1.5 s is sung through for
+  more than 1.8 s: none of the Nov 1 songs' 6 to 15 s of singing over a blank band. The aligner was unsure of every
+  chorus line all the same.
+- **The last key line does not hang over the case**: the band is empty through the emphysema passage.
+
+### What went wrong, worst first
+
+1. **A picture contradicts the voice.** Muse Image painted five oxygens on each hemoglobin, twice, though the scene
+   asks for four; the narrator says "Hemoglobin is a protein that can bind up to four oxygen molecules" and the song
+   sings "Four at a time on every ride" over it, beside the sticky note that says so
+   ([still](test-rounds-nov2/lungs-four-at-a-time-five-oxygens.jpg), [the picture](test-rounds-nov2/lungs-hemoglobin-five-oxygens.jpg)).
+   Its middle "Hemoglobin" label sits on an oxygen. Kept as it is (the owner): a repaint costs about $0.60, since
+   locate and the arrows run again on every scene, and may miscount again.
+2. **The choruses play over a still overview** ([still](test-rounds-nov2/lungs-chorus-over-still-overview.jpg)).
+   SAM never located the overview's pulmonary capillary, a thin green web over pink lung: every match was mostly the
+   lung's colour and was dropped (73 in the step). So the overview's O₂ into the blood, and the blood's way to the
+   heart, have nothing to run between; and the arrows' look left out the air's arrow from the windpipe to the alveoli
+   as pointing the wrong way ("It starts in the lung and ends at the windpipe"), though it was placed from the fork
+   outward. "Oxygen moves from air to blood" is sung four times over a picture where nothing moves.
+3. **The checker passes what is wrong.** Muse Spark found nothing in the overview (a red vessel runs out to the
+   right arm, from the scene's own words "a blood vessel from the heart toward one arm"; the face is cropped at the
+   top) or in the emphysema picture, whose "broken alveolar walls" float inside the sac as pink scraps.
+4. **The lyrics are plain and some lines are padding**: "Hemoglobin carries it to you" (three choruses), "Breathe in
+   deep, fresh air floods", rhymes that miss ("high" / "blood", "ride" / "low", "sac" / "heart"). "Equal pressures,
+   nothing moves for you" says no movement where the lesson says no net diffusion, and the fact-check let it by.
+5. **The upright hook crops labels** in its first frame ("Pu…", "Red blood c…") and opens on the verse's last line
+   with its band still empty ([still](test-rounds-nov2/lungs-hook-first-frame-crops-labels.jpg)), as Nov 1 found.
+6. **Pale for long**: on the song's verses the alveolus close-up stays washed out on most lines, as each spotlights a
+   part, and the CO₂ line's zoom puts the "Carbon dioxide" label out of frame.
+
+### Fixed on this branch
+
+- **Muse Wonder's bundle call was cut after 15 minutes** ("Connection error."). Muse reasons in silence and answers
+  only at the end, streamed or not (a probe: 599 reasoning tokens in silence, then the whole answer in a few chunks), so a
+  long think holds a connection with nothing on it; the 15 minutes are about three tries cut at 5 minutes each,
+  the SDK's two retries unseen, each perhaps billed; the kidneys' second job lost its bundle the same way. The
+  writer's calls now run in the background on Meta's Responses API and are polled every 3 s
+  (`brain.META_BACKGROUND`): the retried bundle came back in 221 s.
+- **In the background, Meta left about a third of Muse Spark's calls queued, never started**: two picture checks for
+  17 minutes while a fresh call beside them finished in 6 s, then 8 of locate's boxes and label checks, sent again
+  after 5 minutes; most were answered in about 30 s, and the hook's label check stuck twice and was skipped. None of Muse Wonder's 11 background calls stuck. So the helper's calls (8 to 100 s)
+  are one request each again, as on chat completions, and a writer's call still queued after 90 s is cancelled and
+  sent again, as is one in progress past 30 minutes, up to three tries (`META_QUEUED_S`, `META_WAIT_S`,
+  `META_TRIES`); a call still running says so every 2 minutes, with its id. After the change the arrows step's 10
+  helper calls each came back first time. A Meta call ends "completed", which the calls table no longer flags.
+- **`plan --videos` and `make` checked the keys on the default brain**, so the Muse job stopped before its videos
+  asking for `POPSMOSIS_ANTHROPIC_API_KEY`, as the kidneys' did; the same fix came in from their branch first.
+- **Fact ids that were not short.** The first script gave each fact a phrase of Muse Wonder's own for its id ("fact:
+  the following facts are the ONLY truth for the droplet: ventilation and structure"), which every line would have
+  cited; the second gave "F1" to "F4". This branch renumbered them f1, f2, ... before the bundle was asked for; main's
+  `script.numbered`, from the natural selection run's "[generated]" ids, does the same, and replaced it in the rebase.
+- **A phospholipid bilayer where there is no membrane.** The look the brief gives a cell scene ends "the membrane a
+  phospholipid bilayer"; the hemoglobin close-up has no membrane among its parts, and its first picture came back with
+  the capillary's wall painted as a bilayer. Code now leaves the clause out of a scene whose parts name no membrane
+  (`art.without_bilayer`); the writer's rewrite put it back, and the painter was sent the scene without it.
+- **30 false problems in the code checks.** Muse Wonder marked its O₂ and CO₂ flows "travels", and `checks.arrow`
+  counted each as an arrow with no one-liner; the renderer draws a symbol as particles whatever it is marked, so the
+  video had none of them. The check now decides as the renderer does.
+- Also: the old variables `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`, `STUDIO_BRAIN_EFFORT` and `SONG_PROVIDER` are set in
+  this cloud environment, and stop `make` (`brain.retired_problem()`); the run unset them. The videos were rendered
+  before this branch was rebased on main's sticky-note change. No scorecard was run (the owner): the checks, brain
+  and script changes do not touch the prompts or what the judge reads.
+
+### Against round 21's lungs
+
+Round 21 (Claude Opus, $2.90, "how the lungs exchange gases") had a train at a crowded platform for its analogy, the
+70 square meters for its hook, pneumonia for its case, and its gases ran along the capillary. This one is about
+oxygen alone but still carries CO₂ the other way, its gases cross the wall, and its misconception and analogy are
+placed as the script asks; its song is plainer and its overview holds still. Muse Wonder cost about what Opus did.
+
+### Good enough for the demo?
+
+The lesson video, yes, with the caveat of the hemoglobin picture: it teaches the path in order, the crossing is
+right and the misconception lands. The song video is weaker for a demo: the choruses sit over a still overview, and
+the one hemoglobin line sings "four" over five. Showing the lesson video and a verse of the song avoids both.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
   API in `POPSMOSIS_API_URL`, which here is production, and Supabase is not set up.
 - The SVG art (`ART_PROVIDER=svg`) through the videos: round 16 drew one plan's scenes with it,
-  but made no videos from them. Muse Wonder through the videos only once (Nov 2, the kidneys); the
-  same day natural selection did not get past its lesson (above).
+  but made no videos from them. Muse Spark as the brain through the videos (Muse Wonder went
+  all the way twice on Nov 2, the kidneys and the lungs; natural selection did not get past its lesson, above).
 
 ## Running a round again
 
@@ -1764,6 +1890,9 @@ python -m studio plan --topic "..." --course "..." --request "..." --job <id> --
 python -m studio make <id>        # resume after a failure
 python -m studio show <id> --brief
 ```
+
+In this cloud environment `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`, `STUDIO_BRAIN_EFFORT` and `SONG_PROVIDER` are
+still set; they stop `make` (and `plan --videos` before its videos) until they are unset for the command, as on Nov 2.
 
 For the art alone: `plan`, then `python -m studio step art <id>` and `step locate <id>`.
 
