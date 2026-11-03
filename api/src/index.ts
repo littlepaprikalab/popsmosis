@@ -12,6 +12,7 @@ import { clientAddress } from './lib/public-limit.js';
 import { resolveAgentToken } from './middleware/auth.js';
 import { legacyPublicPrefix, storageConfig, storageReachable } from './lib/storage.js';
 import { MOVE_EVERY_MS, sweepSupabaseVideos } from './lib/storage-move.js';
+import { logClearReport, sweepDeletedFiles, SWEEP_EVERY_MS } from './lib/storage-delete.js';
 import { keepKnobsFresh } from './lib/knobs.js';
 import { loadKnobs, reloadKnobs } from './lib/studio-settings.js';
 import { scheduleAttachmentSweep } from './lib/attachments.js';
@@ -276,9 +277,13 @@ if (isMain) {
   }
 
   // Whether R2 takes the key and has both buckets, said once in the log; then the videos still on Supabase Storage
-  // are moved to R2 (lib/storage-move.ts), at once and every hour after. None of it holds the API up.
+  // are moved to R2 (lib/storage-move.ts), and the files of droplets their learners deleted are cleared from it
+  // (lib/storage-delete.ts), at once and every hour after. None of it holds the API up.
   const storage = storageConfig();
   if (storage && !('problem' in storage)) {
+    const clear = () => sweepDeletedFiles(storage, prisma)
+      .then((report) => { if (report) logClearReport(app.log, report); })
+      .catch((err) => app.log.error({ err }, 'File storage: clearing deleted droplets\' files failed'));
     let sweeps: NodeJS.Timeout | undefined;
     const sweep = () => sweepSupabaseVideos(storage, prisma)
       .then((report) => {
@@ -295,13 +300,18 @@ if (isMain) {
       .catch((err) => app.log.error({ err }, 'File storage: moving the videos from Supabase Storage failed'));
     storageReachable(storage)
       .then((problem) => {
-        if (problem) return app.log.error(`File storage: ${problem}`);
+        if (problem) {
+          app.log.error(`File storage: ${problem}`);
+          return;
+        }
         app.log.info('File storage: R2 has the droplets and studio buckets, and takes the key');
-        return sweep();
+        return Promise.all([sweep(), clear()]);
       })
       .catch((err) => app.log.error({ err }, 'File storage: the check at boot failed'));
     // Every hour whatever the check said, so a droplet left on Supabase (a READY from an old instance during the
     // redeploy, an R2 that was down at boot) still moves without a restart.
     sweeps = setInterval(sweep, MOVE_EVERY_MS).unref();
+    // Its own timer: the move's stops once nothing is left on Supabase, and deletions go on.
+    setInterval(clear, SWEEP_EVERY_MS).unref();
   }
 }

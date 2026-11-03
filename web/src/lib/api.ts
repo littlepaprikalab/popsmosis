@@ -581,7 +581,10 @@ export const api = {
   // brain: an admin's pick for the topic (lib/brains.ts); left out, the teacher's own makes it.
   askQuestion: (content: string, brain?: Brain | null) =>
     request<Question>('/questions', { method: 'POST', body: JSON.stringify(brain ? { content, brain } : { content }) }).then(localClock),
-  deleteQuestion: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
+  // everything: a topic with a lesson goes whole, the lesson, its videos, likes and comments too; without it, the
+  // request is taken back and the lesson stays on the Droplets tab. A topic with no lesson goes whole either way.
+  deleteQuestion: (id: string, everything = false) =>
+    request<void>(`/questions/${id}${everything ? '?everything=true' : ''}`, { method: 'DELETE' }),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh
   // that changes nothing. since is the caller's watermark: the server then only

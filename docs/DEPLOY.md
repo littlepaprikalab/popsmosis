@@ -240,6 +240,16 @@ Since a public file never changes once viewers can see it, it is uploaded with
    since the studio uploads straight to it (docs/PLAN.md, section 9). It no longer needs the
    Supabase host.
 
+**Deleted droplets.** When a learner deletes a topic with everything, the API empties the
+droplet's `<answerId>/` folder in both buckets itself, with the same key (Object Read & Write
+covers deletes), and goes over it again every hour until no upload URL signed before the delete
+can still be used (`api/src/lib/storage-delete.ts`). The log says `cleared N file(s) of a
+deleted droplet from R2`, or why its files stay for now (the next sweep tries again); the
+reason is also kept in `storage_deletions."lastError"`. Cloudflare's cache can serve a deleted
+public file a while longer to someone who has its link; purge it in the dashboard (Caching >
+Configuration > Purge Cache, by URL) if one must go at once. Files of droplets made before the
+move are deleted from R2 only: their originals in the Supabase bucket go when that bucket does.
+
 **Videos made before the move.** Droplets uploaded while storage was Supabase keep
 playing from Supabase until they are moved, and the API moves them on its own: once it
 has started and the R2 check at boot passes, and again every hour, it copies each one's
@@ -441,6 +451,13 @@ table. Deploy in the usual order: the migration (it runs in the `popsmosis-api` 
 `popsmosis-api`, then `popsmosis-web`; the studio has no change. An API before it never reads
 the table; a web app before the API sends no counts, and one ahead of it has its counts
 refused (404) and drops them.
+
+`20261114120000_storage_deletions` (a learner deleting a topic with everything, README: Privacy
+and the legal pages) creates one small table (`storage_deletions`, row-level security on, no
+foreign key); it rewrites no row and needs no downtime. Deploy `popsmosis-api` first, then
+`popsmosis-web`: a web app ahead of the API sends `?everything=true` to an API that ignores it
+and only takes the request back, so the lesson would stay. The studio has no change: it already
+stops on the 404 a deleted topic or droplet answers with.
 
 ## Troubleshooting
 

@@ -157,6 +157,43 @@ function TeacherNotesLink({ href }: { href: string }) {
 }
 
 /**
+ * What deleting a topic with a lesson takes: everything (the API's ?everything=true), or only the learner's request,
+ * leaving the lesson on the Droplets tab naming no one (api/src/lib/privacy.ts).
+ */
+function DeleteChoice({ everything, onChange }: { everything: boolean; onChange: (everything: boolean) => void }) {
+  const options = [
+    {
+      value: true, label: 'Everything', testId: 'delete-everything',
+      detail: 'Your request, your files and the follow-ups, and the lesson: its text and videos, and the likes and '
+        + 'comments people left on it. It leaves the Droplets tab.',
+    },
+    {
+      value: false, label: 'Only my request', testId: 'delete-request-only',
+      detail: 'Your words, your files and the follow-ups. The lesson stays on the public Droplets tab for others to '
+        + 'learn from, with nothing linking it to you.',
+    },
+  ];
+  return (
+    <fieldset>
+      <legend className="mb-3">What should go? This cannot be undone.</legend>
+      <div className="space-y-2">
+        {options.map((o) => (
+          <label key={o.label} className="flex gap-2.5 items-start cursor-pointer rounded-lg p-2.5"
+            style={{ border: `1px solid ${everything === o.value ? 'var(--accent-red)' : 'var(--border)'}` }}>
+            <input type="radio" name="delete-scope" className="mt-1 shrink-0" style={{ accentColor: 'var(--accent-red)' }}
+              checked={everything === o.value} onChange={() => onChange(o.value)} data-testid={o.testId} />
+            <span>
+              <span className="block font-semibold" style={{ color: 'var(--text-primary)' }}>{o.label}</span>
+              <span className="block text-[13px]">{o.detail}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/**
  * One topic request, its lesson, and the follow-ups under it. Memoized on purpose: the armed poll hands
  * back a fresh questions array every 15s, so without this every card on the
  * page — markdown, thread and all — re-renders on a tick that changed one of
@@ -388,6 +425,8 @@ function LearnContent() {
   const [brain, setBrain] = useState<Brain | null>(null);
   const [defaultBrain, setDefaultBrain] = useState<Brain | null>(null); // the Studio page's, for the Default button
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  // For a topic with a lesson: whether the lesson goes too (api: ?everything=true), or only the request.
+  const [deleteLesson, setDeleteLesson] = useState(true);
   // Submit pressed signed out: the box asks them to sign in, keeping what they typed.
   const [askSignIn, setAskSignIn] = useState(false);
   const signInRef = useRef<HTMLAnchorElement>(null);
@@ -571,17 +610,27 @@ function LearnContent() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  // Stable identity, like the callbacks below: each card is handed it. Every opening starts at Everything.
+  const requestDelete = useCallback((id: string) => {
+    setDeleteLesson(true);
+    setPendingDelete(id);
+  }, []);
+  const handleDelete = async (id: string, everything: boolean) => {
     const hadLesson = questions.find((q) => q.id === id)?.status === 'ANSWERED';
     try {
-      await api.deleteQuestion(id);
+      await api.deleteQuestion(id, hadLesson && everything);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
-      if (hadLesson) showToast('Your request is deleted. The lesson stays for others to learn from.', 'success');
+      if (hadLesson) {
+        showToast(everything
+          ? 'Deleted: your topic, its lesson and its videos.'
+          : 'Your request is deleted. The lesson stays for others to learn from.', 'success');
+      }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to delete topic', 'error');
     }
   };
   const deleting = questions.find((q) => q.id === pendingDelete);
+  const deletingLesson = deleting?.status === 'ANSWERED';
 
   // Stable identity: QuestionCard is memoized, and a callback rebuilt each
   // render would re-render every card on the page anyway.
@@ -621,13 +670,13 @@ function LearnContent() {
     <PageContainer className="py-6">
       <ConfirmDialog
         open={!!pendingDelete}
-        title={deleting?.status === 'ANSWERED' ? 'Delete your request' : 'Delete topic'}
-        message={deleting?.status === 'ANSWERED'
-          ? 'Delete your request? Your words, your files and the follow-ups under it are deleted. The lesson stays on the public Droplets tab for others to learn from, with nothing linking it to you. This cannot be undone.'
+        title="Delete topic"
+        message={deletingLesson
+          ? <DeleteChoice everything={deleteLesson} onChange={setDeleteLesson} />
           : 'Delete this topic request? This cannot be undone.'}
-        confirmLabel="Delete"
+        confirmLabel={!deletingLesson ? 'Delete' : deleteLesson ? 'Delete everything' : 'Delete my request'}
         variant="danger"
-        onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete); setPendingDelete(null); }}
+        onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete, deleteLesson); setPendingDelete(null); }}
         onCancel={() => setPendingDelete(null)}
       />
 
@@ -807,7 +856,7 @@ function LearnContent() {
               index={i}
               isAdmin={isAdmin}
               onAnswerChange={updateAnswer}
-              onRequestDelete={setPendingDelete}
+              onRequestDelete={requestDelete}
               onSetHidden={setHidden}
               onApprove={approve}
             />

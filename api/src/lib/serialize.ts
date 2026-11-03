@@ -197,7 +197,8 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new D
     // While the droplet is being made: the steps running now and the bill so far, shown as it fills in.
     progress: progressOf(q, answer, now),
     isOwner,
-    // Always the owner's to take back. One with a lesson keeps the lesson for everyone else (lib/privacy.ts).
+    // Always the owner's to delete: taken back, keeping the lesson for everyone else (lib/privacy.ts), or with
+    // everything, the lesson too (routes/questions.ts).
     canDelete: isOwner,
   };
 }

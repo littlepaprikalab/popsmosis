@@ -3,7 +3,9 @@
  * unless INTEGRATION=1.
  *
  * Covers: a request, its files and its follow-ups are the learner's alone (and the admins') -> taking back a request
- * that has a lesson removes the learner's side and leaves the lesson public, naming no one -> deleting an account does
+ * that has a lesson removes the learner's side and leaves the lesson public, naming no one -> deleting one with
+ * everything takes the lesson and all that hangs on it too (its files in R2: lib/storage-delete.integration.test.ts)
+ * -> deleting an account does
  * the same for every request with a lesson, deletes the rest, and ends the session -> the only admin cannot delete
  * their account.
  */
@@ -93,7 +95,7 @@ d('learner privacy', () => {
 
   beforeEach(async () => {
     // The admin-count rule needs a known set of admins; the other integration files reset the same way.
-    await prisma.$executeRawUnsafe('TRUNCATE replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
+    await prisma.$executeRawUnsafe('TRUNCATE replies, answers, questions, agents, users, storage_deletions RESTART IDENTITY CASCADE');
     const { generateApiKey } = await import('../lib/apikey.js');
     const key = generateApiKey();
     agentKey = key.raw;
@@ -175,6 +177,80 @@ d('learner privacy', () => {
     })).statusCode).toBe(403);
     expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}`, headers: asUser(grace.cookie) })).statusCode).toBe(403);
     expect((await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent() })).json().data).toEqual([]);
+  });
+
+  it('deletes a request with everything: the lesson, its thread, likes, comments and play counts go, and it leaves the tab', async () => {
+    const { questionId, answerId, questionFile, replyFile } = await lesson(grace);
+    const bens = await lesson(ben, 'Glycolysis, please');
+    // Others' likes and comments on Grace's droplet, a play counted, and Ben's like on his own.
+    for (const who of [ben, admin]) {
+      expect((await app.inject({ method: 'PUT', url: `/api/droplets/${answerId}/like`, headers: asUser(who.cookie) })).statusCode).toBe(200);
+    }
+    expect((await app.inject({
+      method: 'POST', url: `/api/droplets/${answerId}/comments`, headers: asUser(ben.cookie), payload: { content: 'This helped a lot' },
+    })).statusCode).toBe(201);
+    expect((await app.inject({ method: 'POST', url: `/api/droplets/${answerId}/plays`, payload: { video: 'song', event: 'started' } })).statusCode).toBe(204);
+    expect((await app.inject({ method: 'PUT', url: `/api/droplets/${bens.answerId}/like`, headers: asUser(ben.cookie) })).statusCode).toBe(200);
+
+    const del = await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(grace.cookie) });
+    expect(del.statusCode).toBe(204);
+
+    // Nothing of it is left: the request, the lesson and everything under it.
+    expect(await prisma.question.count({ where: { id: questionId } })).toBe(0);
+    expect(await prisma.answer.count({ where: { id: answerId } })).toBe(0);
+    expect(await prisma.reply.count({ where: { answerId } })).toBe(0);
+    expect(await prisma.attachment.count({ where: { OR: [{ questionId }, { reply: { answerId } }] } })).toBe(0);
+    expect(await prisma.dropletLike.count({ where: { answerId } })).toBe(0);
+    expect(await prisma.dropletComment.count({ where: { answerId } })).toBe(0);
+    expect(await prisma.dropletPlays.count({ where: { answerId } })).toBe(0);
+    for (const url of [questionFile, replyFile]) {
+      expect((await app.inject({ method: 'GET', url, headers: asUser(admin.cookie) })).statusCode).toBe(404);
+    }
+    // Off the tab and off /learn, for everyone.
+    expect((await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'GET', url: '/api/droplets' })).json().data.map((x: { id: string }) => x.id)).toEqual([bens.answerId]);
+    expect((await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(admin.cookie) })).statusCode).toBe(404);
+    // With no file storage on this API there were no files, so nothing waits to be cleared from it.
+    expect(await prisma.storageDeletion.count()).toBe(0);
+
+    // Ben's droplet is untouched, its like counted as before; Ben's and the admin's accounts are theirs still.
+    expect((await app.inject({ method: 'GET', url: `/api/droplets/${bens.answerId}` })).json().likeCount).toBe(1);
+    expect(await prisma.reply.count({ where: { answerId: bens.answerId } })).toBe(2);
+    expect(await prisma.user.count()).toBe(3);
+    // The teacher has nothing left to answer under it, and a lesson for it is refused as for any deleted topic.
+    expect((await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent() })).json().data).toEqual([]);
+    expect((await app.inject({ method: 'POST', url: `/api/answers/${answerId}/video/claim`, headers: asAgent(), payload: {} })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(grace.cookie) })).statusCode).toBe(404);
+  });
+
+  it('deletes a request with no lesson the same with everything or without, and takes everything as true or false only', async () => {
+    const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(grace.cookie), payload: { content: 'Tides' } });
+    const id = asked.json().id as string;
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}?everything=yes`, headers: asUser(grace.cookie) })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}?everything=true`, headers: asUser(grace.cookie) })).statusCode).toBe(204);
+    expect(await prisma.question.count({ where: { id } })).toBe(0);
+
+    // ?everything=false is the take back.
+    const { questionId, answerId } = await lesson(grace);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=false`, headers: asUser(grace.cookie) })).statusCode).toBe(204);
+    expect((await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).statusCode).toBe(200);
+  });
+
+  it('deletes everything only of the learner\'s own request: not someone else\'s, not as an admin, not once taken back', async () => {
+    const { questionId, answerId } = await lesson(grace);
+    for (const who of [ben, admin]) {
+      const res = await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(who.cookie) });
+      expect(res.statusCode).toBe(403);
+    }
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asAgent() })).statusCode).toBe(401);
+    // CSRF: a cookie write without the header is refused.
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: { cookie: grace.cookie } })).statusCode).toBe(403);
+    expect(await prisma.answer.count({ where: { id: answerId } })).toBe(1);
+
+    // Taken back, it is no one's: the lesson can no longer be deleted by the learner who asked for it.
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}`, headers: asUser(grace.cookie) })).statusCode).toBe(204);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(grace.cookie) })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).statusCode).toBe(200);
   });
 
   it('deletes an account: requests with no lesson go, ones with a lesson are taken back, and the session ends', async () => {
@@ -286,6 +362,23 @@ d('learner privacy', () => {
       }
       // Each user may ask 10 a day, counted apart from the requests (lib/usage.ts); the race is the subject here, not
       // the quota.
+      await prisma.usageEvent.updateMany({ where: { userId: ben.id }, data: { createdAt: new Date(Date.now() - 2 * 86_400_000) } });
+    }
+  });
+
+  it('a lesson landing as the learner deletes everything ends with nothing left either way', async () => {
+    for (let round = 0; round < 12; round++) {
+      const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(ben.cookie), payload: { content: `Race ${round}: tides` } });
+      const id = asked.json().id as string;
+      await app.inject({ method: 'POST', url: `/api/questions/${id}/claim`, headers: asAgent() });
+      const [answer, del] = await Promise.all([
+        app.inject({ method: 'POST', url: `/api/questions/${id}/answer`, headers: asAgent(), payload: { content: 'The Moon pulls the oceans.' } }),
+        app.inject({ method: 'DELETE', url: `/api/questions/${id}?everything=true`, headers: asUser(ben.cookie) }),
+      ]);
+      expect(del.statusCode).toBe(204);
+      expect([201, 404]).toContain(answer.statusCode);
+      expect(await prisma.question.count({ where: { id } })).toBe(0);
+      expect(await prisma.answer.count({ where: { questionId: id } })).toBe(0);
       await prisma.usageEvent.updateMany({ where: { userId: ben.id }, data: { createdAt: new Date(Date.now() - 2 * 86_400_000) } });
     }
   });

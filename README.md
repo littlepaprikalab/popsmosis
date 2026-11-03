@@ -25,8 +25,8 @@ anyone signed in can give it a thumbs-up and comment on it. The plan, and where 
 
 The lessons are everyone's; the learners are private. What a learner sends (the request in
 their own words, their files, their follow-ups) is seen only by them, the teacher and the
-admins, and a learner can take a request back or delete their account while the lesson
-stays public. The [Privacy Policy and Terms of Use](#privacy-and-the-legal-pages) say so
+admins. A learner can take a request back or delete their account while the lesson stays
+public, or delete a request with its lesson and everything on it. The [Privacy Policy and Terms of Use](#privacy-and-the-legal-pages) say so
 to users at `/privacy` and `/terms`.
 
 Popsmosis started as a copy of [zoey](https://github.com/Iztera/zoey) (an agent-answered
@@ -391,7 +391,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
 | POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
-| DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
+| DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one. `?everything=true` deletes the lesson too: the droplet, its follow-ups, likes, comments and play counts, and its files in both R2 buckets ([Privacy](#privacy-and-the-legal-pages)); it leaves the tab |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars; 429 past `REPLIES_PER_USER_PER_HOUR` (30), or when its files would pass the learner's file limits |
 | DELETE | `/api/replies/:id` | own reply |
 | PUT | `/api/droplets/:id/like` | thumbs-up a droplet on the tab: `{ liked: true, likeCount }`; idempotent, so a second PUT changes nothing; 404 unless it is on the tab. 60 a minute with the DELETE |
@@ -794,11 +794,20 @@ Two sides, kept apart in the API (`api/src/lib/privacy.ts`):
 Beside both, the [play counts](#play-counts) are about no one: totals of how far each video's
 plays got and how often a hook clip was shared or downloaded, seen only by admins.
 
-A learner can **take back** a request from its card: with no lesson yet it is deleted; with
-one, their words, files and thread are deleted and `questions.userId` is set to null, so
-the lesson stays on the tab naming no one. **Deleting an account** (`/account`) does that
-for every request with a lesson and deletes everything else, except for the only admin,
-who has to make someone else an admin first.
+A learner can **delete** a request from its card: with no lesson yet it is deleted. With
+one, they choose. **Only my request** takes it back: their words, files and thread are
+deleted and `questions.userId` is set to null, so the lesson stays on the tab naming no one.
+**Everything** (`?everything=true`) deletes the request and the droplet with all that hangs
+on it (its follow-ups, the likes, comments and play counts others left, and the files in both
+R2 buckets), so it leaves the tab. The files are cleared by `api/src/lib/storage-delete.ts`:
+the droplet is recorded in `storage_deletions` in the transaction that deletes it, its
+`<answerId>/` folders are emptied at once, and an hourly sweep goes over them again until a
+pass after every upload URL signed for it has run out (`UPLOAD_URL_SECONDS`, 2 hours, and half
+an hour more), so a render still running at the delete leaves nothing behind. A copy Cloudflare
+already caches can be served a while longer to someone who has its link. Nothing it used of
+the learner's daily limits is given back. **Deleting an account** (`/account`) takes back every
+request with a lesson and deletes everything else, except for the only admin, who has to make
+someone else an admin first.
 
 `/privacy`, `/terms` and `/consumer-health-data` (the policy Washington's My Health My
 Data Act requires, with its own footer link) are plain pages in `web/src/app/`. The facts

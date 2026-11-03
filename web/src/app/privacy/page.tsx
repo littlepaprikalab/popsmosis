@@ -28,7 +28,8 @@ export default function PrivacyPage() {
             requests, your files or your follow-up questions. Comments you choose to post on a droplet are public, with
             your first name and last initial.</li>
           <li><strong>You are in control.</strong> You can delete a request, a comment, or your whole account at any
-            time. A lesson made from your request stays public, with nothing linking it to you.</li>
+            time. When you delete a request that has a lesson, you choose whether the lesson goes too, or stays public
+            with nothing linking it to you.</li>
           <li><strong>No ads, no tracking, no selling.</strong> We don&rsquo;t sell your data, show ads, use tracking
             cookies or analytics that identify you, or train AI models on what you send. We count how far each video is
             watched, in totals that say nothing about who watched.</li>
@@ -195,7 +196,8 @@ export default function PrivacyPage() {
           <li><strong>When you asked:</strong> the time of each request and follow-up you send, but not what it said,
             for two days, so the daily and hourly limits hold. Deleting a request or a follow-up leaves it until then;
             deleting your account removes it at once.</li>
-          <li><strong>Lessons and videos:</strong> published for as long as Popsmosis runs, unless they are taken down.</li>
+          <li><strong>Lessons and videos:</strong> published for as long as Popsmosis runs, unless you delete them with
+            your request or they are taken down.</li>
           <li><strong>Play totals:</strong> for as long as their droplet is kept; they go with it.</li>
           <li><strong>Server logs and backups:</strong> kept by our providers for a limited time, after which they
             expire.</li>
@@ -212,21 +214,27 @@ export default function PrivacyPage() {
       <Section id="delete" title="7. Deleting your data">
         <ul>
           <li><strong>A request:</strong> press <em>delete</em> on it in <Link href="/learn">Learn</Link>. If it has no
-            lesson yet, it is deleted. If it has one, your words, your files and the follow-up thread are deleted, and
-            the lesson stays public with nothing linking it to you.</li>
+            lesson yet, it is deleted. If it has one, you choose. <em>Everything</em> deletes your words, your files,
+            the follow-up thread and the lesson itself, with its videos and the likes and comments people left on it.{' '}
+            <em>Only my request</em> deletes your words, your files and the follow-up thread, and the lesson stays
+            public with nothing linking it to you.</li>
           <li><strong>A comment or a like:</strong> delete the comment, or take back the like, on the droplet&rsquo;s
             page.</li>
           <li><strong>Your account:</strong> go to <Link href="/account">your account</Link> and choose <em>Delete my
             account</em>. Your account, files, follow-ups, comments, likes and any request without a lesson are deleted,
-            and requests with a lesson are handled as above. If you sign in again later, you start with a new, empty
-            account.</li>
-          <li><strong>A lesson:</strong> if you want a lesson made from your request taken down, write to us at{' '}
-            <Contact />.</li>
+            and requests with a lesson are deleted as with <em>Only my request</em>: their lessons stay public with
+            nothing linking them to you. To take a lesson down as well, delete its request with <em>Everything</em>{' '}
+            first. If you sign in again later, you start with a new, empty account.</li>
+          <li><strong>A lesson:</strong> delete its request with <em>Everything</em>, as above. If you already deleted
+            the request with <em>Only my request</em>, or deleted your account, write to us at <Contact /> and we will
+            take the lesson down.</li>
         </ul>
         <p>
-          These take your data out of Popsmosis&rsquo;s database at once. Copies in server logs, backups and the AI
-          teacher&rsquo;s working files (<a href="#retention">section 6</a>) go later; write to us if you want them
-          cleared sooner.
+          These take your data out of Popsmosis&rsquo;s database at once. A deleted lesson&rsquo;s video files leave
+          our file storage at once too, or within a few hours if a video was still being made, though copies our
+          storage provider already holds in its cache can be served a while longer to someone who has their link.
+          Copies in server logs, backups and the AI teacher&rsquo;s working files (<a href="#retention">section
+          6</a>) go later; write to us if you want them cleared sooner.
         </p>
       </Section>
 

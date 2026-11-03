@@ -272,7 +272,7 @@ test.describe('signed in', () => {
     await expect(page.getByText('ATP synthesis: how do cells')).toHaveCount(0);
   });
 
-  test('a topic with a lesson can be deleted: the request goes, the lesson stays on the Droplets tab', async ({ page, context, request }) => {
+  test('a topic with a lesson can be deleted, the request only: it goes, the lesson stays on the Droplets tab', async ({ page, context, request }) => {
     const text = `E2E ${Date.now()}: diffusion, for my quiz`;
     const asked = await request.post(apiUrl('/api/questions'), {
       headers: { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' },
@@ -297,7 +297,10 @@ test.describe('signed in', () => {
     await card.getByRole('button', { name: 'delete' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('The lesson stays on the public Droplets tab');
-    await dialog.getByRole('button', { name: 'Delete' }).click();
+    // Everything is what a delete takes unless the learner picks less.
+    await expect(dialog.getByTestId('delete-everything')).toBeChecked();
+    await dialog.getByRole('radio', { name: /Only my request/ }).check();
+    await dialog.getByRole('button', { name: 'Delete my request' }).click();
     await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
     await expect(page.getByText('The lesson stays for others to learn from')).toBeVisible();
 
@@ -306,6 +309,44 @@ test.describe('signed in', () => {
     expect(tab.status()).toBe(200);
     expect((await tab.json()).content).toContain('high to low');
     await page.reload();
+    await expect(page.getByText(text)).toHaveCount(0);
+  });
+
+  test('a topic with a lesson can be deleted with everything: the lesson, its likes and comments leave the Droplets tab', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: osmosis, delete it all`;
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const asked = await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: text } });
+    expect(asked.status()).toBe(201);
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    const questionId = (await asked.json()).id;
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    const answerId = (await (await bot.answer(questionId, 'Water moves toward the **higher** solute concentration.')).json()).id;
+    const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
+    expect((await bot.video(answerId, { status: 'RENDERING' })).status()).toBe(200);
+    expect((await bot.video(answerId, { status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4`, lessonVideoUrl: `${BASE}/samples/lesson.mp4` })).status()).toBe(200);
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    expect((await request.patch(apiUrl(`/api/answers/${answerId}`), { headers: asAda, data: { approved: true } })).status()).toBe(200);
+    // Someone else likes it and comments on it.
+    expect((await request.put(apiUrl(`/api/droplets/${answerId}/like`), { headers: asAda })).status()).toBe(200);
+    expect((await request.post(apiUrl(`/api/droplets/${answerId}/comments`), { headers: asAda, data: { content: 'Nice one' } })).status()).toBe(201);
+
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await card.getByRole('button', { name: 'delete' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('the likes and comments people left on it');
+    await expect(dialog.getByTestId('delete-everything')).toBeChecked();
+    await dialog.getByRole('button', { name: 'Delete everything' }).click();
+    await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
+    await expect(page.getByText('Deleted: your topic, its lesson and its videos.')).toBeVisible();
+
+    // Gone from the API and the Droplets tab, for everyone; the droplet's own page says so.
+    expect((await request.get(apiUrl(`/api/droplets/${answerId}`))).status()).toBe(404);
+    expect((await request.get(apiUrl(`/api/questions/${questionId}`), { headers: asAda })).status()).toBe(404);
+    await page.goto(`/droplets/${answerId}`);
+    await expect(page.getByText('This droplet is not on the tab')).toBeVisible();
+    await page.goto('/learn');
     await expect(page.getByText(text)).toHaveCount(0);
   });
 
