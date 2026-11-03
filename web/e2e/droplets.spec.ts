@@ -125,11 +125,11 @@ test.describe('the Droplets tab, signed out', () => {
 
   test('tags the droplet, and finds droplets by a tag', async ({ page }) => {
     await page.goto(`/droplets/${S.droplet}`);
-    // Both videos' tags, once each, under the pair: the song's #kpop, the lesson's #explained, and the #biology they share.
+    // Both videos' tags, once each, under the pair: the song's #kpop, the lesson's #chemiosmosis, and the #biology they share.
     const tags = page.getByRole('list', { name: 'Tags' });
     await expect(tags).toHaveCount(1);
     await expect(tags.getByRole('link', { name: '#kpop', exact: true })).toBeVisible();
-    await expect(tags.getByRole('link', { name: '#explained', exact: true })).toBeVisible();
+    await expect(tags.getByRole('link', { name: '#chemiosmosis', exact: true })).toBeVisible();
     await expect(tags.getByRole('link', { name: '#biology', exact: true })).toHaveCount(1);
 
     // A tag opens the tab searched by it.
@@ -429,9 +429,9 @@ test.describe('videos on /learn', () => {
     const card = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first();
     const tags = card.getByRole('list', { name: 'Tags' });
     await expect(tags.getByRole('link', { name: '#kpop', exact: true })).toBeVisible();
-    await expect(tags.getByRole('link', { name: '#explained', exact: true })).toBeVisible();
-    await tags.getByRole('link', { name: '#explained', exact: true }).click();
-    await expect(page).toHaveURL(/\/droplets\?tag=explained$/);
+    await expect(tags.getByRole('link', { name: '#chemiosmosis', exact: true })).toBeVisible();
+    await tags.getByRole('link', { name: '#chemiosmosis', exact: true }).click();
+    await expect(page).toHaveURL(/\/droplets\?tag=chemiosmosis$/);
     await expect(page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' })).toHaveCount(1);
   });
 

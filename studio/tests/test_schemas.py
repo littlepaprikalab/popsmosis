@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from studio.brain import SCHEMA_KEYWORDS, strict_schema
-from studio.schemas import Bundle, FactAudit, FactCheck, LessonBundle, Tags, bundle_of, tag_of, with_study_tags
+from studio.schemas import Bundle, FactAudit, FactCheck, LessonBundle, bundle_of, tag_of
 from studio.tests.sample import bundle_data, lesson_bundle_data
 
 
@@ -61,7 +61,7 @@ def test_tags_are_written_as_hashtags_are_searched():
                             *[f"#t{n}" for n in range(12)]]
     tags = Bundle.model_validate(data).tags
     assert tags.song == ["apbio", "lightreactions", "révolution_française", "t0", "t1", "t2", "t3", "t4", "t5", "t6"]
-    assert tags.lesson == ["photosynthesis", "lightreactions", "apbio", "explained"]
+    assert tags.lesson == ["photosynthesis", "lightreactions", "apbio", "photosystem"]
 
 
 def test_a_tag_reads_the_same_cleaned_twice():
@@ -77,15 +77,13 @@ def test_a_tag_that_helps_no_one_find_the_video_is_dropped():
     assert Bundle.model_validate(data).tags.song == ["osmosis"]
 
 
-def test_the_study_tags_come_after_the_writers_own_with_room_kept_for_them():
-    tags = Tags(song=[f"t{n}" for n in range(10)], lesson=["osmosis", "explained"])
-    assert with_study_tags(tags, "high school") == Tags(song=[*[f"t{n}" for n in range(8)], "studysong", "studytok"],
-                                                        lesson=["osmosis", "explained", "examprep", "studytok"])
-    # A younger audience has no exam ahead; the lesson video alone has no song to tag.
-    for younger in ("about age 10", "6th grade", "middle school", "kids"):
-        assert with_study_tags(Tags(lesson=["osmosis"]), younger, sung=False) == Tags(
-            lesson=["osmosis", "explained", "studytok"])
-    assert "examprep" in with_study_tags(Tags(), "9th grade").lesson
+def test_a_tag_that_names_only_the_videos_format_is_dropped():
+    # On every droplet, so a search for it finds none in particular (the owner, Nov 3).
+    data = bundle_data()
+    data["tags"]["song"] = ["#vision", "#StudySong", "#studytok", "#kpop", "#EduTok"]
+    data["tags"]["lesson"] = ["#vision", "#Explained", "#exam prep", "#retina", "#learnontiktok", "#studywithme"]
+    tags = Bundle.model_validate(data).tags
+    assert tags.song == ["vision", "kpop"] and tags.lesson == ["vision", "retina"]
 
 
 def test_a_bundle_written_before_tags_has_none():

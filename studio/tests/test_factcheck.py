@@ -269,7 +269,7 @@ def test_tags_are_checked_once_each_with_what_a_tag_is_judged_by():
     tags = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("tag:")]
     # The tags both videos carry are sent once, under the song's ids.
     assert tags == [("tag:song-1", "#photosynthesis"), ("tag:song-2", "#lightreactions"), ("tag:song-3", "#apbio"),
-                    ("tag:song-4", "#studysong"), ("tag:song-5", "#pop"), ("tag:lesson-4", "#explained")]
+                    ("tag:song-4", "#thylakoid"), ("tag:song-5", "#pop"), ("tag:lesson-4", "#photosystem")]
     assert fake.payloads[0]["about"] == {"course": "AP Biology", "topic": "the light reactions",
                                          "audience": "high school", "song_style": "upbeat pop, 112 bpm"}
     assert report.status == "passed" and checked.tags == bundle().tags and dropped_tags(report) == []
@@ -290,8 +290,8 @@ def test_a_tag_that_fails_leaves_both_videos_and_never_fails_the_check():
     fake = FakeChecker(rule)
     report, checked = check_bundle(bundle(), "", fake)
     assert report.status == "passed" and report.reason == "" and report.corrections == []
-    assert checked.tags.song == ["photosynthesis", "studysong", "pop"]
-    assert checked.tags.lesson == ["photosynthesis", "explained"]
+    assert checked.tags.song == ["photosynthesis", "thylakoid", "pop"]
+    assert checked.tags.lesson == ["photosynthesis", "photosystem"]
     # The tag with no verdict is asked again each round, with what it is judged by; then it is dropped.
     assert len(fake.payloads) == 3 and fake.ids(2) == ["tag:song-3"] and fake.ids(3) == ["tag:song-3"]
     assert fake.payloads[1]["about"]["course"] == "AP Biology"
@@ -497,7 +497,7 @@ def test_run_posts_only_the_tags_that_passed_and_keeps_the_draft(tmp_path):
     write(tmp_path / "bundle.json", bundle())
     report = factcheck.run(tmp_path, ask=FakeChecker(lambda t: ("UNSUPPORTED", "", "") if t == "#pop" else supported(t)))
     assert report.status == "passed"
-    assert read(tmp_path / "bundle.json", Bundle).tags.song == ["photosynthesis", "lightreactions", "apbio", "studysong"]
+    assert read(tmp_path / "bundle.json", Bundle).tags.song == ["photosynthesis", "lightreactions", "apbio", "thylakoid"]
     assert read(tmp_path / "bundle.draft.json", Bundle) == bundle()
 
 

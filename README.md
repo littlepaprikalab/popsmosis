@@ -446,19 +446,20 @@ Each video is tagged the way a TikTok is, so the Droplets tab can be searched: t
 writes 5 to 7 hashtags for the song video and for the lesson video as the last part of the
 bundle (`tags.song`, `tags.lesson`; the prompt is in `studio/prompts/bundle.md`): the topic,
 its key terms, the subject and the course ("#photosynthesis", "#thylakoid", "#apbio"), and
-last, for the song, its genre ("#kpop"). Code adds the tags every video carries after them
-("#studysong" and "#studytok" for the song; "#explained", "#examprep" and "#studytok" for the
-lesson, with no "#examprep" for a younger audience; `with_study_tags` in
-`studio/schemas.py`) and drops tags that find nothing ("#fyp", "#viral"), as the API does
-again (`api/src/lib/tags.ts`).
+last, for the song, its genre ("#kpop"). Code drops tags that find nothing in particular, as
+the API does again (`NO_TAGS` in `studio/schemas.py` and `api/src/lib/tags.ts`): a hope of
+being shown ("#fyp", "#viral"), or only the video's format ("#studysong", "#studytok",
+"#explained", "#examprep"), which would be on every droplet. Code added those four to every
+video until Nov 3; a migration (`20261116120000_format_tags`) took them off the droplets
+that had them.
 
 The fact-check then checks every tag in the same call as the lines, by rules of its own
 (`studio/prompts/factcheck.md`, "Tags"): a tag passes when it names something the facts
-cover, or only the topic, a subject containing it, the course or the video itself (the
+cover, or only the topic, a subject containing it, the course or the song's genre (the
 checker is given the course, topic and song style for this). Anything else is dropped from
 both videos, never rewritten: a neighbouring topic the lesson does not cover
 ("#calvincycle"), a claim, a style the song does not have, an artist, anything about the
-learner, or a tag that helps no one ("#fyp"). A tag never fails the droplet, and one that
+learner, or a tag that helps no one ("#fyp", "#lesson"). A tag never fails the droplet, and one that
 gets no verdict is dropped too, so only checked tags are posted. `python -m studio show`
 lists what was dropped and why. Like the lines, a tag passes only on what the facts say: a
 term the facts never mention is dropped even when it is related. No extra model call: the
@@ -475,8 +476,8 @@ again when its videos go READY if they are still missing (a lesson posted to an 
 than the tags, during a deploy). They read back as
 
 ```json
-"tags": { "song": ["photosynthesis", "thylakoid", "apbio", "kpop", "studysong"],
-          "lesson": ["photosynthesis", "thylakoid", "apbio", "explained"] }
+"tags": { "song": ["photosynthesis", "thylakoid", "apbio", "kpop"],
+          "lesson": ["photosynthesis", "thylakoid", "apbio", "atpsynthase"] }
 ```
 
 The page shows each video's under it, a card its first four, and every tag is a link to

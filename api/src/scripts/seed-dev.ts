@@ -39,16 +39,16 @@ const ATP_BUNDLE = {
     { id: 'c2', section: 'chorus', text: 'Every turn a little energy for me', names: [], fact_id: 'f2' },
   ],
   tags: {
-    song: ['#ATPsynthesis', '#ATPsynthase', '#cellularrespiration', '#mitochondria', '#apbio', '#biology', '#studysong', '#kpop', '#studytok'],
-    lesson: ['#ATPsynthesis', '#ATPsynthase', '#cellularrespiration', '#mitochondria', '#apbio', '#biology', '#explained', '#studytok'],
+    song: ['#ATPsynthesis', '#ATPsynthase', '#cellularrespiration', '#mitochondria', '#apbio', '#biology', '#kpop'],
+    lesson: ['#ATPsynthesis', '#ATPsynthase', '#cellularrespiration', '#mitochondria', '#chemiosmosis', '#apbio', '#biology'],
   },
 };
 const OSMOSIS_BUNDLE = {
   ...ATP_BUNDLE,
   topic: 'Osmosis',
   tags: {
-    song: ['#osmosis', '#diffusion', '#cellmembrane', '#biology', '#studysong', '#poppunk'],
-    lesson: ['#osmosis', '#diffusion', '#cellmembrane', '#biology', '#explained'],
+    song: ['#osmosis', '#diffusion', '#cellmembrane', '#biology', '#poppunk'],
+    lesson: ['#osmosis', '#diffusion', '#cellmembrane', '#tonicity', '#biology'],
   },
 };
 const PASSED = { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] };

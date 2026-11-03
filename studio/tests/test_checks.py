@@ -847,11 +847,12 @@ def test_a_source_quote_the_study_guide_does_not_hold_is_left_out():
     assert [f.source_quote for f in bundle.facts] == ["", "", ""] and len(problems) == 2
 
 
-def test_the_study_tags_follow_the_writers_own_and_the_rest_is_left_as_it_was():
+def test_the_writers_tags_are_left_as_written_with_none_added():
+    # Until Nov 3 every video was given "#studysong" or "#explained", "#examprep" and "#studytok" here: tags on every
+    # droplet, which find none in particular.
     data = bundle_data()
     bundle, problems = checks.repair_once(Bundle.model_validate(data))
-    assert bundle.tags.song == ["photosynthesis", "lightreactions", "apbio", "studysong", "pop", "studytok"]
-    assert bundle.tags.lesson == ["photosynthesis", "lightreactions", "apbio", "explained", "examprep", "studytok"]
+    assert bundle.tags == Bundle.model_validate(data).tags
     assert problems == [] and checks.repair_once(bundle) == (bundle, [])  # said once: the same bundle again
 
 
