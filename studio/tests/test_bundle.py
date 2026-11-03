@@ -41,11 +41,11 @@ def test_the_prompt_holds_for_topics_outside_science():
     prompt = " ".join(bundle_step.PROMPT.split())
     assert "never a route made up to keep the dots busy" in prompt and "their scenes hold still" in prompt
     assert 'named in a plain word ("price", "letter", "taxes")' in prompt
-    # The narration is the script's now, and ends on what goes in and comes out only for a process; the chorus,
-    # which sums up the same way, keeps the warning.
+    # The narration is the script's now, and ends on what goes in and comes out only for a process. The chorus's own
+    # warning and the bridge's "never the verses' story again" left the brief on Nov 3: cut, they changed nothing the
+    # writer did (docs/test-rounds.md), and checks.song_shape_problems records a bridge that retells the verses.
     assert "for a process, what goes in and what comes out" in " ".join(script_step.narration_rules().split())
-    assert 'for any other idea, its cause and its result, never "in" and "out"' in prompt
-    assert "never the verses' story again" in prompt and "Any other topic has no bridge" in prompt
+    assert "Any other topic has no bridge" in prompt
     # Nov 1, the owner: no other case for a chain of events. Asked for "the same causes in another revolution", the
     # French Revolution's lesson and bridge turned to England, a segue that taught nothing.
     assert "another revolution" not in prompt and "other case" not in prompt
@@ -192,7 +192,7 @@ def test_the_lesson_alone_brief_cuts_the_song_and_survives_a_renamed_heading():
     assert "## The song\n" in bundle_step.PROMPT and "## The narration\n" in bundle_step.PROMPT  # else nothing is cut
     assert "## The song\n" not in bundle_step.LESSON_ONLY_PROMPT
     assert "### The song's pictures" in bundle_step.PROMPT and "### The song's pictures" not in bundle_step.LESSON_ONLY_PROMPT
-    assert len(bundle_step.LESSON_ONLY_PROMPT) < 0.8 * len(bundle_step.PROMPT)
+    assert len(bundle_step.LESSON_ONLY_PROMPT) < 0.85 * len(bundle_step.PROMPT)  # the song section, trimmed Nov 3
     renamed = "Intro\n\n## Songs\n\nSing.\n\n## Narration\n\nSay.\n"
     assert bundle_step.without_song(renamed) == renamed + bundle_step.NO_SONG
     # The grave-topic rule is Direction's, which the lesson alone keeps: said once.
@@ -251,3 +251,21 @@ def test_the_bill_says_the_lesson_call_writes_the_lesson_and_or_song(tmp_path, v
     knobs.use({"knobs": {}})
     [step] = ledger.breakdown(tmp_path, "lesson")["steps"]
     assert [m["task"] for m in step["models"]] == ["writes the lesson and/or song", "edits the narration"]
+
+
+def test_with_a_script_the_bundle_call_reads_what_the_facts_mean_not_how_to_write_them():
+    """script.follow() puts the script's facts and essence back over the bundle's, so the bundle call is spared the
+    rules for writing them (Nov 3), and keeps what they mean for the rest, its course and its topic."""
+    brief = bundle_step.PROMPT
+    cut = bundle_step.with_script(brief)
+    for gone in ("Write 3 or 4 facts", "`source_quote`", "the one sentence the learner should still be able to say"):
+        assert gone in brief and gone not in cut
+    flat = " ".join(cut.split())
+    for kept in ("rejects any that claims what the facts do not support", "Every technical name not in `key_terms`",
+                 "- `course`:", "- `topic`:", "## Scenes and structures", "## The song", "## How we teach"):
+        assert kept in flat
+    assert cut.count("## The facts") == 1 and len(cut) < len(brief) - 4000
+    # The lesson-only brief is cut the same way, and a brief whose headings were renamed is kept whole.
+    assert "Write 3 or 4 facts" not in bundle_step.with_script(bundle_step.LESSON_ONLY_PROMPT)
+    renamed = "Intro\n\n## Facts\n\nWrite them.\n\n## Scenes\n\nDraw.\n"
+    assert bundle_step.with_script(renamed) == renamed

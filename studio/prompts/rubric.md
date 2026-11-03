@@ -96,11 +96,12 @@ The song as words to be sung, at its style (verses and chorus sung; rap only in 
 style asks to be rapped, never the chorus).
 
 - 5: Every line sounds like something a singer sings, not a sentence cut into lines: short phrases with the
-  small words that carry the rhythm, 6 to 9 syllables with room to hold a note (up to about 14 rapped). Its
+  small words that carry the rhythm, lines a singer can sing without rushing, the verses and the chorus at an even
+  pace. Its
   ideas come as images, calls and answers, list chants, contrast pairs and lines sung again with a twist. The
   rhymes are clean and never bend a line's meaning or grammar to land. The chorus is a chant a learner could
   sing back after hearing it twice. Terms are written as a singer says them and land mid-line.
-- 3: Mostly singable, but several lines read like captions or textbook sentences, run past 10 syllables, or
+- 3: Mostly singable, but several lines read like captions or textbook sentences, run too long to sing unrushed, or
   reach their rhyme with a forced word or a tag that says nothing ("for real", "no doubt").
 - 1: Prose broken into lines: it could not be sung as a song.
 

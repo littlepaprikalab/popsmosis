@@ -2003,6 +2003,106 @@ need the script to plan it (its few ideas, its voice), not yet tried. Five topic
 grades a song against the one beside it (B's moon song had depth 4 beside A's and 3 beside C's), so the
 preferences, and the voice's steady lead on depth, are the signal.
 
+## Nov 3: which of the song section's rules change what the writer does
+
+The owner asked whether the brain can follow a brief of 629 lines and 8,000 words. The rule the owner keeps
+(CLAUDE.md, "Rules in the prompts earn their place"), applied to the song section as Nov 3's round did to the
+fact-check. In the session, no API call but the songs the owner asked to hear.
+
+Fourteen groups of song rules, each taken out of the brief in turn; the music's style, the song's pictures and
+the voice (tested the same day) were left alone. Sixteen subagent writers, two with the full brief and one per
+cut, each wrote the song (`music` and `lyrics`) of three topics (the pump, the French Revolution, the Moon's
+phases) from that day's scripts. The code counted what it can; six blind Opus judges filled a checklist written
+before any song existed, one item or more per group. A group earned its place when, cut, its own signals were
+worse than every other run's on 2 of the 3 topics.
+
+- **One group earned its place alone: the syllables.** Cut, lines over the limit went to 3, 14 and 5 (others 0 to
+  1, 1 to 7, 0 to 3) and the median sung line to 10 to 12 syllables (others 8).
+- **The other 13 changed nothing**, and two were not followed even with them in: "3 to 5 things" (12 to 25 ideas
+  a song, by the judges' count, in every run) and the misconception never in the chorus (most pump choruses sang
+  it). No cut lowered the judges' overall score.
+- **All 13 out together broke what none did alone**, as the fact-check's cut had: unrhymed couplets 4, 3 and 4
+  (full brief 0 to 1), overall 3 on every topic (4), one kind of device in the Moon song (4 to 5), two title lines
+  failed, label-shaped lines 5 against 1 to 2 in the French one, a stage direction. The rules overlap: rhyme is
+  asked for in several places, and any one can go, not all.
+- **Seven out together held**: the 3 to 5 things and the run of small parts; follow one thing, and a couplet a
+  step; one surprise; the misconception never in the title line or chorus; the chorus's middle lines; the bridge
+  as a sung exam question; a lyric as true as a lesson sentence (the fact-check holds that). Overall 4, 4 and 4
+  beside the full brief's 4 or 3, 4, 4; rhyme, devices, titles and directions as the full brief's. Shipped: about
+  330 words out of the song section.
+
+**The syllables, by ear.** The judges scored the songs written without a count lower (3 against 3 to 4; with the
+seven out too, 3 on every topic against 4) for "long rhymed lines". The owner heard three French Revolution songs
+by Lyria ($0.32 in all; one of the four calls was lost to a script that did not make the audio folder): the full
+brief's (sung lines 7 to 10 syllables, rapped 14 to 18), the one written without a count (sung 9 to 14, rapped
+10 to 14), which the owner preferred, and the seven-out one without a count (rapped 16 to 21, "So the Third
+Estate says, we're the National Assembly, the laws are ours from now on"), which "sounds fine". So the brief gives
+no count, and the check records a sung line from 15 syllables and a rapped one from 16 (`checks.py`). Read on
+paper, the judge prefers short lines where the owner's ear does not.
+
+What it does not show: it was Opus alone, while the Muse brains read the same brief and may lean on rules Opus
+does not (Muse Spark needed three of the fact-check's back); the songs only, not the whole bundle; three topics,
+one run a cut.
+
+## Nov 3: the bundle call without the rules for writing the facts
+
+With a script, the bundle call's brief no longer carries how to write the facts, the core idea, the why chain, the
+key terms and the misconception (`bundle_step.with_script`): the script writer writes them, and `script.follow()`
+puts the script's back over whatever the bundle wrote. It keeps what they mean for the rest (the fact-check reads
+every line against the facts alone; the chorus sings the core idea; names outside `key_terms` stay out) and its own
+course and topic: 6,826 words where it read 7,617. Two clauses the code makes sure of went too ("name no colour" in a
+picture's words, ignored in 61 of 62 scenes, and the style's "shouted" and "group shouts").
+
+Tested in the session on full bundles, three topics (the pump, the French Revolution, the Moon's phases), the same
+script for both: one subagent writer with the brief as it was committed, one with the cut, the code checks on each,
+and an Opus judge reading the two droplets blind against the scorecard rubric.
+
+| | Rubric total, as it was / cut | Preferred | Errors the judge found | Checks left |
+|---|---|---|---|---|
+| The pump | 32 / 31 | as it was | 1 / 1 | 1 / 6 |
+| The French Revolution | 28 / 29 | cut | 1 / 1 | 4 / 6 |
+| The Moon's phases | 29 / 29 | cut | 1 / 0 | 6 / 2 |
+
+The same, 89 against 89. The judge on the French lesson with the cut: "the clearer first read ... it leaves out
+names the learner does not need". The checks left on either side are of the same kinds (long lyric lines, a name a
+scene does not draw, two parts painted alike), none about the facts or the essence. Shipped.
+
+## Nov 3: which rules for the pictures and the direction change what the writer does
+
+The same test as the song section's, on "Scenes and structures" and "Direction", on the bundle call's brief with a
+script (`bundle_step.with_script`). Seventeen groups of rules, each taken out in turn, and an eighteenth variant with
+the reasons and past incidents taken out of those rules and every rule kept (about 370 words); two writers with the
+brief whole. Each of the 20 subagent writers wrote, for three topics (the pump, the French Revolution, the Moon's
+phases), only the scenes, the direction, what builds up, turns, blocks and changes, and the key lines, around a
+lesson, song and narration written already (that day's bundles with the brief as committed). Code merged each answer
+into its bundle and ran the studio's checks, and counted the picture descriptions and the direction; six blind Opus
+judges filled a checklist written beforehand. No picture was painted: what the painter makes of a description was
+not tested. Rules for a graph, a cycle of forms and a grave topic had no topic here and were not cut.
+
+- **Earned their place**, worse than every other run on every topic or on the one topic they are for: the opening
+  phrase (1, 6 and 4 descriptions without it, against 0), the look sentence (6, 6 and 4 without it), the tags in
+  double brackets (31, 21 and 14 parts untagged, against 0), `sam_phrase` (30, 21 and 14 phrases over three words,
+  "large purple protein in the membrane"), the camera (more close-ups on 2 of 3), the stages (the pump's three stages
+  opened on two different sentences, every other run on one), the younger audience (the Moon's overview went to 4
+  parts a scene, others 2.5 to 3.8), the still stage (the pump's descriptions asked for action) and "in history only
+  goods move" (a route of something else appeared in the French plan).
+- **Changed nothing alone**: whole before parts, region by region, real names not shapes, never panels.
+  Not cut: **all four out together broke what none did alone**: overall 3 on every topic against 4 for both
+  whole-brief plans, two of three plans no longer naming the whole first, the pump's descriptions naming shapes for
+  things 9 times (0), more modelling errors and a weaker camera on the Moon. The rules overlap, as the song's did.
+- **Left in as unsure**: a failure's detail scene and two side-by-side spaces (no topic here crosses between two
+  spaces), and the particles' rules (446 words: only the pump moves much here).
+- **The reasons**: without them the plans tied for the judges' lowest score on every topic, never below and never
+  above. Kept.
+
+Two places where the brief and the script pull apart, met by most writers: the younger audience's "two or three
+structures a scene" against a script whose narration names six or seven parts over the Moon's overview (every writer
+but two kept them all), and the colours' "never near black" against the script's black coats for the Third Estate
+(recoloured green or brown; one writer kept the coats black under a soft tint of the part's colour).
+
+Nothing in the brief changed on this round: the only cuts it found overlapped, and another session is reworking the
+picture descriptions' rules.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

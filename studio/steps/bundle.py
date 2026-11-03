@@ -68,6 +68,43 @@ def without_song(brief: str) -> str:
 
 
 LESSON_ONLY_PROMPT = without_song(PROMPT)
+# With a script, the brief's "The facts" (how to write the facts, the core idea, the why chain, the key terms and the
+# misconception) was the script writer's to follow: script.follow() puts the script's back over whatever the bundle
+# wrote. The bundle call reads only what those fields mean for the rest, and its own course and topic (Nov 3: about
+# 800 words of the brief's 7,600 the bundle call no longer reads).
+FACTS_SECTION = ("## The facts\n", "## Scenes and structures\n")
+FACTS_WITH_SCRIPT = """## The facts
+
+The script's `facts`, `core_idea`, `why_chain`, `key_terms` and `misconception` stand as
+written: copy them word for word (code holds the bundle to them). What they mean for the rest:
+
+- A fact-checker that sees only the facts (never this brief) reads every lyric, narration
+  sentence and lesson sentence, every key line and everything the videos show moving, and
+  rejects any that claims what the facts do not support, even if it is true; a line it
+  cannot fix fails the droplet.
+- The chorus sings `core_idea`, the narration ends on it, the lesson opens toward it and
+  checks it, and both videos keep it written across the top of every frame.
+- The lesson and the narration are built on the links of `why_chain`, not on a list of parts.
+- Every technical name not in `key_terms` is left out of the lesson, the narration and the
+  song, said in plain words instead ("a carrier in the membrane", not "plastoquinone").
+- The lesson, the song and the narration each correct the misconception once.
+
+Then:
+
+- `course`: the course named in the request, or the one this topic is usually taught in.
+- `topic`: the topic as a textbook names it ("the light reactions"). With the course it is
+  the droplet's public title: nothing about the learner (no name, school, teacher, class or
+  test date).
+
+"""
+
+
+def with_script(brief: str) -> str:
+    """The brief for the bundle call when a script stands: its "The facts" section as FACTS_WITH_SCRIPT. A brief
+    whose headings were renamed is kept whole rather than cut in the wrong place; the tests say when it no longer
+    cuts."""
+    start, end = brief.find(FACTS_SECTION[0]), brief.find(FACTS_SECTION[1])
+    return brief[:start] + FACTS_WITH_SCRIPT + brief[end:] if 0 <= start < end else brief
 # With no script (its call failed), the narration is the plan's to write, by the script writer's rules for it.
 NO_SCRIPT = """
 
@@ -110,7 +147,7 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     if script:  # held to the guide before the audit is shown them as its words
         facts, unquoted = checks.held_to_guide(script.facts, request.study_guide)
         script = script.model_copy(update={"facts": facts})
-    system = (brief + ("" if script else NO_SCRIPT + script_step.narration_rules())
+    system = ((with_script(brief) if script else brief + NO_SCRIPT + script_step.narration_rules())
               + (NOTE.format(note=note) if note.strip() else ""))
     early = audit.begin(request, script, ask)  # the facts audited beside the bundle call (studio/steps/audit.py)
     bundle = _written(job, ask, prompt + ("\n\n" + script_step.as_prompt(script) if script else ""), sung,

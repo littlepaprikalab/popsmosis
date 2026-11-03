@@ -353,8 +353,8 @@ def test_a_lyric_one_syllable_over_passes_and_two_over_is_recorded():
         _, found, _ = review(change)
         return [rule for line, rule, _ in found if line == "v1-1" and rule == "lyric-style"]
 
-    assert lyric(" ".join(["la"] * 11)) == []  # one over the cap: a singer takes it in stride
-    assert lyric(" ".join(["la"] * 12)) == ["lyric-style"]
+    assert lyric(" ".join(["la"] * 14)) == []  # one over the cap: a singer takes it in stride
+    assert lyric(" ".join(["la"] * 15)) == ["lyric-style"]
 
 
 
@@ -392,7 +392,7 @@ def test_a_style_that_raps_one_section_lets_only_its_lines_run_longer():
             data["music"]["positive_styles"] = [style]
             for line in data["lyrics"]:
                 if line["id"] in ("v1-1", "v2-1"):
-                    line["text"] = " ".join(["la"] * 13)
+                    line["text"] = " ".join(["la"] * 15)
         _, found, _ = review(change)
         return [line for line, rule, _ in found if rule == "lyric-style"]
 
@@ -401,7 +401,7 @@ def test_a_style_that_raps_one_section_lets_only_its_lines_run_longer():
 def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired():
     def change(data):
         data["lyrics"][0]["text"] = "Zoom inside to the chloroplast"
-        data["lyrics"][1]["text"] = " ".join(["la"] * 13)
+        data["lyrics"][1]["text"] = " ".join(["la"] * 15)
         data["lyrics"][2]["text"] = "Light hits the leaf and the race begins"
 
     _, found, _ = review(change)
