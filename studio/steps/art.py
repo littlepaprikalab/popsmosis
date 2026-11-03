@@ -737,7 +737,7 @@ If the picture already shows everything the lesson needs it to show, and shows i
 else: a second painting can come out worse.
 
 Otherwise write the scene's description again, so that the next painting comes out right. Write it as one paragraph \
-of plain sentences, opening as the old one opens ("Textbook illustration of ..."). Keep everything the \
+of plain sentences, opening as the old one opens ("Educational textbook illustration of ..."). Keep everything the \
 picture must show and every part, and change whatever made the painter go wrong.
 
 The painter is an image model: it paints what the words say, not what the lesson means. Code adds to your \
