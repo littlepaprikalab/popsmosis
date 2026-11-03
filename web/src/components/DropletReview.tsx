@@ -74,7 +74,8 @@ function Fix({ before, after }: { before: string; after: string }) {
     </p>
   );
 }
-const findingsOf = (f: ArtFindings) => FINDINGS.flatMap(({ key, label }) => f[key].map((text) => ({ label, text })));
+// `?? []`: an API deployed before a kind was added (unfounded, Nov 3) leaves it out.
+const findingsOf = (f: ArtFindings) => FINDINGS.flatMap(({ key, label }) => (f[key] ?? []).map((text) => ({ label, text })));
 const shown = (text: string) => text.replace(/\n/g, ' / '); // a couplet on one line
 
 function Section({ title, summary, children }: { title: string; summary: string; children: React.ReactNode }) {
