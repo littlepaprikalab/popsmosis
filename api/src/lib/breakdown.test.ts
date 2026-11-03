@@ -216,6 +216,10 @@ describe('endToEndOf', () => {
     expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: null, videoUpdatedAt: null })).toEqual({ lesson: 450, videos: null });
     expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: 'READY', videoUpdatedAt: null })).toEqual({ lesson: 450, videos: null });
   });
+  it('never has the videos before the lesson, whatever the two clocks say', () => {
+    expect(endToEndOf(asked, { createdAt: at(7.5), videoStatus: 'READY', videoUpdatedAt: new Date(at(7.5).getTime() - 300) }))
+      .toEqual({ lesson: 450, videos: 450 });
+  });
   it('rounds to a tenth of a second, and is never less than nothing', () => {
     expect(endToEndOf(asked, { createdAt: new Date(asked.getTime() + 1234), videoStatus: null, videoUpdatedAt: null }).lesson).toBe(1.2);
     expect(endToEndOf(asked, { createdAt: at(-1), videoStatus: null, videoUpdatedAt: null }).lesson).toBe(0);

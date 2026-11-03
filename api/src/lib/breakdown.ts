@@ -200,14 +200,17 @@ export interface EndToEnd {
 
 const since = (from: Date, to: Date) => Math.max(0, Math.round((to.getTime() - from.getTime()) / 100) / 10);
 
-/** How long the droplet took from `askedAt`, its question's createdAt. READY is final, so its videoUpdatedAt is when. */
+/**
+ * How long the droplet took from `askedAt`, its question's createdAt. READY is final, so its videoUpdatedAt is when.
+ * The videos never before the lesson: the database's clock stamps the lesson, this server's the READY, and the two
+ * may be a moment apart.
+ */
 export function endToEndOf(
   askedAt: Date, answer: { createdAt: Date; videoStatus: string | null; videoUpdatedAt: Date | null },
 ): EndToEnd {
-  return {
-    lesson: since(askedAt, answer.createdAt),
-    videos: answer.videoStatus === 'READY' && answer.videoUpdatedAt ? since(askedAt, answer.videoUpdatedAt) : null,
-  };
+  const lesson = since(askedAt, answer.createdAt);
+  const ready = answer.videoStatus === 'READY' ? answer.videoUpdatedAt : null;
+  return { lesson, videos: ready ? Math.max(lesson, since(askedAt, ready)) : null };
 }
 
 /** The droplet's bill of materials for the page, or null when the studio sent none. */

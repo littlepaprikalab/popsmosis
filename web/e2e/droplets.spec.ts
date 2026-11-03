@@ -482,6 +482,76 @@ test.describe('videos on /learn', () => {
     await expect(page.getByTestId('breakdown')).toHaveCount(0);
   });
 
+  test('the time end to end reads right whatever the API sends: no videos bill, a long wait, no videos, failed ones, an older API', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    // The ATP droplet as the API sends it, then changed as each case needs before the page reads it.
+    type Card = { content: string; answer: Record<string, unknown> & { breakdown: { steps: { part: string }[] } } | null };
+    let change: (answer: NonNullable<Card['answer']>) => void = () => {};
+    await page.route('**/api/questions?*', async (route) => {
+      const response = await route.fetch();
+      const body = await response.json() as { data: Card[] };
+      for (const q of body.data) if (q.content.includes('how do cells actually make ATP') && q.answer) change(q.answer);
+      await route.fulfill({ response, json: body });
+    });
+    const lessonOnly = (b: NonNullable<Card['answer']>['breakdown']) =>
+      ({ ...b, steps: b.steps.filter((s) => s.part === 'lesson'), seconds: 277, costUsd: 0.71, credits: null });
+    const billOf = async () => {
+      await page.goto('/learn');
+      const bill = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first().getByTestId('breakdown');
+      await bill.scrollIntoViewIfNeeded();
+      return bill;
+    };
+    const opened = async (bill: Locator) => {
+      await bill.locator('summary').click();
+      return bill.locator('table').getByTestId('breakdown-milestone');
+    };
+
+    // READY sent without the videos' bill: their work is not on it, so the note says no wait rather than a wrong one.
+    change = (a) => { a.breakdown = lessonOnly(a.breakdown); };
+    let bill = await billOf();
+    await expect(bill.getByTestId('breakdown-total')).toHaveText('15.2 min end to end · 4.6 min of work · $0.71');
+    await expect(await opened(bill)).toHaveText([/Request to lesson\s*7\.5 min/, /End to end\s*15\.2 min/]);
+    await expect(bill.getByText('End to end: from the moment it was asked to the moment its videos were ready, by the clock.', { exact: true })).toBeVisible();
+    await expect(bill.getByText(/waiting/)).toHaveCount(0);
+
+    // A night in the queue reads in hours, a weekend in days; on a phone too.
+    change = (a) => { a.endToEnd = { lesson: 6 * 3600, videos: 6.5 * 3600 }; };
+    bill = await billOf();
+    await expect(bill.getByTestId('breakdown-total')).toHaveText('6.5 h end to end · 10.9 min of work · $0.80 + 3,214 cr');
+    await expect(await opened(bill)).toHaveText([/Request to lesson\s*6\.0 h/, /End to end\s*6\.5 h/]);
+    await expect(bill.getByText(/the studio’s 10\.9 min, and 6\.3 h waiting/)).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expect(bill.getByTestId('breakdown-milestone-phone')).toHaveText([/Request to lesson\s*6\.0 h/, /End to end\s*6\.5 h/]);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    change = (a) => { a.endToEnd = { lesson: 3600, videos: 3 * 86400 }; };
+    await expect((await billOf()).getByTestId('breakdown-end-to-end')).toHaveText('3.0 days end to end');
+
+    // No videos: the droplet is done with its lesson.
+    change = (a) => { a.video = null; a.breakdown = lessonOnly(a.breakdown); a.endToEnd = { lesson: 450, videos: null }; };
+    bill = await billOf();
+    await expect(bill.getByTestId('breakdown-total')).toHaveText('7.5 min end to end · 4.6 min of work · $0.71');
+    await expect(await opened(bill)).toHaveText([/^End to end\s*7\.5 min$/]);
+    await expect(bill.getByText('End to end: from the moment it was asked to the moment its lesson was posted, by the clock: '
+      + 'the studio’s 4.6 min, and 2.9 min waiting for the studio to start.')).toBeVisible();
+
+    // Videos given up: never done end to end, so only the lesson's time from the request.
+    change = (a) => {
+      a.video = { ...(a.video as object), status: 'FAILED', error: 'render: ffmpeg exited 1' };
+      a.endToEnd = { lesson: 450, videos: null };
+    };
+    bill = await billOf();
+    await expect(bill.getByTestId('breakdown-total')).toHaveText('10.9 min · $0.80 + 3,214 cr');
+    await expect(await opened(bill)).toHaveText([/^Request to lesson\s*7\.5 min$/]);
+    await expect(bill.getByText('Request to lesson: from the moment it was asked, by the clock, the wait for the studio to start included.')).toBeVisible();
+
+    // An API older than the field: the bill as it was.
+    change = (a) => { delete a.endToEnd; };
+    bill = await billOf();
+    await expect(bill.getByTestId('breakdown-total')).toHaveText('10.9 min · $0.80 + 3,214 cr');
+    await expect(await opened(bill)).toHaveCount(0);
+    await expect(bill.getByText(/^(End to end|Request to lesson):/)).toHaveCount(0);
+  });
+
   test('a failed render says why under the lesson', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');

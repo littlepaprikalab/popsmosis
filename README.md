@@ -535,11 +535,14 @@ post (the answer's `createdAt`) and the videos' READY (their last status change,
 ```
 
 in seconds from the request; `videos` is `null` until they are READY, and stays so for videos given up or never
-made. The bill shows them under its total, "Request to lesson" and "End to end", and its folded line leads with the
+made. The database's clock stamps the lesson and the API's the READY, so `videos` is held to no less than `lesson`. The bill shows them under its total, "Request to lesson" and "End to end", and its folded line leads with the
 end to end ("15.2 min end to end · 10.9 min of work · $0.80"). A droplet is done end to end with its videos, or with
 its lesson when it has none; until then, and when its videos failed, the bill shows the lesson's time alone. A note
 says what the end to end counts besides the studio's time ("the studio's 10.9 min, and 4.3 min waiting for the
-studio to start and between the lesson and its videos"). The reply queue's `answer` does not carry it.
+studio to start and between the lesson and its videos"), only when the bill has every part up to the end: a READY
+sent without the videos' bill would otherwise count their work as waiting. A night in the queue reads in hours, a
+weekend in days. Nothing is stored for it, and the cards' queries already read the three times, so it costs no query
+and about 40 bytes a card. The reply queue's `answer` does not carry it.
 
 #### While a droplet is made
 

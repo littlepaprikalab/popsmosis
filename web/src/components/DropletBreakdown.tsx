@@ -31,7 +31,10 @@ export function duration(seconds: number | null): string {
   if (seconds === null) return '—';
   if (seconds < 10) return `${seconds.toFixed(1)} s`;
   if (seconds < 60) return `${Math.round(seconds)} s`;
-  return `${(seconds / 60).toFixed(1)} min`;
+  // A time from the request counts the queue, which can be a night or a weekend: not "2880.0 min".
+  if (seconds < 90 * 60) return `${(seconds / 60).toFixed(1)} min`;
+  if (seconds < 48 * 3600) return `${(seconds / 3600).toFixed(1)} h`;
+  return `${(seconds / 86400).toFixed(1)} days`;
 }
 
 const credits = (n: number) => `${n.toLocaleString('en-US')} cr`;
@@ -208,9 +211,16 @@ function milestonesOf(endToEnd: EndToEnd | null | undefined, video: Video | null
   return [{ label: 'Request to lesson', seconds: endToEnd.lesson, end: false }];
 }
 
-/** What the time from the request runs to, and what it counts besides the studio's own: the waits. */
-function endToEndNote(end: Milestone | undefined, studio: number | null, videos: boolean): string {
+/**
+ * What the time from the request runs to, and what it counts besides the studio's own: the waits. The wait is said
+ * only when the bill has every part up to the end: the videos' bill is left out of a READY sent without it (too
+ * big, unreadable, or by hand), and their work would then read as waiting.
+ */
+function endToEndNote(end: Milestone | undefined, bill: Breakdown | null, videos: boolean): string {
   if (!end) return 'Request to lesson: from the moment it was asked, by the clock, the wait for the studio to start included.';
+  const parts = new Set(bill?.steps.map((s) => s.part));
+  const whole = parts.has('lesson') && (!videos || parts.has('videos'));
+  const studio = whole ? bill?.seconds ?? null : null;
   const wait = studio === null ? null : end.seconds - studio;
   return `End to end: from the moment it was asked to the moment ${videos ? 'its videos were ready' : 'its lesson was posted'}, by the clock`
     + (wait !== null && wait >= 1
@@ -258,7 +268,7 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
   const milestones = milestonesOf(endToEnd, video, making);
   const end = milestones.find((m) => m.end);
   const notes = [
-    milestones.length > 0 && endToEndNote(end, bill?.seconds ?? null, !!video),
+    milestones.length > 0 && endToEndNote(end, bill, !!video),
     making && rows.some((r) => r.status === 'running')
       && 'A step running now counts its time up, the total with it, and shows what it has spent so far.',
     bill && bill.seconds !== null && stepSeconds > bill.seconds + 1
