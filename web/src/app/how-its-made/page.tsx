@@ -273,7 +273,7 @@ export default function HowItsMadePage() {
           <ol aria-label="Making the lesson">
             {LESSON_STEPS.map((step, i) => <RailStep key={step.name} n={i + 1} step={step} />)}
           </ol>
-          <RailMilestone>The lesson is posted. You can read it now, while the videos are made.</RailMilestone>
+          <RailMilestone>The lesson passes. It isn&rsquo;t shown yet: it waits for its song and video.</RailMilestone>
           <RailItem as="div" marker={<Junction />}>
             <div className="pt-2.5"><RailLabel>Then, at the same time</RailLabel></div>
             <div className="grid gap-x-8 gap-y-6 md:grid-cols-2">
@@ -282,7 +282,10 @@ export default function HowItsMadePage() {
             </div>
           </RailItem>
           <RailStep as="div" n={LESSON_STEPS.length + PICTURE_STEPS.length + SOUND_STEPS.length + 1} step={VIDEO_STEP} />
-          <RailMilestone last>Both videos are done. The droplet goes on the Droplets tab for everyone.</RailMilestone>
+          <RailMilestone last>
+            Both videos are done. You can watch them and read the lesson, and the droplet goes on the Droplets tab
+            for everyone.
+          </RailMilestone>
         </div>
 
         <p className="text-xs leading-relaxed mt-6 max-w-2xl" style={{ color: 'var(--text-muted)' }}>
