@@ -27,6 +27,8 @@ export interface BreakdownModel {
   // 'session': calls the teacher's own Claude session answered after the API failed (studio/session.py), on the
   // routine's plan rather than the studio's API key, so they add nothing to the bill. Absent: the API answered.
   via?: 'session';
+  // What the line's calls did, in a few words ("checks the pictures": studio/ledger.py's TASKS); absent when unknown.
+  task?: string;
 }
 
 /** Software a step ran on the studio's machine besides its models (studio/ledger.py's TOOLS). */
@@ -110,6 +112,7 @@ function readModel(raw: unknown): BreakdownModel | null {
     costUsd: amount(raw.costUsd),
     credits: amount(raw.credits),
     ...(raw.via === 'session' && { via: 'session' as const }),
+    ...(text(raw.task) && { task: text(raw.task).slice(0, 60) }),
   };
 }
 

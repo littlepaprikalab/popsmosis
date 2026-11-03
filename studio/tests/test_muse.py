@@ -139,7 +139,7 @@ class FakeHelper:
             clean = "\n- misplaced: " not in prompt and "\n- wrong: " not in prompt
             part = re.search(r"each to be tagged once:\n- (.+?) \(", prompt).group(1)  # its first part, tagged
             return {"text": art.KEEP if clean else f"Rewritten {scene} [[{part}]] after its picture went wrong."}
-        assert role == "helper"
+        assert role == ("checker" if schema is art.PictureCheck else "helper")  # the checker is Claude, any brain
         if schema is art.PictureCheck:
             assert system == art.CHECK_PROMPT and "The lesson's facts:\n- f1: " in prompt
             from PIL import Image
@@ -293,6 +293,9 @@ def test_a_note_that_names_no_fact_of_the_lesson_is_never_shown(job, monkeypatch
     helper = FakeHelper(checks={"synthase": [{"misplaced": ["head in the lumen"], "notes": [right, unfounded]}]})
     art.run(job, helper)
     assert art.notices(job, checks.load(job / "bundle.json")) == {"synthase": [right]}
+    # Dropped from the video, but kept in the record for the admin's review (Nov 3).
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["tries"][0]["unfounded"] == ["f9: The carriers belong on the capillary's side."]
 
 
 def test_a_stage_painted_afresh_and_declined_is_a_declined_try_not_a_failed_step(job, monkeypatch):

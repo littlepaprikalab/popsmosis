@@ -228,6 +228,7 @@ def test_meta_request_shape(tmp_path, monkeypatch):
     request = brain.meta_request("brain", "Check.", FactCheck, [image], "You check.")
     assert request["model"] == "muse-wonder-1.0" and request["background"] is True  # polled, never held open
     assert request["instructions"] == "You check."
+    assert request["reasoning"] == {"effort": "high"}  # the admin's effort, as for Claude (high by default)
     [turn] = request["input"]
     assert turn["role"] == "user"
     assert turn["content"][0]["type"] == "input_image"
@@ -236,7 +237,9 @@ def test_meta_request_shape(tmp_path, monkeypatch):
     assert request["text"]["format"] == {
         "type": "json_schema", "name": "FactCheck", "schema": brain.strict_schema(FactCheck), "strict": True,
     }
-    assert brain.meta_request("helper", "Hi", None, [], None) == {  # a short call, answered in the one request
+    with brain.chosen("muse-spark", "low"):
+        assert brain.meta_request("brain", "Write.", None, [], None)["reasoning"] == {"effort": "low"}
+    assert brain.meta_request("helper", "Hi", None, [], None) == {  # a short call at Meta's default effort
         "model": "muse-spark-1.3", "input": [{"role": "user", "content": [{"type": "input_text", "text": "Hi"}]}],
     }
 

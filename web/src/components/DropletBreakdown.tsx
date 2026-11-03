@@ -60,6 +60,7 @@ const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 interface Line {
   name: string;
   version: string | null; // a tool's; a model's name is its version
+  task?: string; // what a model's line did ("paints the pictures", "checks the pictures")
   maker: string | null;
   calls: number | null; // a model's; a tool is run, not called
   cost: string | null; // a model's; a tool is not billed
@@ -68,14 +69,20 @@ interface Line {
 /** A step's models, then the tools it ran on the studio's machine. */
 function linesOf(s: BreakdownStep): Line[] {
   return [
-    ...s.models.map((m) => ({ name: m.model, version: null, maker: m.maker, calls: m.calls, cost: modelCost(m) })),
+    ...s.models.map((m) => ({
+      name: m.model, version: null, maker: m.maker, calls: m.calls, cost: modelCost(m),
+      ...(m.task && { task: m.task }),
+    })),
     ...(s.tools ?? []).map((t) => ({ name: t.name, version: t.version, maker: t.maker, calls: null, cost: null })),
   ];
 }
 
 /** A line's name, with a tool's version after it in a lighter colour. */
 function LineName({ line }: { line: Line }) {
-  return <>{line.name}{line.version && <span style={{ color: 'var(--text-muted)' }}> {line.version}</span>}</>;
+  return <>
+    {line.name}{line.version && <span style={{ color: 'var(--text-muted)' }}> {line.version}</span>}
+    {line.task && <span style={{ color: 'var(--text-muted)' }}> · {line.task}</span>}
+  </>;
 }
 
 

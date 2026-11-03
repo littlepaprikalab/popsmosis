@@ -104,7 +104,7 @@ def install() -> None:
 
     def provider(role, prompt, schema, images, system, label):
         fault = take("brain", label or role)
-        claude = role in ("judge", "drawer") or brain.provider() == "claude"
+        claude = role in brain.CLAUDE_ONLY or brain.provider() == "claude"
         model = (brain.claude_brain()[0] if role == "brain" else brain.CLAUDE[role]["model"]) if claude \
             else brain.META.get(role, brain.CLAUDE.get(role, {})).get("model", "muse-spark-1.3")
         if fault == "nokey" or (claude and not brain.claude_key()):

@@ -218,6 +218,7 @@ export interface BreakdownModel {
   costUsd: number | null; // null: charged in credits, with no price set for them
   credits: number | null; // what the provider charged in its own credits (ElevenLabs)
   via?: 'session'; // answered by the teacher's own Claude session after the API failed: on its plan, not the API key
+  task?: string; // what the line's calls did ("checks the pictures"); absent when the studio did not say
 }
 
 /** Software a step ran on the studio's machine besides its models, at the version installed there. */
@@ -289,6 +290,7 @@ export interface ArtFindings {
   unnamed: string[]; // a small round thing that is no listed structure
   wrong: string[]; // anything else wrong for the scene
   notes: string[]; // what would teach something false, written for the student
+  unfounded: string[]; // a note that names no fact of the lesson: dropped from the video, shown here
 }
 
 /** One scene's picture, as the art checker saw it. */

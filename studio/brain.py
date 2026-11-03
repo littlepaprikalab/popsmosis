@@ -15,7 +15,12 @@ provider has its helper (docs/PLAN.md, section 3):
 Who paints the art goes by the brain's provider, as an admin sets it on /admin/studio too
 (painter()): by default Gemini 3.1 Flash Image for Claude's brain and Muse Image for Muse's,
 and SAM 3.1 then finds the structures in either. Claude's brain may instead draw the art as
-SVG. The helper, which checks each picture and boxes a structure SAM missed, is the brain's.
+SVG. The helper, which boxes a structure SAM missed, is the brain's.
+
+The checker, which looks at each painted picture for a wrong label, a part out of place or a mistake (art.look()),
+is Claude Sonnet 5.5 whatever the brain: on Nov 3 Muse Spark passed an eye with its cornea above the lens instead of
+in front of it (at high effort, 3 times in 3), and so did Muse Wonder at low (3 in 3), while Claude, given the same
+prompt and picture, caught it every time (the owner: "let the image checker be Claude Sonnet regardless of brain").
 
 The drawer is Claude Opus 5.5 at high effort, whatever the brain: on Muse's brain it draws as SVG the scenes the
 admin's STUDIO_CLAUDE_DRAWS knob gives Claude (charts, and a math lesson's pictures; studio/steps/art.py), since a
@@ -49,7 +54,8 @@ from typing import Sequence
 
 from pydantic import BaseModel, ValidationError
 
-ROLES = ("brain", "helper", "judge", "drawer")
+ROLES = ("brain", "helper", "checker", "judge", "drawer")
+CLAUDE_ONLY = ("checker", "judge", "drawer")  # Claude whatever the brain
 
 CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;
@@ -59,6 +65,8 @@ CLAUDE = {
     # Sonnet, not Haiku, since Oct 28: the helper judges each picture's science, and finds the
     # parts SAM missed.
     "helper": {"model": "claude-sonnet-5-5", "effort": "low", "max_tokens": 16000},
+    # Checks each painted picture (art.look()), on every brain.
+    "checker": {"model": "claude-sonnet-5-5", "effort": "medium", "max_tokens": 16000},
     # The scorecard's judge, on every brain. Changing it makes earlier scorecards no longer comparable.
     "judge": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 32000},
     # Draws a Muse brain's charts and math as SVG (studio/steps/art.py): Claude's brain as it is by default.
@@ -282,13 +290,13 @@ def ask(
 ) -> dict:
     """Ask one question; return the answer as a dict.
 
-    role is "brain", "helper", "judge" or "drawer" (the last two Claude, whatever the brain). With a schema the
+    role is "brain", "helper", "checker", "judge" or "drawer" (the last three Claude, whatever the brain). With a schema the
     answer is that model's fields; without one it is {"text": ...}. images are PNG, JPEG,
     GIF or WebP files shown before the prompt. label names the call in `calls`.
     """
     if role not in ROLES:
         raise ValueError(f"role must be one of {ROLES}, not {role!r}")
-    if role in ("judge", "drawer") or provider() == "claude":
+    if role in CLAUDE_ONLY or provider() == "claude":
         texts = _ask_claude(role, prompt, schema, images, system, label or role)
     else:
         texts = _ask_meta(role, prompt, schema, images, system, label or role)
@@ -431,7 +439,8 @@ def brain_model() -> str:
 
 
 def claude_brain() -> tuple[str, str]:
-    """Claude's brain's model and effort: the brain in force, at the effort set on /admin/studio (high by default)."""
+    """The brain's model and effort: the brain in force, at the effort set on /admin/studio (high by default). Muse's
+    brain is asked at the same effort (meta_request())."""
     effort = _effort or DEFAULT_EFFORT
     if effort not in EFFORTS:
         raise BrainError(f"Claude's effort must be one of {', '.join(EFFORTS)}, not {effort!r} (/admin/studio)")
@@ -495,7 +504,8 @@ def _ask_claude(role, prompt, schema, images, system, label) -> list[str]:
         # whatever other credential the machine happens to hold.
         key = claude_key()
         if not key:
-            who = {"judge": "the scorecard's judge", "drawer": "Claude, drawing a scene as SVG,"}.get(role) or _who()
+            who = {"judge": "the scorecard's judge", "drawer": "Claude, drawing a scene as SVG,",
+                   "checker": "Claude, checking a picture,"}.get(role) or _who()
             raise BrainError(f"{who} needs {' or '.join(CLAUDE_KEY_VARS)}")
         _clients["claude"] = anthropic.Anthropic(api_key=key)
     started = time.monotonic()
@@ -613,6 +623,11 @@ def meta_request(
     request = {"model": model, "input": [{"role": "user", "content": content}]}
     if role in META_BACKGROUND:
         request["background"] = True
+    if role == "brain":
+        # The effort set on /admin/studio, as for Claude: Meta's API takes the same levels as `reasoning.effort`.
+        # Left out, Muse Spark thinks at high and Muse Wonder at max, as Meta echoed on Nov 3, so until then an admin's
+        # effort did nothing on a Muse brain. The helper's calls keep Meta's default.
+        request["reasoning"] = {"effort": claude_brain()[1]}
     if system:
         request["instructions"] = system
     if schema is not None:
