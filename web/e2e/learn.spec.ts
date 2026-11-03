@@ -56,6 +56,9 @@ test.describe('signed out', () => {
     page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/api/questions')) sent.push(r.url()); });
     await page.goto('/learn');
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill('How do vaccines train the immune system?');
+    // The brain is picked signed out too, from what a learner may pick.
+    await expect(page.getByTestId('brain-picker').getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Spark']);
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' }).click();
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     await page.getByTestId('sign-in-prompt').getByRole('link', { name: 'Sign in with Google' }).click();
     await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
@@ -67,6 +70,7 @@ test.describe('signed out', () => {
     await expect(page.getByText('@Ben')).toBeVisible();
     const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
     await expect(box).toHaveValue('How do vaccines train the immune system?');
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByText('Your topic is still in the box: press Submit to send it.')).toBeVisible();
     await expect(box).toBeFocused();
     await expect(page.getByTestId('sign-in-prompt')).toHaveCount(0);
@@ -505,6 +509,7 @@ test.describe('signed in', () => {
     await signIn(context, S.users.ada);
     await page.goto('/learn');
     const picker = page.getByTestId('brain-picker');
+    await expect(picker.getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Wonder', 'Muse Spark']);
     await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
     await picker.getByRole('radio', { name: 'Muse Spark' }).click();
     await expect(picker.getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
@@ -528,6 +533,11 @@ test.describe('signed in', () => {
     // Remembered on this browser, so a run of test topics stays on it.
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
+    // Muse Wonder too, though the page knows it is an admin's only once the sign-in is read.
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' }).click();
+    await page.reload();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('brain-note')).toContainText('Admins only.');
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
@@ -601,11 +611,31 @@ test.describe('signed in', () => {
     await expect(note).toHaveText(new RegExp(`^Popsmosis has made all the droplets it can for now\\. It takes topics again ${await threeHoursOn()}\\.$`));
   });
 
-  test('a learner gets no brain picker: their topics are made by the teacher\'s own', async ({ page, context }) => {
+  test('a learner picks the brain too, from all but Muse Wonder, and is not told whose key pays', async ({ page, context, request }) => {
+    await page.addInitScript(() => window.localStorage.setItem('popsmosis.brain', 'muse-wonder')); // an admin's, on this browser
     await signIn(context, S.users.ben);
     await page.goto('/learn');
-    await expect(page.getByPlaceholder('A topic, e.g. ATP synthesis')).toBeVisible();
-    await expect(page.getByTestId('brain-picker')).toHaveCount(0);
+    const picker = page.getByTestId('brain-picker');
+    await expect(picker.getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Spark']);
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('brain-note')).toHaveText('The teacher’s usual brain.');
+    await picker.getByRole('radio', { name: 'Claude' }).click();
+    await expect(page.getByTestId('brain-note')).toHaveText('Claude Opus 5.5 writes and checks the lesson.');
+
+    const text = `E2E ${Date.now()}: osmosis, on Claude by a learner`;
+    await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('topic-brain')).toHaveText('Claude');
+
+    // The API takes Claude from a learner, never Muse Wonder.
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
+    const sent = own.data.find((q: { content: string }) => q.content === text);
+    expect(sent.brain).toBe('claude');
+    const wonder = await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: `${text}, on Wonder`, brain: 'muse-wonder' } });
+    expect(wonder.status()).toBe(403);
+    expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).status()).toBe(204);
   });
 
   test('a topic asked with files shows them: a picture as its thumbnail, a text file as a link', async ({ page, context, request }) => {

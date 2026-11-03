@@ -28,7 +28,7 @@ import { DropletPill, Marked, SongChip } from '@/components/Highlights';
 import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
 import { topicDraft } from '@/lib/topicDraft';
-import { BRAIN_MODELS, BRAIN_OPTIONS, brainLabel, rememberedBrain, rememberBrain, type Brain } from '@/lib/brains';
+import { BRAIN_MODELS, brainLabel, brainOptionsFor, rememberedBrain, rememberBrain, type Brain } from '@/lib/brains';
 
 const PAGE_SIZE = 20;
 const POLL_MS = 10_000;
@@ -272,8 +272,8 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
   const made = awaiting && q.progress ? progressCount(q.progress) : null;
   // Brewing until there is something to watch or read: a lesson waiting for its videos is not ready yet.
   const badge = STATUS_BADGES[awaiting ? 'PENDING' : q.status];
-  // The brain an admin picked for it: shown to admins, so test topics are told apart from the teacher's own.
-  const brain = isAdmin ? brainLabel(q.brain) : null;
+  // The brain picked for it on /learn: a learner sees only their own topics, an admin tells test topics apart by it.
+  const brain = brainLabel(q.brain);
 
   return (
     <CollapsibleCard
@@ -474,7 +474,7 @@ function LearnContent() {
   const [hasNew, setHasNew] = useState(false);
   const [agentLastSeenAt, setAgentLastSeenAt] = useState<string | null | undefined>(undefined);
   const [newQuestion, setNewQuestion] = useState('');
-  // An admin's pick of the brain for the next topic (lib/brains.ts), remembered on this browser; null: the teacher's own.
+  // The pick of the brain for the next topic (lib/brains.ts), remembered on this browser; null: the default.
   const [brain, setBrain] = useState<Brain | null>(null);
   const [defaultBrain, setDefaultBrain] = useState<Brain | null>(null); // the Studio page's, for the Default button
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -526,9 +526,11 @@ function LearnContent() {
     load();
   }, [authLoading, user, load]);
 
+  const brainOptions = brainOptionsFor(isAdmin);
+  const chosen = brainOptions.find((o) => o.value === brain);
   useEffect(() => {
+    setBrain(rememberedBrain(isAdmin)); // read again once an admin is known, as Muse Wonder is theirs alone
     if (!isAdmin) return;
-    setBrain(rememberedBrain());
     api.getStudioSettings().then((s) => setDefaultBrain(s.brain.default)).catch(() => {}); // the note says less without it
   }, [isAdmin]);
 
@@ -669,7 +671,7 @@ function LearnContent() {
     if (!user) { setAskSignIn(true); return; }
     try {
       await guard(async () => {
-        const picked = isAdmin ? brain : null;
+        const picked = chosen?.value ?? null;
         const q = await api.askQuestion(content, picked);
         setQuestions((prev) => [q, ...prev]);
         if (!latestSeenRef.current || q.createdAt > latestSeenRef.current) latestSeenRef.current = q.createdAt;
@@ -842,30 +844,30 @@ function LearnContent() {
             {submitting ? '...' : 'SUBMIT'}
           </button>
         </div>
-        {isAdmin && (
-          <div className="mt-3" data-testid="brain-picker">
-            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brain for this topic">
-              <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Brain:</span>
-              {BRAIN_OPTIONS.map((option) => {
-                const on = option.value === brain;
-                return (
-                  <button key={option.label} type="button" role="radio" aria-checked={on} title={option.note}
-                    onClick={() => pickBrain(option.value)}
-                    className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-full border ${
-                      on ? 'text-[var(--btn-filled-text)] border-transparent' : 'text-[var(--accent-purple)] border-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/10'
-                    }`}
-                    style={on ? { background: 'var(--accent-purple)' } : {}}>
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="brain-note">
-              Admins only. {BRAIN_OPTIONS.find((o) => o.value === brain)?.note}
-              {brain === null && defaultBrain && ` Now: ${BRAIN_MODELS[defaultBrain] ?? defaultBrain}.`}
-            </p>
+        <div className="mt-3" data-testid="brain-picker">
+          <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brain for this topic">
+            <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Brain:</span>
+            {brainOptions.map((option) => {
+              const on = option.value === brain;
+              return (
+                <button key={option.label} type="button" role="radio" aria-checked={on}
+                  title={isAdmin && option.adminNote ? `${option.note} ${option.adminNote}` : option.note}
+                  onClick={() => pickBrain(option.value)}
+                  className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-full border ${
+                    on ? 'text-[var(--btn-filled-text)] border-transparent' : 'text-[var(--accent-purple)] border-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/10'
+                  }`}
+                  style={on ? { background: 'var(--accent-purple)' } : {}}>
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
-        )}
+          <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="brain-note">
+            {chosen?.note}
+            {isAdmin && chosen?.adminNote && ` ${chosen.adminNote}`}
+            {isAdmin && brain === null && defaultBrain && ` Now: ${BRAIN_MODELS[defaultBrain] ?? defaultBrain}.`}
+          </p>
+        </div>
         <p className="text-[10px] mt-2 flex justify-between" style={{ color: 'var(--text-muted)' }}>
           <span>No personal info: the lesson will be public. Min {QUESTION_MIN} characters. Enter adds a line; Ctrl+Enter (⌘+Enter) or Submit sends.</span>
           <span>{newQuestion.length}/{QUESTION_MAX}</span>

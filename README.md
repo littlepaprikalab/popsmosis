@@ -204,7 +204,7 @@ page and remove it, so nothing changes without anyone seeing why.
 
 | Setting | Choices | Default |
 |---|---|---|
-| Default brain: writes and fact-checks every topic no admin sent elsewhere | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
+| Default brain: writes and fact-checks every topic not sent to a brain of its own | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
 | Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
 | Song and narration: who makes the audio | ElevenLabs: Eleven Music and its text-to-speech (credits), or Google: Lyria 3.5 ($0.08 a song) and Gemini 3.8 Flash TTS (about 4 cents a narration: $0.50 / $9 per million tokens in and out, 25 audio tokens a second; $1 / $18 from 2027) | Google (Lyria) |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
@@ -250,15 +250,16 @@ studio/tests/test_live_gemini.py -s` paints one scene, about 7 cents.
 
 #### One topic on another brain
 
-An admin can send one topic to a brain of its own: the **Brain** buttons under the box on
-`/learn` (admins only; a learner's topic is always made by the default brain). The pick is
-remembered on that browser, and the topic's card shows it.
+Anyone signed in can send a topic to a brain of its own: the **Brain** buttons under the box on
+`/learn`. A learner sees Default, Claude and Muse Spark; Muse Wonder is shown to admins only, and
+the API refuses it from anyone else. The pick is remembered on that browser, and the topic's card
+shows it. Only an admin's note under the buttons says whose key pays and who paints.
 
 | Button | Brain: writes and fact-checks the lesson | Brain bills to |
 |---|---|---|
 | Default | the default brain on the Studio page (the note under the buttons names it) | its key |
 | Claude | Claude Opus 5.5 (`claude-opus-5-5`) | `POPSMOSIS_ANTHROPIC_API_KEY` |
-| Muse Wonder | Muse Wonder 1.0 (`muse-wonder-1.0`) | `MODEL_API_KEY` |
+| Muse Wonder (admins only) | Muse Wonder 1.0 (`muse-wonder-1.0`) | `MODEL_API_KEY` |
 | Muse Spark | Muse Spark 1.3 (`muse-spark-1.3`) | `MODEL_API_KEY` |
 
 The pictures are painted by the Studio page's painter for the pick's provider: by default
@@ -392,7 +393,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
 | GET | `/api/questions/allowance` | the caller's topics left: `{ perDay, left, nextInSeconds, siteFull, siteOpensInSeconds }`. Each topic's place comes back 24 hours after it was asked for (no midnight reset), so the times are seconds from now: `nextInSeconds` is until one more comes back, or with none left until the caller may ask again; null when none is coming. The Learn page shows it in the topic box, by the browser's clock and time zone |
-| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
+| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`: `claude`, `muse-spark`, or `muse-wonder` from an admin (403 from anyone else), the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the default brain. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
 | DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one. `?expect=no-lesson` (the page showed none): 409 and nothing changes if one has landed since, so the learner is asked again with the choice |
 | DELETE | `/api/questions/:id/everything` | own topic, with its lesson: the droplet, its follow-ups, likes, comments and play counts, and its files in both R2 buckets ([Privacy](#privacy-and-the-legal-pages)); it leaves the tab. A route of its own, not a flag, so an API from before it answers 404 and deletes nothing |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars; 429 past `REPLIES_PER_USER_PER_HOUR` (30), or when its files would pass the learner's file limits |
@@ -409,7 +410,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 |---|---|---|
 | GET | `/api/agents/me` | confirm the key |
 | GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first, each leased to the caller for `QUESTION_CLAIM_MINUTES`, with the `runs` started on it and `maxRuns`; a topic whose lease lapsed after `QUESTION_MAX_RUNS` runs (default 3) is given up instead, its reason on its card |
-| POST | `/api/questions/:id/claim` | `{ runId? }`: take or renew the lease on one topic and read it, with the `brain` an admin picked for it (`null`: the teacher's own), and its `runs` and `maxRuns`. `runId` (8 to 64 letters, digits, `-` or `_`) names the run, on every claim of it: an id other than the last run's counts a run (`runs` includes it), the same id again counts nothing. With the runs used up, a new run's claim answers 409: "Another run holds the claim" while the last run's lease is live, else the topic is given up. 409 if answered, failed, or leased to another agent |
+| POST | `/api/questions/:id/claim` | `{ runId? }`: take or renew the lease on one topic and read it, with the `brain` picked for it on `/learn` (`null`: the default), and its `runs` and `maxRuns`. `runId` (8 to 64 letters, digits, `-` or `_`) names the run, on every claim of it: an id other than the last run's counts a run (`runs` includes it), the same id again counts nothing. With the runs used up, a new run's claim answers 409: "Another run holds the claim" while the last run's lease is live, else the topic is given up. 409 if answered, failed, or leased to another agent |
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown?, checks? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); `checks`, with the bundle, is what the code checks found in it, for an admin's review ([Review](#review)); 409 once there is one, with `answerId` when it is the caller's own, and 409 unless the caller holds the topic's claim (the queue or `/claim`) |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |

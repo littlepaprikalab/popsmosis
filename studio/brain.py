@@ -1,7 +1,7 @@
 """The brain: one ask() that every studio step calls, whatever the provider.
 
-The brain is one of CHOICES, and an admin sets it, never the environment, which holds only the
-keys: the default brain and Claude's effort on /admin/studio, or a topic's own brain on /learn
+The brain is one of CHOICES, and the site sets it, never the environment, which holds only the
+keys: the default brain and Claude's effort on /admin/studio, or a topic's own brain picked on /learn
 (api/src/lib/studio-settings.ts, api/src/lib/brains.ts). The studio reads them from the API, and
 the runners put the one in force with chosen() and choose(). With none in force, as for a local
 `python -m studio plan` without --brain, it is Claude Opus 5.5 at high effort. Each brain's
@@ -85,7 +85,7 @@ PAINTER_NAMES = {"gemini": "Gemini 3.1 Flash Image", "muse": "Muse Image", "svg"
 # The keys each painter's art needs: SAM 3.1 finds the structures in a painted picture, on Meta's key.
 PAINTER_KEYS = {"gemini": ("GEMINI_API_KEY", META_KEY_VAR), "muse": (META_KEY_VAR,), "svg": ()}
 
-# The brains an admin may set as the default on /admin/studio or pick for one topic on /learn: each one's
+# The brains an admin may set as the default on /admin/studio, or a sender pick for one topic on /learn: each one's
 # provider and model. The API holds the same keys (api/src/lib/brains.ts); keep the two lists the same.
 CHOICES = {
     "claude": {"provider": "claude", "model": "claude-opus-5-5", "name": "Claude Opus 5.5"},

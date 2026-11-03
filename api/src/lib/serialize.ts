@@ -194,7 +194,7 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new D
     content: q.content,
     status: q.status,
     failedReason: q.status === 'FAILED' ? q.failedReason : null,
-    // The brain an admin picked for it (lib/brains.ts); null: the teacher's own. The studio reads it from the claim.
+    // The brain picked for it on /learn (lib/brains.ts); null: the default. The studio reads it from the claim.
     brain: q.brain,
     attachments: q.attachments.map(serializeAttachment),
     createdAt: q.createdAt.toISOString(),

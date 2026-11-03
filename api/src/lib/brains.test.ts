@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBrain, isBrain, BRAINS } from './brains.js';
+import { parseBrain, isBrain, BRAINS, LEARNER_BRAINS } from './brains.js';
 
 describe('parseBrain', () => {
   it('leaves the choice to the teacher when none is sent', () => {
@@ -13,8 +13,15 @@ describe('parseBrain', () => {
     for (const brain of BRAINS) expect(parseBrain(brain, true)).toEqual({ brain });
   });
 
-  it('refuses a brain from anyone else, so a learner cannot spend on a costlier model', () => {
-    expect(parseBrain('muse-wonder', false)).toMatchObject({ brain: null, forbidden: true });
+  it('takes Claude and Muse Spark from a learner', () => {
+    expect(LEARNER_BRAINS).toEqual(['claude', 'muse-spark']);
+    for (const brain of LEARNER_BRAINS) expect(parseBrain(brain, false)).toEqual({ brain });
+  });
+
+  it('leaves Muse Wonder to admins', () => {
+    expect(parseBrain('muse-wonder', false)).toEqual({
+      brain: null, error: 'brain must be one of claude, muse-spark', forbidden: true,
+    });
   });
 
   it('refuses a brain it does not know, whoever sends it', () => {
