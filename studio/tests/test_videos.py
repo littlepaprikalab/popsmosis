@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from studio import jobs, knobs, media
+from studio import brain, jobs, knobs, media
 from studio import run as operator_run
 from studio import videos
 from studio.api import ApiError
@@ -728,6 +728,25 @@ def test_make_runs_a_local_jobs_videos_in_videos_order_with_no_api_and_no_upload
     setup.ran.clear()
     assert videos.local(job) == (videos.DONE, "render", "the videos were already made")
     assert setup.ran == []
+
+
+def test_make_checks_the_keys_of_the_jobs_own_brain(setup, monkeypatch):
+    """Nov 2: `plan --brain muse-wonder --videos`, with only the Meta and Gemini keys, stopped before its videos on
+    "Claude Opus 5.5 needs POPSMOSIS_ANTHROPIC_API_KEY": `make` checked the default brain's keys, not the job's."""
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    for name in ("POPSMOSIS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY", "STUDIO_VIDEOS", *brain.RETIRED_VARS):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("MODEL_API_KEY", "k")
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    job = jobs.ROOT / "local-job"
+    job.mkdir()
+    operator_run.keep_brain(job, "muse-wonder")
+    assert videos.local(job) == (videos.DONE, "render", "render made")
+    monkeypatch.delenv("MODEL_API_KEY")
+    for step in media.MEDIA_STEPS:
+        (job / f".{step}.done").unlink(missing_ok=True)
+    assert videos.local(job) == (videos.STOPPED, "videos",
+                                 "the studio's settings are wrong: Muse Wonder 1.0 needs MODEL_API_KEY")
 
 
 def test_make_resumes_at_the_step_that_failed(setup):

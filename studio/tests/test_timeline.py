@@ -513,6 +513,20 @@ def test_the_hook_cut_is_the_pre_chorus_and_first_chorus_moved_to_start_at_zero(
 
 
 
+def test_the_hook_cut_ends_before_the_line_after_the_chorus(job):
+    """The sample's second verse is sung straight after the first chorus, as the kidney song's was (Nov 2): the cut's
+    tail stops where it starts, so the clip never ends on the verse's first words."""
+    make(job)
+    hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
+    sung = [b.line_id for b in hook.beats if b.line_id]
+    assert sung[-1] == "c1-1" and "v2-1" not in sung
+    song = jobs.read(job / media.timeline_path("song"), Timeline)
+    verse = next(b for b in song.beats if b.line_id == "v2-1")
+    chorus = next(b for b in song.beats if b.line_id == "c1-1")
+    moved = chorus.words[0].start - next(b for b in hook.beats if b.line_id == "c1-1").words[0].start
+    assert hook.duration <= verse.words[0].start - moved + 0.001
+
+
 def test_the_hook_cut_never_reaches_into_a_verse_the_song_never_sings(job):
     """A first chorus shorter than HOOK_MIN_S takes in the verse before it, but not one Eleven Music left
     instrumental: its lines have no beat (step 6)."""

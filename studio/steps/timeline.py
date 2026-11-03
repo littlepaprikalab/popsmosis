@@ -235,7 +235,13 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
     if opening is None or closing is None or not song.audio:
         return None
     t0 = max((opening.words[0].start if opening.words else opening.t0) - HOOK_LEAD_S, 0.0)
-    t1 = min((closing.words[-1].end if closing.words else closing.t1) + HOOK_TAIL_S, song.duration)
+    end = closing.words[-1].end if closing.words else closing.t1
+    t1 = min(end + HOOK_TAIL_S, song.duration)
+    # Its tail never reaches the next line: the kidney cut of Nov 2 ended on "The loop of Henle dips", the verse after
+    # the chorus timed straight after its last word.
+    after = by_line.get(bundle.lyrics[last + 1].id) if last + 1 < len(bundle.lyrics) else None
+    if after is not None and after.words:
+        t1 = max(min(t1, after.words[0].start), end)
     beats = []
     for beat in song.beats:
         if beat.t1 <= t0 or beat.t0 >= t1:
