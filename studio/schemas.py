@@ -597,7 +597,8 @@ class AuditReport(Strict):
 class Check(Strict):
     id: str
     verdict: Verdict
-    source: str = Field(description='SUPPORTED: the fact id or a verbatim study-guide quote. Otherwise ""')
+    source: str = Field(description='SUPPORTED: the fact id it rests on, or several comma-separated ("course knowledge" '
+                                    'for a lyric the facts are silent on; "" for public text). Otherwise ""')
     problem: str = Field(description='UNSUPPORTED: what is wrong, in one sentence. Otherwise ""')
     corrected: str = Field(description='UNSUPPORTED: the line rewritten to say only what the facts support. Otherwise ""')
 

@@ -562,6 +562,28 @@ def test_a_second_flow_is_its_own_motion_and_one_that_fails_leaves_only_itself()
         ["Cytochrome b6f", "Thylakoid"], "H⁺")
 
 
+def test_an_arrow_and_its_one_liner_that_both_fail_leave_nothing_behind():
+    def saying(data):
+        next(d for d in data["direction"] if d["line_id"] == "v2-1").update(
+            particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺", says="Protons go home")
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if "H⁺" in text else supported(text))
+    report, checked = check_bundle(bundle(saying), "", fake)
+    line = next(d for d in checked.direction if d.line_id == "v2-1")
+    assert report.status == "passed" and (line.particles, line.carries, line.says) == ([], "", "")
+    assert len(dropped_motions(report)) == 2
+
+
+def test_every_kind_of_line_has_its_rules():
+    def everything(data):
+        moving(data)
+        with_key_lines(data)
+        data["direction"][0]["caption"] = "Light lands here"
+
+    assert {line.kind for line in lines_of(bundle(everything))} == set(factcheck.RULES)
+    assert set(factcheck.KEPT_OR_DROPPED) == {factcheck.TAG, factcheck.MOTION, factcheck.AVOID}
+
+
 def test_a_route_left_out_by_the_check_is_never_drawn_and_a_passed_one_is():
     from studio.schemas import Locations
     from studio.steps import timeline

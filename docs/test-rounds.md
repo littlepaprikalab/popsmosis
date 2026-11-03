@@ -1875,6 +1875,88 @@ The lesson video, yes, with the caveat of the hemoglobin picture: it teaches the
 right and the misconception lands. The song video is weaker for a demo: the choruses sit over a still overview, and
 the one hemoglobin line sings "four" over five. Showing the lesson video and a verse of the song avoids both.
 
+## Nov 3: which of the fact-check prompt's rules change what the checker does
+
+The rule the owner keeps for the writer's brief (CLAUDE.md, "Rules in the prompts earn their place"), applied to
+`prompts/factcheck.md`. One round-one payload on the light reactions, 62 lines (9 facts, one corrected by the
+audit with `was`, a study guide with two wrong claims), each line aimed at a rule: overgeneralizations, an image
+that makes a wrong point, the jammed-turbine bridge that once borrowed the herbicide's "no NADPH" (Round 5), a
+crude couplet, two appeals, form-keeping corrections (a couplet, a key line, a table row, a list item), tags of
+every kind, motions through a wall and from a teacher to a student, and public text naming an artist, a logo and
+an instruction. Seventeen Opus subagents stood in for the checker: the full prompt twice, and 15 copies each with
+one group of rules taken out, judged against a key written beforehand.
+
+- **The full prompt** gave the expected verdict on all 62 lines, both times, with no disagreement between the two.
+- **One group earned its place**: "Across a wall or membrane it goes through what the facts say it crosses by".
+  Without it, "H⁺ travels from Thylakoid lumen to Thylakoid membrane to Stroma" passed.
+- **The other 14 changed no verdict on the lines aimed at them, nor on any other**: figures of speech and
+  attitude; one case never supporting another (the turbine couplet was failed and "NADPH piles up for a while"
+  passed without it); fitness for a classroom; the list of what makes a line UNSUPPORTED; the study guide as never
+  a source; corrected facts; a lyric's leniency; appeals; the Versailles example; the tag and public-text lists;
+  unmarked "Something travels"; and both rules on how to write `corrected`, whose corrections kept a couplet's
+  lines and rhyme word, a key line's arrows and a table row's cells without them. About 1,000 of the prompt's
+  2,600 words.
+
+What it does not show: the lines were clear-cut, where a rule matters least; it was one run of each copy, on one
+payload of 62 lines where a real one has 130; and it was Opus alone, while a topic on Muse Wonder or Muse Spark
+is fact-checked by that model with the same prompt. Nothing was taken out on this round alone.
+
+The schema's `source` still said "the fact id or a verbatim study-guide quote", left from before the study guide
+became context only; it now says what `cites()` takes.
+
+**Round 2, harder and at full size.** Two real droplets from the Oct 30 scorecard run, mitosis (114 lines) and
+the causes of World War I (128), their round-one payloads built by `check_bundle` itself, each with one fact
+given a `was` and a study guide with claims the facts do not make, and about 47 borderline lines put in among
+their own: a DJ image that says the fibers spin chromatids "every which way", "the spindle fibers act like
+bouncers", a bridge borrowing nondisjunction's 47 and 45 for a spindle that never forms, "just like Ms. Patel
+showed us", Franz Ferdinand mocked for his open car, "each pole ends up with half of the chromosomes" written
+from the old fact, "Princip was only 19" from the guide, "Mitosis always produces two identical cells", tags
+from "#meiosis" to "#mrokaforsclass", a picture asking for a written title, styles naming Bad Bunny and an
+Assassin's Creed loading screen. The full prompt ran twice on each, the 14 copies once on each: 32 subagents.
+
+- The full prompt's two runs agreed on 163 of 163 lines of mitosis and 167 of 173 of the war.
+- **The public text's list earned its place**: without it, a picture asking for "the title 'MITOSIS' written in
+  bold letters across the top" passed, and so did the four real pictures that said "as Campbell Biology draws
+  it" (since Nov 2 the art step adds that look at paint time, so the bundle no longer says it).
+- **The other 13 changed no verdict on any line aimed at them** (82 lines in all). The few lines that did move
+  moved in copies missing unrelated rules too ("Line up the pairs (metaphase)", "the wall breaks down" failed
+  without the tag list as often as without the example): the checker's own variance on borderline lines.
+- Corrections kept a couplet's line count, a key line's arrows and length, a table row's cells, a lesson's bold
+  and narration's one sentence in every copy.
+
+**The trimmed prompt** (21547f1) took out all 13 together and kept the membrane rule, the public text's list
+and fitness for a classroom (it changed nothing for Opus, but guards what children see and is read by the Muse
+brains too). On the same three payloads, run once on round 1's and twice on each droplet, it gave the full
+prompt's verdict on every line where the full prompt's own runs agreed, but two unmarked-dot probes that one
+run each judged otherwise (one with no key; one, "Something travels from Princip to Franz Ferdinand", failed as
+an animation of shots hitting a person). Its corrections kept a couplet's rhyme word less often, though: 37 of
+60 lines against the full prompt's 45 of 58, with couplets such as "Italy stayed neutral when the war began / In
+'fifteen it fought Austria-Hungary instead". No single cut showed it; all of them together did. The rule that a
+corrected couplet keeps its lines, rhythm and last word went back into the Lyrics section, in its own words.
+With it back (0bd2ba4), one more run on each droplet kept the rhyme word on 27 of 32 lines and gave the
+full prompt's verdicts, but "the wall breaks down", the borderline line that also moved in copies
+missing unrelated rules.
+
+**On Muse Spark** (the owner asked for it; $1.78 on `MODEL_API_KEY`, every other key unset). The fact-check as a
+Muse topic asks it, through `brain.ask` at high effort, on the same three payloads: the full prompt (30f88bb) and
+the trimmed one (0bd2ba4) once on round 1's, twice on each droplet, then the prompt as it now stands twice on
+mitosis. Every call answered on its first try, in 95 to 291 s, for $0.07 to $0.16.
+
+- Muse Spark is a fair checker of these lines: with the full prompt it got 46 or 47 of mitosis's 47 probes, 41 of
+  the war's 43 (both runs missed the same two) and 61 of round 1's 62. The one it missed
+  there is the documented one: it failed "NADPH piles up for a while, you know" with the rule on cases or
+  without it. Unlike Opus, it passed the four "as Campbell Biology draws it" pictures.
+- **Three cut rules change what Spark does**, where none had changed Opus: how to hear an appeal (right 8 times
+  in 8 with it, 6 without: it failed "Sister chromatids, two of a kind / Split to the poles, none left behind"
+  as "ignoring nondisjunction" when the songwriter's appeal said the bridge covers that); unmarked "Something
+  travels" (13 in 13, 11 without: "Something travels from Metaphase plate to Pole" failed as "no such route in
+  facts"); and a neighbouring topic in a tag ("#meiosis" on mitosis passed in 3 runs of 4 without the list's
+  first clause, in none with it). The first two went back in their own words, and the tag list's first clause.
+- With them back, two runs on mitosis gave the full prompt's verdict on every line, and every probe right.
+
+The prompt is 1,936 words, from 2,643. What the cut takes out was tested on Opus and Muse Spark, not on Muse
+Wonder.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
