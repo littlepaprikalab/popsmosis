@@ -1471,13 +1471,131 @@ topics, and $0.12 for repainting the pump's close-ups in the overview's look (be
   $0.27 for the light reactions, whose overview has 15 parts. Each part is asked in up to three phrasings, then by the
   helper's box.
 
+## Round, Nov 2: the kidneys on Meta's models, end to end
+
+One topic, locally, to check quality before the hackathon demo, with every model call on the real APIs and none of
+them Claude's: **AP Biology: how the kidneys filter blood** ("How do the kidneys filter blood? For AP Biology", R&B),
+`plan --brain muse-wonder --videos` (job `kid-mw1`). The owner approved the paid calls; nothing was posted.
+
+| | |
+|---|---|
+| Brain and helper | Muse Wonder 1.0 writes (script, bundle, audit, narration edit, fact-check, its look at each first picture); Muse Spark 1.3 checks (learner test, picture checks, the locate step's boxes and label checks, the arrows) |
+| Media | Muse Image paints, SAM 3.1 finds the parts, Lyria 3.5 sings, Gemini 3.8 Flash TTS reads, and MMS times both; Demucs and MMS run here, free |
+| Keys | `MODEL_API_KEY` and `GEMINI_API_KEY` only: the Anthropic and ElevenLabs keys, the production API's, and the retired `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`, `SONG_PROVIDER` and `ART_PROVIDER` unset; `STUDIO_CLAUDE_DRAWS=brain` |
+| Settings | No `settings.json`, so the Muse brain's defaults; one holding only `{"spend": {"topicUsd": 5}}` was added after the lesson, as a ceiling, which changes no default |
+
+| Part | Cost | Time |
+|---|---|---|
+| Script | $0.42 | 2.6 min |
+| Bundle | $1.00 | 4.8 min |
+| Narration edit | $0.59 | 3.8 min |
+| Fact audit (twice), learner test | $0.18 | 1.4 min |
+| Fact-check, 2 rounds | $0.54 | 2.9 min |
+| **The lesson** | **$2.73** | **15.5 min** |
+| Art: 6 pictures, 6 checks by Spark, 4 looks by Wonder | $0.49 | 4.3 min |
+| Locate: 73 SAM calls ($0.18), 28 Spark boxes and label checks ($0.32) | $0.50 | 3.4 min |
+| Song (173 s) and narration (124 s) | $0.11 | 0.5 min |
+| Timing, timeline, render | $0 | 5.8 min |
+| Arrows: 18 Spark calls | $0.28 | 2.3 min |
+| **The videos** | **$1.38** | **12.6 min** |
+| **Topic to both videos** | **$4.11** | **28 min** |
+
+The bill lists `muse-wonder-1.0`, `muse-spark-1.3`, `muse-image-1.0`, `sam-3.1`, `lyria-3.5` and
+`gemini-3.8-flash-tts`, and the free `mms-fa` and `htdemucs`: nothing else was called. Muse Wonder is priced as Opus
+5.5 is ($4 / $20 per million) and writes long: 20K output tokens for the script, 47K for the bundle, 29K for the
+narration edit, which cost more than the two fact-check rounds. Its looks at the pictures were cheap ($0.05 to $0.12).
+
+### What worked
+
+- **The facts and the fact-check.** The audit judged all four facts correct in one call. The fact-check passed in two
+  rounds (78 supported, 11 filler, none unsupported) and repaired the narration editor's worst line: "Then high
+  pressure forces water from the blood, carrying salts with it as glucose and urea follow" became "Then high
+  pressure forces water, glucose and salts from the blood into Bowman's capsule". It also took "a tight ball of
+  capillaries" out of n7, since no fact says it.
+- **The pictures.** Five scenes in seven tries, in one textbook look: a nephron with its glomerulus, coil, loop,
+  collecting duct and capillaries; Bowman's capsule in cross-section with blood cells and proteins inside the
+  capillaries and water, glucose, salts and urea in the capsule space; the tubule wall beside a capillary; the same
+  wall with glucose piled up for the diabetes case. No wrong label and no note on any kept picture. The filter's first
+  try had proteins in the capsule space, and the check's note said so truly ("proteins never leave the blood during
+  filtration"); Muse Wonder rewrote the scene and the repaint was clean. Muse Image refused the hook's first prompt
+  (content policy; it asked for a cup of urine) and painted the second.
+- **Round 17's Bowman's capsule.** Found, by SAM in the helper's box, and every mask of the close-up on its own part
+  (water, glucose, salts and urea each on its own coloured balls). 29 of 30 parts located; the proteins, inside the
+  glomerulus, were left out.
+- **Round 17's missing outro.** Lyria's text listed all 45 lines, outro included, and sang them: the outro's lines
+  were heard at 0.60 to 0.70. Every lyric still shows the word being sung. Chorus drift was 2.0 s at most; the
+  aligner was unsure of 7 lines, four of them the last chorus (0.12 to 0.23), spaced as the other choruses are.
+- **Round 20's glucose note.** No note was written on a kept picture, and the one written was true.
+- **Each flow goes the right way.** Filtration: water, glucose and salt from the glomerulus into the capsule space.
+  Reabsorption: glucose and water from the tubule across the wall into the capillary. The loop: water and salt out
+  into the tissue. The collecting duct: urine down to the pool.
+- **The lesson's shape.** The hook ends on its question ("So what happens to the other 178 liters or so?"), the
+  sorting-line analogy is said over the nephron, the prediction comes where the misconception forms ("if glucose
+  leaves the blood, is it lost in your pee?"), the diabetes case comes after the path, and the lesson ends on its core
+  idea.
+
+### What went wrong
+
+1. **`make` stopped before the videos** (fixed): "Claude Opus 5.5 needs POPSMOSIS_ANTHROPIC_API_KEY". `make` checked
+   the default brain's keys, not the job's.
+2. **No secretion** (rule added, not re-run). The facts cover filtration, reabsorption and the loop; nothing is
+   secreted anywhere, so an AP Biology lesson on the nephron skips one of its three processes, and no picture or flow
+   shows it. A free subagent writer on the same script prompt left it out too.
+3. **The diabetes case over the hook** (fixed, re-rendered): the script put n19 to n22 on the hook, so "So the
+   proximal tubule cannot take back all that extra glucose" played over a boy holding a water jug, while the bundle
+   had painted the case for the song alone ([before and after](test-rounds-nov2-kidneys/case-on-hook-before-after.jpg)).
+4. **The hook clip ended on the next verse** (fixed): its last frames showed "The loop of Henle dips", the verse after
+   the chorus timed straight after its last word ([before and after](test-rounds-nov2-kidneys/hook-last-frame-before-after.jpg)).
+5. **The narration editor garbled a clear line.** The script's "Next, the loop of Henle pulls more water out into
+   salty tissue" became "Back in the nephron, the loop of Henle leaves the salty tissue saltier deeper down, so more
+   water leaves" ([still](test-rounds-nov2-kidneys/stale-key-line-and-garbled-n15.jpg)): "Back in the nephron" is its
+   prompt's own example, though the close-up before it was in the nephron too. The fact-check passed it.
+6. **A key line held over the next scene**: "High pressure in glomerulus → filtrate forms" stays over the prediction
+   and the misconception (n11, n12) on the tubule close-up, until the tubule's own key line. Clearing the band at every
+   cut would also clear the lesson's question off the overview; left for the owner.
+7. **The fact-check and the filtrate.** It dropped "filtrate travels from Glomerulus to Filtrate" (three motions) as
+   travelling "to itself": the particle and the capsule space share the name. It passed the lyric "Salts and urea are
+   crossing too" and dropped urea's motion, since no fact names urea, though urea is one of the key terms.
+8. **An arrow read backwards.** Spark's look said the water arrow in the close-up ran from the capsule space into the
+   glomerulus, though its own placement said the reverse, and the arrow was left out; 4 of 14 arrows were.
+9. **The overview's loop.** The proximal tubule's orange runs down the loop's first arm, so the painted "Loop of
+   Henle" label sits beside an orange tube, and there is no distal tubule, though f1 names "a further winding
+   section". The check passed it.
+10. **Rhymes for their own sake**: "Deeper tissue wears a saltier crown", "High pressure sends water and glucose to
+    flight", "So glucose stays, the stream's not the same"; and "The proximal tubule pulls it out", which can be heard
+    as taking glucose away.
+11. Smaller: the hook is a young child whose see-through jug shows his kidneys and pelvis; the upright hook crops the
+    overview's painted labels ("imal tubule", "Collecting du"); no arrow has a one-liner (35 `says` hints).
+
+### Fixed on this branch
+
+- **`make` checks the job's own brain** (`studio/videos.py`): `local()` checks the keys inside `job_chosen()`, as
+  `videos` and `background` already did.
+- **A case told on the hook plays over the picture that draws it** (`checks._case_off_the_hook`, rule `case-on-hook`).
+  Sentences that come back to the hook to talk about parts it does not draw, up to the one that says the core idea,
+  play over the scene that draws the most of those parts, the song's own picture first on a tie; the song-scene repair
+  then makes it the lesson's too. The close stays on the hook.
+- **The hook cut stops at the next line** (`timeline.hook_cut`): its 0.8 s tail never reaches the line after the
+  chorus.
+- **Every stage the course names** (`prompts/bundle.md`, the facts): "A process the course teaches as named stages has
+  every stage it names in the facts, each in its place, even one the learner's question leaves out (the four phases of
+  mitosis, the three stages of cellular respiration), and the narration walks each as a step." Tested on this topic
+  with free subagent writers, its examples from other topics so that a writer applies it rather than copies it: without
+  it, secretion was in 0 of 2 scripts (the Claude writer's and Muse Wonder's); with the facts half alone, in the facts
+  of 2 of 2 and the narration of none; as shipped, walked in the narration of 2 of 2, over the tubule close-up ("The
+  tubule also does secretion, moving extra acid and some drugs from blood into the filtrate").
+- A test left stale by the art step's look at each picture (`test_videos.py`): it failed on `main`.
+
+The job was checked again and its timeline and videos made again with the first three (`step check`, `step
+timeline`, `step render`: no paid call; the arrows already pointed were kept, the moved sentences carrying no flow).
+The brief's rule needs a new lesson, so it is not in this droplet.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
   API in `POPSMOSIS_API_URL`, which here is production, and Supabase is not set up.
 - The SVG art (`ART_PROVIDER=svg`) through the videos: round 16 drew one plan's scenes with it,
-  but made no videos from them. Muse Wonder as the brain only for the bundle and fact-check
-  (round 5), not through the videos.
+  but made no videos from them. Muse Wonder through the videos only once (Nov 2, the kidneys).
 
 ## Running a round again
 
