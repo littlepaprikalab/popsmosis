@@ -2103,6 +2103,41 @@ but two kept them all), and the colours' "never near black" against the script's
 Nothing in the brief changed on this round: the only cuts it found overlapped, and another session is reworking the
 picture descriptions' rules.
 
+## Nov 3: hooks and story scenes asked for as editorial illustrations
+
+Every `image_prompt` opened "Educational textbook illustration of" and every hook ended "a friendly textbook
+illustration of the real thing", so hooks and history, literature and story scenes came out as flat textbook
+figures. The brief was changed: a diagram (a science scene, a graph) keeps the textbook opener; a scene of people,
+places or everyday things opens "Editorial illustration of ..., painterly style" and ends "a rich editorial
+illustration: painterly, cinematic light, real depth, the things the lesson names clear in front."
+
+- **The writer follows it.** A subagent writer on four topics (French Revolution, dramatic irony, light reactions,
+  supply and demand) used the new opener on all 13 hooks and story scenes and kept the textbook one on all 9
+  diagrams (4 thylakoid scenes, 5 supply-and-demand graphs).
+- **Painted both ways.** Six scenes (three hooks, three story scenes) on Gemini 3.1 Flash Image, one picture per
+  wording, the same words but for the opener and the look line ($0.82). A blind Opus judge, A and B at random:
+
+| Scene | Preferred | Old: appeal / clarity / correct | New: appeal / clarity / correct |
+|---|---|---|---|
+| Romeo and Juliet hook | new | 4 / 3 / 2 | 4 / 4 / 3 |
+| French Revolution hook | new | 2 / 5 / 4 | 5 / 4 / 4 |
+| Light reactions hook | old | 3 / 5 / 4 | 4 / 3 / 3 |
+| Three estates | old | 3 / 4 / 3 | 4 / 2 / 2 |
+| Bastille | old | 4 / 4 / 4 | 4 / 4 / 2 |
+| Capulet tomb | new | 2 / 3 / 1 | 5 / 4 / 4 |
+| Mean | 3 of 6 | 3.0 / 4.0 / 3.0 | 4.3 / 3.5 / 3.0 |
+
+- **Better looking, less clear.** The new pictures were richer and moodier; the old ones bland and clip-art-like.
+  But the new ones lost colour coding in crowds (the three estates' clergy and nobles in mixed costume colours) and
+  in dim light (the pondweed's red oxygen bubbles came back silver), and the bakery gained figures no one asked for.
+- **One look for another.** Every new picture came out the same: dark, warm, painterly, lit by a candle or a lamp.
+  "Editorial ... cinematic light" fixes a style as "textbook" did.
+- **Label slips in both**, one picture each, likely the painter's noise: the old tomb labelled Juliet twice and
+  Romeo not at all; the new Bastille added "Storming of Iuly 1789". Both Romeo and Juliet hooks wrote "PLAY SCRIPT"
+  on the book, though a hook asks for no writing.
+
+The pictures and prompts were in the session's scratchpad (`lookpaint/`); not decided whether the wording stays.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
