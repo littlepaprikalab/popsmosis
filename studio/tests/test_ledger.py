@@ -221,7 +221,7 @@ def test_each_media_step_lists_the_software_it_runs_at_the_version_installed_her
     assert steps["timing"]["tools"] == [
         {"name": "demucs", "version": "4.1.0", "task": "runs htdemucs"},
         {"name": "torchaudio", "version": "2.11.0", "task": "runs mms-fa"},
-        {"name": "torch", "version": "2.11.0+cpu", "task": "runs both models"},
+        {"name": "torch", "version": "2.11.0+cpu", "task": "runs the models"},
         {"name": "ffmpeg", "version": "7.1.1", "task": "decodes the audio for them"}]
     assert steps["render"]["tools"] == [{"name": "skia-python", "version": "144.1", "task": "draws the frames"},
                                         {"name": "ffmpeg", "version": "7.1.1", "task": "encodes the videos"}]
@@ -229,7 +229,8 @@ def test_each_media_step_lists_the_software_it_runs_at_the_version_installed_her
 
 
 def test_the_lesson_video_alone_times_the_voice_with_no_song_software(tmp_path, monkeypatch):
-    """STUDIO_VIDEOS=lesson: no Demucs or aligner runs, so the bill does not say they did."""
+    """STUDIO_VIDEOS=lesson with a voice that came with its timings (ElevenLabs): no Demucs or aligner runs, so the bill
+    does not say they did."""
     from studio import knobs
 
     monkeypatch.setattr(ledger, "version", lambda name: "1.0")
@@ -240,6 +241,23 @@ def test_the_lesson_video_alone_times_the_voice_with_no_song_software(tmp_path, 
     assert steps["timing"]["tools"] == []
     assert [t["name"] for t in steps["audio"]["tools"]] == ["ffmpeg"]  # ffprobe still reads the voice's length
     assert [t["name"] for t in steps["render"]["tools"]] == ["skia-python", "ffmpeg"]
+
+
+def test_the_lesson_video_alone_lists_what_the_aligner_ran_on_when_it_timed_the_voice(tmp_path, monkeypatch):
+    """STUDIO_VIDEOS=lesson with Gemini's voice, which has no timings of its own: MMS aligns it, so the bill lists what
+    MMS ran on beside it. Demucs's package is still left out: there is no song to separate."""
+    from studio import knobs
+
+    monkeypatch.setattr(ledger, "version", lambda name: "1.0")
+    (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [{"step": "timing", "seconds": 9.0}]}))
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    with ledger.at_step("timing"):
+        ledger.log(tmp_path, [call("narration alignment", model="mms-fa", cost=0.0, role="local")])
+    [timing] = ledger.breakdown(tmp_path, "videos")["steps"]
+    assert [m["task"] for m in timing["models"]] == ["times the narration"]
+    assert timing["tools"] == [{"name": "torchaudio", "version": "1.0", "task": "runs mms-fa"},
+                               {"name": "torch", "version": "1.0", "task": "runs the models"},
+                               {"name": "ffmpeg", "version": "1.0", "task": "decodes the audio for them"}]
 
 
 def test_the_lessons_steps_run_no_software_of_their_own(tmp_path):
@@ -461,6 +479,13 @@ def test_every_label_the_studio_logs_says_what_its_call_did():
         ("arrows", "arrows look overview ATP pump > cell"): "checks the arrows",
     }
     assert {key: ledger.task_of({"label": key[1], "step": key[0]}) for key in said} == said
+
+
+def test_the_bill_names_the_aligner_as_the_timing_step_logs_it():
+    from studio.steps import timing
+
+    assert ledger.ALIGNER == timing.MMS_MODEL
+    assert set(ledger.ALIGNER_TOOLS) < set(ledger.TOOLS["timing"])
 
 
 def test_every_tool_on_the_bill_says_what_it_did_in_its_step():

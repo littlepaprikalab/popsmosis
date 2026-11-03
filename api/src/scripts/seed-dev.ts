@@ -87,7 +87,7 @@ const SAMPLE_BREAKDOWN = {
       ], tools: [
         { name: 'demucs', version: '4.1.0', task: 'runs htdemucs' },
         { name: 'torchaudio', version: '2.11.0+cpu', task: 'runs mms-fa' },
-        { name: 'torch', version: '2.11.0+cpu', task: 'runs both models' },
+        { name: 'torch', version: '2.11.0+cpu', task: 'runs the models' },
         { name: 'ffmpeg', version: '6.1.1-3ubuntu5', task: 'decodes the audio for them' },
       ] },
       { step: 'timeline', seconds: 0.3, tries: 1, costUsd: 0, models: [] },

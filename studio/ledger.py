@@ -65,18 +65,24 @@ TOOLS = {
     # ffprobe reads each file's length; ffmpeg re-encodes a Lyria song
     "audio": {"ffmpeg": "measures and converts the audio"},
     # Demucs's package runs its model; torchaudio has the MMS aligner; ffmpeg decodes the audio they hear
-    "timing": {"demucs": "runs htdemucs", "torchaudio": "runs mms-fa", "torch": "runs both models",
+    "timing": {"demucs": "runs htdemucs", "torchaudio": "runs mms-fa", "torch": "runs the models",
                "ffmpeg": "decodes the audio for them"},
     "arrows": {"skia-python": "draws each arrow to check"},  # a still of each arrow, to look at (studio/steps/arrows.py)
     "render": {"skia-python": "draws the frames", "ffmpeg": "encodes the videos"},  # studio/render/
 }
-SONG_TOOLS = {"timing"}  # steps whose tools work on the song alone: none run for the lesson video alone
+SONG_TOOLS = {"timing"}  # steps whose tools work on the song: the lesson video alone has none to separate
+ALIGNER = "mms-fa"  # studio/steps/timing.py's MMS_MODEL, which a voice with no timings of its own is aligned by
+ALIGNER_TOOLS = ("torchaudio", "torch", "ffmpeg")  # what it runs on, Demucs's package aside
 
 
-def tools(step: str, job: Path | None = None) -> tuple[str, ...]:
-    """What the step ran on besides its models (TOOLS). The lesson alone (STUDIO_VIDEOS=lesson, or a bundle with no
-    song) times the voice from its character timings, with no song to separate or align."""
-    return () if step in SONG_TOOLS and media.lesson_only(job) else tuple(TOOLS.get(step, {}))
+def tools(step: str, job: Path | None = None, models: set[str] = frozenset()) -> tuple[str, ...]:
+    """What the step ran on besides its models (TOOLS), given the models that answered in it. The lesson alone
+    (STUDIO_VIDEOS=lesson, or a bundle with no song) has no song to separate: its voice is timed from the voice's own
+    character timings (ElevenLabs), with none of these, or aligned by MMS (Gemini's voice, which has none), on all but
+    Demucs's package."""
+    if step in SONG_TOOLS and media.lesson_only(job):
+        return ALIGNER_TOOLS if ALIGNER in models else ()
+    return tuple(TOOLS.get(step, {}))
 # How a call logged before calls were tagged with their step is told apart: by its label.
 LABEL_STEPS = {"bundle": "bundle", "factcheck": "factcheck", "art": "art",
                "song": "audio", "narration": "audio", "frq": "audio"}
@@ -292,7 +298,7 @@ def breakdown(job: Path, part: str, running: tuple[str, float] | None = None) ->
         steps.append({"step": name, **timed.get(name, {"seconds": None, "tries": 0}),
                       "costUsd": cost, "models": models,
                       "tools": [{"name": tool, "version": version(tool), "task": TOOLS[name][tool]}
-                                for tool in tools(name, job)]})
+                                for tool in tools(name, job, {m["model"] for m in models})]})
     seconds = [_run_seconds(r) for r in runs]
     return {"steps": steps, "seconds": round(sum(s for s in seconds if s is not None), 1) if runs else None}
 
