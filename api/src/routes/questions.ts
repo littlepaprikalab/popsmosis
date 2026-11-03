@@ -239,8 +239,13 @@ export default async function questionRoutes(app: FastifyInstance) {
   // an API from before it answers 404 and deletes nothing, where it would ignore a flag and only take the request
   // back, leaving a lesson the learner can no longer reach while the page says it is gone.
   // What either used of the learner's limits is not given back (lib/usage.ts).
+  // ?expect=no-lesson: the page showed the topic with no lesson. If one has landed since (the page polls a waiting
+  // topic every 15 s), the delete is refused with a 409 and nothing changes, so the learner is shown the choice
+  // rather than having a lesson they never saw taken back and kept. An API from before it ignores it.
   const deleteQuestion = (everything: boolean) => async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
+    const { expect } = request.query as Record<string, string | undefined>;
+    if (expect !== undefined && expect !== 'no-lesson') return sendError(reply, 'VALIDATION_ERROR', 'expect must be no-lesson');
     const userId = request.viewer!.id;
 
     let deletedAnswers: string[] = [];
@@ -253,6 +258,9 @@ export default async function questionRoutes(app: FastifyInstance) {
         const question = rows[0];
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
         if (question.userId !== userId) throw new AppError('FORBIDDEN', 'You can only delete your own questions');
+        if (question.status === 'ANSWERED' && expect === 'no-lesson') {
+          throw new AppError('CONFLICT', 'Its lesson arrived just now, so nothing was deleted: choose what should go');
+        }
         if (question.status === 'ANSWERED' && !everything) {
           await detachQuestions(tx, [id]);
           return [];

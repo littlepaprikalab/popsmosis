@@ -387,6 +387,35 @@ test.describe('signed in', () => {
     expect([row.content, row.answer.id]).toEqual([text, answerId]);
   });
 
+  test('deleting a topic whose lesson lands before the page sees it deletes nothing, and asks again with the choice', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: refraction, never mind`;
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const questionId = (await (await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: text } })).json()).id;
+    // The page's poll of waiting cards brings nothing new, so the card goes on showing it waiting.
+    await page.route('**/api/questions?ids=*', (route) => route.fulfill({ json: { data: [], nextCursor: null } }));
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('waiting')).toBeVisible();
+
+    // The lesson lands, unseen.
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    expect((await bot.answer(questionId, 'Light bends as it slows in glass.')).status()).toBe(201);
+
+    await card.getByRole('button', { name: 'delete' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Delete this topic request?');
+    await dialog.getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByText('Its lesson arrived just now, so nothing was deleted')).toBeVisible();
+    // Asked again, now with the choice, and the card shows the lesson.
+    await expect(dialog.getByTestId('delete-everything')).toBeChecked();
+    await expect(card).toContainText('Light bends');
+    const row = await (await request.get(apiUrl(`/api/questions/${questionId}`), { headers: asBen })).json();
+    expect([row.content, row.status]).toEqual([text, 'ANSWERED']);
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+  });
+
   test('a topic the teacher gives up says why, in place, and can be deleted', async ({ page, context, request }) => {
     await signIn(context, S.users.ada);
     await page.goto('/learn');

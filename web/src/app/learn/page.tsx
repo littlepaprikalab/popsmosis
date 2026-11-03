@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, mem
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LightBulbIcon } from '@heroicons/react/24/outline';
-import { api, isMissingRoute, Question, Answer } from '@/lib/api';
+import { api, ApiError, isMissingRoute, Question, Answer } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useGuardedSubmit } from '@/lib/useGuardedSubmit';
 import { usePolling } from '@/lib/usePolling';
@@ -651,7 +651,7 @@ function LearnContent() {
   const handleDelete = async (id: string, everything: boolean) => {
     const hadLesson = questions.find((q) => q.id === id)?.status === 'ANSWERED';
     try {
-      await api.deleteQuestion(id, hadLesson && everything);
+      await api.deleteQuestion(id, hadLesson && everything, !hadLesson);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
       if (hadLesson) {
         showToast(everything
@@ -662,6 +662,19 @@ function LearnContent() {
       // An API from before deleting everything (mid-deploy, or rolled back) has no such route, so it deleted nothing.
       if (isMissingRoute(err)) {
         showToast('Deleting everything is not available for a moment, so nothing was deleted. Please try again in a few minutes.', 'error');
+        return;
+      }
+      // The card showed it waiting, and its lesson landed before the next poll: nothing was deleted. Show the lesson's
+      // card and ask again, with the choice.
+      if (!hadLesson && err instanceof ApiError && err.status === 409) {
+        showToast(err.message, 'info');
+        try {
+          const fresh = await api.getQuestion(id);
+          setQuestions((prev) => prev.map((q) => (q.id === id ? fresh : q)));
+          requestDelete(id);
+        } catch {
+          // The next poll brings the card up to date; the learner can delete it from there.
+        }
         return;
       }
       showToast(err instanceof Error ? err.message : 'Failed to delete topic', 'error');

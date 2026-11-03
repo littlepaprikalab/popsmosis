@@ -592,9 +592,11 @@ export const api = {
     request<Question>('/questions', { method: 'POST', body: JSON.stringify(brain ? { content, brain } : { content }) }).then(localClock),
   // everything: a topic with a lesson goes whole, the lesson, its videos, likes and comments too; without it, the
   // request is taken back and the lesson stays on the Droplets tab. A topic with no lesson goes whole either way.
-  // Its own route, so an API from before it answers 404 ('Route not found') and deletes nothing (EVERYTHING_UNAVAILABLE).
-  deleteQuestion: (id: string, everything = false) =>
-    request<void>(`/questions/${id}${everything ? '/everything' : ''}`, { method: 'DELETE' }),
+  // Its own route, so an API from before it answers 404 ('Route not found') and deletes nothing (isMissingRoute).
+  // expectNoLesson: the page shows the topic with no lesson; if one has landed since, the API answers 409 and
+  // deletes nothing, so the learner can be shown the choice.
+  deleteQuestion: (id: string, everything = false, expectNoLesson = false) =>
+    request<void>(`/questions/${id}${everything ? '/everything' : expectNoLesson ? '?expect=no-lesson' : ''}`, { method: 'DELETE' }),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh
   // that changes nothing. since is the caller's watermark: the server then only

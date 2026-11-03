@@ -226,6 +226,26 @@ d('learner privacy', () => {
     expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asUser(grace.cookie) })).statusCode).toBe(404);
   });
 
+  it('refuses a delete the page sent for a topic with no lesson once one has landed, and changes nothing', async () => {
+    const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(grace.cookie), payload: { content: 'Tides, quickly' } });
+    const id = asked.json().id as string;
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}?expect=lesson`, headers: asUser(grace.cookie) })).statusCode).toBe(400);
+    // The page still shows it waiting; the lesson lands in between.
+    await app.inject({ method: 'POST', url: `/api/questions/${id}/claim`, headers: asAgent() });
+    const answered = await app.inject({ method: 'POST', url: `/api/questions/${id}/answer`, headers: asAgent(), payload: { content: 'The Moon pulls the oceans.' } });
+    expect(answered.statusCode).toBe(201);
+    const stale = await app.inject({ method: 'DELETE', url: `/api/questions/${id}?expect=no-lesson`, headers: asUser(grace.cookie) });
+    expect(stale.statusCode).toBe(409);
+    expect(stale.json().error.message).toMatch(/lesson arrived/);
+    const row = await prisma.question.findUniqueOrThrow({ where: { id } });
+    expect([row.userId, row.content, row.status]).toEqual([grace.id, 'Tides, quickly', 'ANSWERED']);
+
+    // With no lesson, it deletes as ever.
+    const other = (await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(grace.cookie), payload: { content: 'Waves' } })).json().id as string;
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${other}?expect=no-lesson`, headers: asUser(grace.cookie) })).statusCode).toBe(204);
+    expect(await prisma.question.count({ where: { id: other } })).toBe(0);
+  });
+
   it('deletes a request with no lesson the same with everything or without', async () => {
     const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(grace.cookie), payload: { content: 'Tides' } });
     const id = asked.json().id as string;
