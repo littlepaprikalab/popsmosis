@@ -847,8 +847,8 @@ someone else an admin first.
 
 `/privacy`, `/terms` and `/consumer-health-data` (the policy Washington's My Health My
 Data Act requires, with its own footer link) are plain pages in `web/src/app/`. The facts
-they rest on are in `web/src/lib/legal.ts`: who runs Popsmosis and where (Little Paprika
-Lab, Washington State), the contact address, the governing law (Washington, King County
+they rest on are in `web/src/lib/legal.ts`: who runs Popsmosis and where (Spicy Ginger
+Labs LLC, Washington State), the contact address, the governing law (Washington, King County
 courts), the minimum age (13), the file retention (keep it equal to
 `ATTACHMENT_RETENTION_DAYS`) and the license the droplets are shared under
 (CC BY-NC-SA 4.0), and the contact address, which is also the copyright (DMCA) agent's.
@@ -873,3 +873,12 @@ The API starts as `node --import tsx dist/index.js`: the build is typechecked an
 compiled by `tsc`, but the Prisma-generated client uses extension-less ESM imports
 that plain Node cannot resolve, so the tsx loader stays in the start command (same as
 sparks).
+
+## License
+
+The code is source-available, not open source: © 2026 Spicy Ginger Labs LLC, all rights
+reserved. Anyone may read it, and the Meta Global AI Developer Hackathon's organizers and
+judges may build, run and test it to judge the submission; nothing else is granted
+([LICENSE](LICENSE)). The droplets are licensed separately, under CC BY-NC-SA 4.0 (Terms,
+section 8), and third-party parts keep their own licenses, such as the Inter fonts
+(`studio/render/fonts/OFL.txt`).

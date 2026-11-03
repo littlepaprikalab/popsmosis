@@ -1,0 +1,26 @@
+Popsmosis
+Copyright (c) 2026 Spicy Ginger Labs LLC. All rights reserved.
+
+The source code in this repository is public so that it can be read. It is licensed,
+not sold, and the only rights granted are these:
+
+1. Anyone may view the code.
+2. The organizers and judges of the Meta Global AI Developer Hackathon may copy, build,
+   run and test the code to judge and review this submission.
+
+No other right to use, copy, modify, host, distribute or sublicense the code is granted
+without written permission from Spicy Ginger Labs LLC. The one exception is forking:
+GitHub's Terms of Service, which apply to every public repository, let GitHub users fork
+it (keep a copy on GitHub). A fork gives no right to run, host, change or reuse the code.
+
+This license does not limit any rights the hackathon's official rules ask entrants to
+grant. It grants no rights to the Popsmosis or Spicy Ginger Labs names or logos.
+
+Licensed separately:
+- Lessons ("droplets") published on Popsmosis: CC BY-NC-SA 4.0, per the Terms of Use.
+- Third-party components keep their own licenses, including the Inter fonts
+  (SIL OFL 1.1, studio/render/fonts/OFL.txt) and the npm and pip dependencies.
+
+THE CODE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. TO THE FULLEST EXTENT THE LAW
+ALLOWS, SPICY GINGER LABS LLC IS NOT LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY
+ARISING FROM THE CODE OR ITS USE.
