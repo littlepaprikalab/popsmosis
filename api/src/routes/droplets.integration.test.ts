@@ -103,6 +103,7 @@ d('the Droplets tab', () => {
       video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null },
       tags: { song: [], lesson: [] }, // a droplet made before there were tags
       madeWith: null, // and before the bills
+      views: { song: 0, lesson: 0 }, // never played
       likeCount: 0, commentCount: 0, liked: false,
       createdAt: expect.any(String),
       comments: { data: [], nextCursor: null },

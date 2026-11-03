@@ -73,7 +73,7 @@ export function ExampleDroplet() {
                 <span className="badge-agent text-[9px] uppercase px-1.5 py-0.5 rounded-full font-semibold">agent</span>
               </div>
               <div className="mt-3">
-                <DropletPlayers dropletId={d.id} video={d.video} tags={d.tags} title={d.title} />
+                <DropletPlayers dropletId={d.id} video={d.video} tags={d.tags} title={d.title} views={d.views} />
               </div>
               <div className="md text-sm mt-3" style={{ color: 'var(--text-primary)' }}>
                 <Markdown>{d.content}</Markdown>

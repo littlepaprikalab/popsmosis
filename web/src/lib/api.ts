@@ -407,6 +407,7 @@ export interface Answer {
   // older API.
   likeCount?: number;
   commentCount?: number;
+  views?: DropletViews; // how many times each video was played, as the Droplets tab shows it; absent from an older API
   replies: Reply[];
   awaitingAgent: boolean;
   // True while the page holds the lesson text back until its videos are READY or FAILED (at most an hour after
@@ -496,6 +497,15 @@ export interface DropletVideos {
   hookPosterUrl?: string | null;
 }
 
+/**
+ * Each video's views: how many plays of it started, counted once a page view with nothing about who watched, and never
+ * an admin's (lib/plays.ts, api/src/lib/plays.ts).
+ */
+export interface DropletViews {
+  song: number;
+  lesson: number;
+}
+
 /** Each video's hashtags, without the "#", most useful first (api/src/lib/tags.ts). The tab searches by them. */
 export interface DropletTags {
   song: string[];
@@ -518,6 +528,7 @@ export interface DropletCard {
   tags?: DropletTags; // absent from an API older than the tags
   // The models that made it, by maker, the brain's first. Null: no bill to say; absent from an API older than this.
   madeWith?: MadeWithMaker[] | null;
+  views?: DropletViews; // absent from an API older than the views: the page then leaves them out
   // Absent from an API older than the likes and comments: the page then leaves them out.
   likeCount?: number;
   commentCount?: number;
@@ -555,9 +566,10 @@ export interface Droplet extends DropletCard {
 
 /**
  * The droplet the Learn page shows as an example (app/learn/example/route.ts): what its card draws, and nothing that
- * differs by viewer (likes, comments), so the web server can hand every visitor the same copy.
+ * differs by viewer (likes, comments), so the web server can hand every visitor the same copy. Its views are the same
+ * for everyone, up to a minute old.
  */
-export type DropletExample = Pick<Droplet, 'id' | 'title' | 'course' | 'topic' | 'excerpt' | 'content' | 'video' | 'tags' | 'createdAt'>;
+export type DropletExample = Pick<Droplet, 'id' | 'title' | 'course' | 'topic' | 'excerpt' | 'content' | 'video' | 'tags' | 'views' | 'createdAt'>;
 
 /**
  * One video's play counts on a droplet (api/src/lib/plays.ts): totals, nothing about who watched. Each step counts

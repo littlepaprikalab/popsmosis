@@ -17,7 +17,8 @@ import { ClipFeed } from '@/components/ClipFeed';
 import { DropletComments } from '@/components/DropletComments';
 import { ChatBubbleLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { PlayIcon } from '@heroicons/react/24/solid';
-import { countPlays } from '@/lib/plays';
+import { countPlays, useViews } from '@/lib/plays';
+import { viewsLabel } from '@/components/ViewCount';
 
 // How many of a droplet's hashtags its card shows; its page shows them all, under each video.
 const CARD_TAGS = 4;
@@ -266,12 +267,14 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
   const song = !!d.video.songVideoUrl;
   const src = d.video.songVideoUrl || d.video.lessonVideoUrl;
   const poster = (song ? d.video.songPosterUrl : d.video.lessonPosterUrl) || d.video.songPosterUrl || d.video.lessonPosterUrl;
+  // The views of the video the card plays, as YouTube puts them under a title.
+  const views = useViews(d.views?.[song ? 'song' : 'lesson'] ?? 0);
   return (
     <article data-testid="droplet-card"
       className="flex flex-col rounded-lg overflow-hidden animate-fade-in"
       style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', animationDelay: `${Math.min(index, 12) * 60}ms` }}>
       {src ? (
-        <CardVideo dropletId={d.id} src={src} poster={poster} kind={song ? 'song' : 'lesson'} heading={heading} />
+        <CardVideo dropletId={d.id} src={src} poster={poster} kind={song ? 'song' : 'lesson'} heading={heading} onStart={views.onStart} />
       ) : (
         <Link href={href} className="aspect-video flex items-center justify-center" style={{ background: 'var(--bg-tertiary)' }}>
           <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>▶ Watch</span>
@@ -283,7 +286,11 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
         )}
         <h3 className="text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{heading}</h3>
         <p className="text-xs line-clamp-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{d.excerpt}</p>
-        <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>{timeAgo(d.createdAt)}</p>
+        <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>
+          {/* An API older than the views sends none: leave them out rather than show zero. */}
+          {src && d.views && <><span data-testid="view-count">{viewsLabel(views.views)}</span> · </>}
+          {timeAgo(d.createdAt)}
+        </p>
       </Link>
       <TagList tags={allTags(d.tags)} max={CARD_TAGS} className="px-4 pb-3 -mt-1" />
       <MadeWith makers={d.madeWith} compact className="px-4 pb-3 -mt-1" />
@@ -320,8 +327,9 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
  * for every card on the page, and preload="none" keeps the video itself from loading.
  * How far it plays is counted as on the droplet's page (lib/plays.ts).
  */
-function CardVideo({ dropletId, src, poster, kind, heading }: {
+function CardVideo({ dropletId, src, poster, kind, heading, onStart }: {
   dropletId: string; src: string; poster: string | null; kind: 'song' | 'lesson'; heading: string;
+  onStart: (counted: Promise<boolean>) => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
@@ -338,7 +346,7 @@ function CardVideo({ dropletId, src, poster, kind, heading }: {
         poster={started ? poster ?? undefined : undefined}
         src={src}
         onPlay={() => setStarted(true)}
-        {...countPlays(dropletId, kind)}
+        {...countPlays(dropletId, kind, onStart)}
         aria-label={`${heading}: ${kind} video`}
         className="block w-full h-full"
       />

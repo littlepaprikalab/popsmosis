@@ -1,12 +1,13 @@
 'use client';
 
-import type { DropletTags, DropletVideos, Video } from '@/lib/api';
+import type { DropletTags, DropletVideos, DropletViews, Video } from '@/lib/api';
 import { useState } from 'react';
 
 import { Drop } from '@/components/DropletMeter';
 import { TagList } from '@/components/TagList';
+import { ViewCount } from '@/components/ViewCount';
 import { allTags } from '@/lib/tags';
-import { countClip, countPlays } from '@/lib/plays';
+import { countClip, countPlays, useViews, type PlayVideo } from '@/lib/plays';
 
 /**
  * A droplet's videos: the karaoke song and the narrated lesson, or the lesson alone when it was made with no song
@@ -14,9 +15,12 @@ import { countClip, countPlays } from '@/lib/plays';
  * of room).
  * H.264 with +faststart, so a plain <video> starts playing before the file has
  * downloaded; preload="none" keeps a page of them from fetching anything until one is played.
- * How far each play gets is counted, with nothing about who watched (lib/plays.ts).
+ * How far each play gets is counted, with nothing about who watched (lib/plays.ts), and each video's views show
+ * beside its name, as on YouTube or TikTok; none from an API older than them.
  */
-export function DropletPlayers({ dropletId, video, tags, title }: { dropletId: string; video: DropletVideos; tags?: DropletTags; title?: string }) {
+export function DropletPlayers({ dropletId, video, tags, title, views }: {
+  dropletId: string; video: DropletVideos; tags?: DropletTags; title?: string; views?: DropletViews;
+}) {
   const players = [
     { label: 'SONG', kind: 'song' as const, src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)' },
     { label: 'LESSON', kind: 'lesson' as const, src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)' },
@@ -26,25 +30,37 @@ export function DropletPlayers({ dropletId, video, tags, title }: { dropletId: s
     <>
     <div className={`grid gap-3 ${players.length > 1 ? 'sm:grid-cols-2' : ''}`} data-testid="droplet-players">
       {players.map((p) => (
-        <figure key={p.label} className="min-w-0">
-          <figcaption className="text-[10px] uppercase tracking-wider font-bold mb-1" style={{ color: p.color }}>{p.label}</figcaption>
-          <video
-            controls
-            playsInline
-            preload="none"
-            poster={p.poster ?? undefined}
-            src={p.src}
-            {...countPlays(dropletId, p.kind)}
-            aria-label={`${p.label.toLowerCase()} video`}
-            className="w-full rounded-md aspect-video"
-            style={{ background: '#000', border: '1px solid var(--border)' }}
-          />
-        </figure>
+        <Player key={p.label} dropletId={dropletId} {...p} views={views?.[p.kind]} />
       ))}
     </div>
     <TagList tags={allTags(tags)} className="mt-1.5" />
     {video.hookVideoUrl && <HookClip dropletId={dropletId} src={video.hookVideoUrl} title={title} />}
     </>
+  );
+}
+
+function Player({ dropletId, label, kind, src, poster, color, views }: {
+  dropletId: string; label: string; kind: PlayVideo; src: string; poster: string | null; color: string; views?: number;
+}) {
+  const shown = useViews(views ?? 0);
+  return (
+    <figure className="min-w-0" data-testid={`player-${kind}`}>
+      <figcaption className="flex items-baseline justify-between gap-2 mb-1">
+        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color }}>{label}</span>
+        {views !== undefined && <ViewCount views={shown.views} />}
+      </figcaption>
+      <video
+        controls
+        playsInline
+        preload="none"
+        poster={poster ?? undefined}
+        src={src}
+        {...countPlays(dropletId, kind, shown.onStart)}
+        aria-label={`${label.toLowerCase()} video`}
+        className="w-full rounded-md aspect-video"
+        style={{ background: '#000', border: '1px solid var(--border)' }}
+      />
+    </figure>
   );
 }
 
@@ -98,10 +114,10 @@ export function HookClip({ dropletId, src, title }: { dropletId: string; src: st
 }
 
 /** Under a lesson on /learn: the players once READY, else where the render stands. */
-export function LessonVideos({ answerId, video, tags }: { answerId: string; video: Video | null; tags?: DropletTags }) {
+export function LessonVideos({ answerId, video, tags, views }: { answerId: string; video: Video | null; tags?: DropletTags; views?: DropletViews }) {
   if (!video) return null;
   if (video.status === 'READY') {
-    return <div className="mt-3"><DropletPlayers dropletId={answerId} video={video} tags={tags} /></div>;
+    return <div className="mt-3"><DropletPlayers dropletId={answerId} video={video} tags={tags} views={views} /></div>;
   }
   if (video.status === 'RENDERING') {
     return (

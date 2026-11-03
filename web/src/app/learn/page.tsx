@@ -385,7 +385,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                   {answer.model && <span className="text-[10px] ml-auto truncate" style={{ color: 'var(--text-muted)' }}>{answer.model}</span>}
                 </div>
                 {/* The videos first: the droplet is them, and the text is what they teach, to read after. */}
-                <LessonVideos answerId={answer.id} video={answer.video} tags={answer.tags} />
+                <LessonVideos answerId={answer.id} video={answer.video} tags={answer.tags} views={answer.views} />
                 <div className={`md text-sm ${answer.video ? 'mt-3' : ''}`} style={{ color: 'var(--text-primary)' }}>
                   <Markdown>{answer.content}</Markdown>
                 </div>

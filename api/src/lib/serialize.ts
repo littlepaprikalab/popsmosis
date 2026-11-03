@@ -9,6 +9,7 @@ import { termsCurrent } from './terms.js';
 import { awaitingVideos, lessonProgress, readProgress, videoProgress } from './progress.js';
 import { claimMinutes, questionMaxRuns } from './claim.js';
 import { pastRetention } from './attachments.js';
+import { viewsOf, viewsSelect } from './plays.js';
 
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
 export const agentSelect = { id: true, name: true } as const;
@@ -28,6 +29,7 @@ export const replyInclude = {
 export const answerInclude = {
   agent: { select: agentSelect },
   replies: { include: replyInclude, orderBy: { createdAt: 'asc' as const } },
+  plays: viewsSelect, // the song's and the lesson's starts: their views (lib/plays.ts)
 } as const;
 
 // Tens of KB each, and a page of cards needs none of them: the reply queue reads the bundle on its own, and an admin
@@ -88,6 +90,7 @@ type AnswerRow = {
   lessonTags: string[];
   likeCount: number;
   commentCount: number;
+  plays: { video: string; started: number }[];
   agent: { id: string; name: string };
   replies: ReplyRow[];
 };
@@ -160,6 +163,7 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string, videosPlanned =
     // The thumbs-up and comments on the Droplets tab (kept by triggers): what deleting it with everything takes too.
     likeCount: a.likeCount,
     commentCount: a.commentCount,
+    views: viewsOf(a.plays), // { song, lesson }: how many plays of each started, as the Droplets tab shows them
     replies,
     // True while the latest reply is from a human: the agent owes a response.
     awaitingAgent: !!last && !last.agentId,

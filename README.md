@@ -365,7 +365,7 @@ Errors are always `{ "error": { "code", "message" } }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY, that no admin hid and none is still to review, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, madeWith, likeCount, commentCount, liked, createdAt, comments }`, where `madeWith` is the models that made it, by maker ([Made with](#made-with)), and `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
+| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY, that no admin hid and none is still to review, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, madeWith, views, likeCount, commentCount, liked, createdAt, comments }`, where `madeWith` is the models that made it, by maker ([Made with](#made-with)), `views` is `{ song, lesson }`, how many plays of each started ([Views](#views)), and `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
 | GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
 | GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
 | GET | `/api/announcement` | the message under the nav ([Announcement](#announcement)): `{ announcement: { message, tone: info\|warning, updatedAt } }`, or `{ announcement: null }` when none is up. The same for everyone, from memory; outside the 60 a minute |
@@ -434,8 +434,9 @@ A lesson's `answer` also carries `video` (`null` for a text-only droplet): its s
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
 `endToEnd`, how long it took from the request ([End to end](#end-to-end)); `awaitingVideos`, true while the page holds the text back for the videos (below);
 `hidden`, true when an admin took it off the Droplets tab; `awaitingReview`, true while it waits for an admin to
-approve it; and `likeCount` and `commentCount`, its thumbs-up and comments on the tab, which the delete dialog names
-since deleting the topic with everything takes them too. The question carries `progress` while its droplet is being
+approve it; `views`, `{ song, lesson }`, as the tab shows them ([Views](#views)); and `likeCount` and `commentCount`,
+its thumbs-up and comments on the tab, which the delete dialog names since deleting the topic with everything takes
+them too. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
 the question routes; the reply queue's `context` is the compact part a follow-up needs.
@@ -789,6 +790,19 @@ feed and the hook tile's Share and Download:
   with enough plays (`?min=`, the page's "At least").
 - **Across a deploy.** A web app that meets an API with no counts (a 404) stops sending them
   until the page is loaded again; a 429 or a failure stops only that play.
+
+#### Views
+
+Each video's `started` count is also public, as its **views**, shown the way YouTube and TikTok
+show them: "1.2K views" beside the song and the lesson on a droplet's page and on `/learn`, and
+"1.2K views · 3 days ago" under a card on the tab, for the video the card plays. The droplet
+routes and a question's `answer` carry `views: { song, lesson }` (0 for a video with no plays),
+read from `droplet_plays` in the same request (`api/src/lib/plays.ts`, `viewsOf`). Only the
+starts: how far the plays got stays on `/admin/plays`. The hook clip's starts are not a view of
+either, as it is a cut of the song. A count is what the bullets above say a start is, so a view
+is a page view's play, never an admin's. When the viewer's own start is counted, the number on
+the page goes up by one at once (`useViews` in `web/src/lib/plays.ts`), and a later read of the
+count replaces it rather than adding to it.
 
 `/admin/plays` opens with **where plays drop off**: one line each for the song, the lesson and
 the hook clip, the share of all their plays still going at the start, 25%, 50%, 75% and the end,

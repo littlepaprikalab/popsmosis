@@ -295,6 +295,34 @@ d('play counts', () => {
     });
   });
 
+  describe('the views everyone sees', () => {
+    const get = (url: string, cookie?: string) =>
+      app.inject({ method: 'GET', url, headers: { 'x-proxy-token': SECRET, ...(cookie && { cookie }) } });
+
+    it("shows each video's starts as its views, on the tab, the droplet and the learner's own page, and nothing more", async () => {
+      const watched = await droplet();
+      const unwatched = await droplet('Osmosis');
+      await play(watched, 'song', 4, fresh());
+      await play(watched, 'song', 1, fresh());
+      await play(watched, 'lesson', 0, fresh());
+      await play(watched, 'hook', 4, fresh()); // a cut of the song, in the Clips feed: not a view of either
+      const views = { song: 2, lesson: 1 };
+
+      const cards = (await get('/api/droplets')).json().data as { id: string; views: unknown }[];
+      expect(cards.find((c) => c.id === watched)?.views).toEqual(views);
+      expect(cards.find((c) => c.id === unwatched)?.views).toEqual({ song: 0, lesson: 0 });
+      expect((await get(`/api/droplets/${watched}`)).json().views).toEqual(views);
+      expect((await get(`/api/droplets/${unwatched}`)).json().views).toEqual({ song: 0, lesson: 0 });
+      // How far the plays got stays the owner's: no other count goes out with a droplet.
+      expect(JSON.stringify((await get(`/api/droplets/${watched}`)).json())).not.toMatch(/reached|finished|shared|downloaded|started/);
+
+      const { questionId } = await prisma.answer.findUniqueOrThrow({ where: { id: watched }, select: { questionId: true } });
+      expect((await get(`/api/questions/${questionId}`, learner.cookie)).json().answer.views).toEqual(views);
+      expect((await get('/api/questions', learner.cookie)).json().data.map((q: { answer: { views: unknown } }) => q.answer.views))
+        .toEqual(expect.arrayContaining([views, { song: 0, lesson: 0 }]));
+    });
+  });
+
   describe("the owner's ranking", () => {
     it('is for admins only', async () => {
       expect((await app.inject({ method: 'GET', url: '/api/plays', headers: { 'x-proxy-token': SECRET } })).statusCode).toBe(401);

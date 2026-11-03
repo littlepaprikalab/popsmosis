@@ -59,7 +59,8 @@ export default function PrivacyPage() {
               <li>When the lesson was made</li>
               <li>Comments you post on a droplet, with your first name and last initial (&ldquo;Grace H.&rdquo;) and
                 when you posted them</li>
-              <li>How many likes and comments a droplet has</li>
+              <li>How many likes and comments a droplet has, and how many times each of its videos has been played
+                (its views)</li>
             </ul>
           </div>
           <div>
@@ -109,7 +110,8 @@ export default function PrivacyPage() {
             nothing else. They are counted without your cookie, your account, your IP address or any identifier of your
             device or browser, and with no time, so they can&rsquo;t say who watched or when. To stop anyone inflating
             them, your IP address is held in memory for up to an hour, only in a scrambled form, and is never stored
-            with them.</dd>
+            with them. How many times the song and the lesson were started is shown beside each video as its views; how
+            far they were watched is not shown.</dd>
           <dt>Technical information</dt>
           <dd>A cookie that keeps you signed in (<a href="#cookies">section 10</a>). Our hosting provider&rsquo;s server
             logs, which record IP addresses, the addresses requested, times and errors. IP addresses are also held

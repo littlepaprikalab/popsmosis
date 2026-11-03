@@ -40,7 +40,7 @@ async function fetchExample(): Promise<DropletExample | null> {
   // Only what the card draws: the comments and likes that came with it differ by viewer, and are not shown.
   return {
     id: d.id, title: d.title, course: d.course, topic: d.topic, excerpt: d.excerpt, content: d.content,
-    video: d.video, tags: d.tags, createdAt: d.createdAt,
+    video: d.video, tags: d.tags, views: d.views, createdAt: d.createdAt,
   };
 }
 

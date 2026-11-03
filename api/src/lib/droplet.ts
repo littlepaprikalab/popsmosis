@@ -11,6 +11,7 @@
 import { serializeTags } from './tags.js';
 import { billModels, madeWithOf } from './breakdown.js';
 import { knob } from './knobs.js';
+import { viewsOf, viewsSelect } from './plays.js';
 
 // Tens of KB in practice; the cap keeps one answer from filling a list response or a row.
 export const DROPLET_JSON_MAX_BYTES = 256 * 1024;
@@ -142,6 +143,7 @@ export const publicDropletSelect = {
   lessonTags: true,
   lessonBreakdown: true,
   videoBreakdown: true,
+  plays: viewsSelect, // the song's and the lesson's starts, shown as their views (lib/plays.ts)
 } as const;
 
 /** What the Droplets tab may list: the videos are READY, no admin hid it, and none is still to look at it. */
@@ -162,6 +164,7 @@ type PublicDropletRow = {
   commentCount: number;
   songTags: string[];
   lessonTags: string[];
+  plays: unknown; // the song's and the lesson's rows of play counts, { video, started } (lib/plays.ts, viewsOf)
   // The models each bill names (billModels), or null for no bill: the list has Postgres read them out of the bills.
   lessonModels: unknown;
   videoModels: unknown;
@@ -214,7 +217,8 @@ function publicVideo(a: PublicDropletRow) {
 
 /**
  * A card on the list: the title, a few lines of the lesson, the videos and their
- * hashtags, the models that made them, and how many people liked it and commented.
+ * hashtags, the models that made them, how many times each video was played, and how
+ * many people liked it and commented.
  * `liked` is the viewer's own thumbs-up: false for anyone not signed in.
  */
 export function serializeDropletCard(a: PublicDropletRow, liked = false) {
@@ -225,6 +229,7 @@ export function serializeDropletCard(a: PublicDropletRow, liked = false) {
     video: publicVideo(a),
     tags: serializeTags(a), // each video's hashtags; the tab searches by them (lib/tags.ts)
     madeWith: madeWithOf(a.lessonModels, a.videoModels), // the models that made it, by maker; null: no bill to say
+    views: viewsOf(a.plays), // { song, lesson }: the plays of each that started (lib/plays.ts)
     likeCount: a.likeCount,
     commentCount: a.commentCount,
     liked,

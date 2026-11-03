@@ -91,6 +91,7 @@ describe('the public droplet', () => {
     },
     songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null,
     likeCount: 3, commentCount: 1,
+    plays: [{ video: 'SONG', started: 12 }],
     songTags: ['atpsynthase', 'apbio', 'kpop'], lessonTags: ['atpsynthase', 'apbio'],
     lessonModels: ['claude-opus-5-5', 'claude-opus-5-5'], videoModels: ['gemini-3.1-flash-image', 'eleven_multilingual_v2'],
   };
@@ -109,7 +110,8 @@ describe('the public droplet', () => {
     const card = serializeDropletCard(row);
     expect(card.excerpt).toBe('ATP synthase A rotary motor in the inner membrane. A B 1 2');
     expect(card.video).toEqual({ songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null });
-    expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'id', 'likeCount', 'liked', 'madeWith', 'tags', 'title', 'topic', 'video']);
+    expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'id', 'likeCount', 'liked', 'madeWith', 'tags', 'title', 'topic', 'video', 'views']);
+    expect(card.views).toEqual({ song: 12, lesson: 0 }); // a video with no plays has no row
     expect(card.tags).toEqual({ song: ['atpsynthase', 'apbio', 'kpop'], lesson: ['atpsynthase', 'apbio'] });
     expect(card).toMatchObject({ likeCount: 3, commentCount: 1, liked: false }); // nobody signed in
     expect(serializeDropletCard(row, true).liked).toBe(true);

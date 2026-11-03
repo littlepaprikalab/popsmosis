@@ -12,6 +12,7 @@ import { PUBLIC_PER_CLIENT_PER_MINUTE, PUBLIC_PER_INSTANCE_PER_MINUTE, WindowCou
 import { requireUser, sessionSubject } from '../middleware/auth.js';
 import { tagQueryOf } from '../lib/tags.js';
 import { BILL_MODELS_PATH } from '../lib/breakdown.js';
+import { viewsSql } from '../lib/plays.js';
 
 // Likes are one row each way and cost little, but each is a write on the droplet's row, so one
 // person flipping a thumb as fast as they can click is held to a pace no real use reaches.
@@ -84,12 +85,12 @@ export default async function dropletRoutes(app: FastifyInstance) {
       : Prisma.sql`false`;
     // A card needs two fields of the bundle, the start of the lesson and the models the bills
     // name; the bundle can be hundreds of KB, so Postgres hands back only those (the same fields
-    // publicDropletSelect names). Walks the (videoStatus, createdAt, id) index.
+    // publicDropletSelect names), and its videos' views. Walks the (videoStatus, createdAt, id) index.
     const rows = await prisma.$queryRaw<(Parameters<typeof serializeDropletCard>[0] & { liked: boolean })[]>`
       SELECT id, left(content, ${EXCERPT_SOURCE_LENGTH}) AS content, "createdAt",
              jsonb_build_object('course', bundle->'course', 'topic', bundle->'topic') AS bundle,
              "songVideoUrl", "lessonVideoUrl", "songPosterUrl", "lessonPosterUrl", "hookVideoUrl", "hookPosterUrl",
-             "likeCount", "commentCount", "songTags", "lessonTags", ${liked} AS liked,
+             "likeCount", "commentCount", "songTags", "lessonTags", ${liked} AS liked, ${viewsSql} AS plays,
              jsonb_path_query_array("lessonBreakdown", ${BILL_MODELS_PATH}::jsonpath) AS "lessonModels",
              jsonb_path_query_array("videoBreakdown", ${BILL_MODELS_PATH}::jsonpath) AS "videoModels"
       FROM answers
