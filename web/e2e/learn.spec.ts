@@ -544,6 +544,82 @@ test.describe('signed in', () => {
     expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asAda })).status()).toBe(204);
   });
 
+  test('the note after Submit stays until it is closed, and the next Submit\'s replaces it', async ({ page, context, request }) => {
+    // The first Submit is refused, as at the daily limit; the two after it go through.
+    const refusal = 'Popsmosis has made all the droplets it can for today. Please try again tomorrow.';
+    let refuse = true;
+    await page.route('**/api/questions', (route) => {
+      if (route.request().method() !== 'POST' || !refuse) return route.continue();
+      refuse = false;
+      return route.fulfill({ status: 429, json: { error: { code: 'RATE_LIMITED', message: refusal, retryable: false } } });
+    });
+    await page.clock.install();
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    const notes = page.getByTestId('toasts');
+    const sentTexts = [`E2E ${Date.now()}: a note to read at leisure`, `E2E ${Date.now()}: and another`];
+    await box.fill(sentTexts[0]);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    await expect(notes).toContainText(refusal);
+
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    await expect(notes).toContainText('Topic sent. The teacher picks it up on its next pass');
+    await expect(notes).not.toContainText(refusal);
+    // Every other note is gone in 3 or 4 seconds.
+    await page.clock.fastForward(60_000);
+    await expect(notes).toContainText('Topic sent.');
+
+    await box.fill(sentTexts[1]);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    await expect(page.getByTestId('question-card').filter({ hasText: sentTexts[1] })).toHaveCount(1);
+    await expect(notes.getByRole('button', { name: 'Dismiss' })).toHaveCount(1);
+    await notes.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(notes).toHaveCount(0);
+
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=10'), { headers: asAda })).json();
+    for (const text of sentTexts) {
+      const sent = own.data.find((q: { content: string }) => q.content === text);
+      expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asAda })).status()).toBe(204);
+    }
+  });
+
+  test('a refused Submit\'s note stays too, under the nav; another page, or signing out, closes it', async ({ page, context }) => {
+    // The API's refusal at the daily limit, without spending the learner's topics.
+    const refusal = 'Popsmosis has made all the droplets it can for today. Please try again tomorrow.';
+    await page.route('**/api/questions', (route) => (route.request().method() === 'POST'
+      ? route.fulfill({ status: 429, json: { error: { code: 'RATE_LIMITED', message: refusal, retryable: false } } })
+      : route.continue()));
+    await page.clock.install();
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    const note = page.getByTestId('toasts').filter({ hasText: refusal });
+    const refuse = async () => {
+      await box.fill('Osmosis, refused');
+      await page.getByRole('button', { name: 'SUBMIT' }).click();
+      await expect(note).toBeVisible();
+    };
+    await refuse();
+    await page.clock.fastForward(60_000);
+    await expect(note).toBeVisible();
+    // It sits under the nav, never over it.
+    const nav = page.locator('nav').first();
+    const navBox = (await nav.boundingBox())!;
+    expect((await note.boundingBox())!.y).toBeGreaterThanOrEqual(navBox.y + navBox.height);
+
+    await nav.getByRole('link', { name: 'DROPLETS', exact: true }).click();
+    await expect(page).toHaveURL(/\/droplets/);
+    await expect(note).toHaveCount(0);
+
+    await page.goto('/learn');
+    await refuse();
+    await page.getByRole('button', { name: 'LOGOUT' }).click();
+    await expect(page.getByRole('link', { name: 'SIGN IN', exact: true })).toBeVisible();
+    await expect(note).toHaveCount(0);
+  });
+
   test('a lesson shows pictures from this site only, and its links say nobody vouched for them', async ({ page, context, request }) => {
     const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
     const text = `E2E ${Date.now()}: a lesson with links and pictures`;

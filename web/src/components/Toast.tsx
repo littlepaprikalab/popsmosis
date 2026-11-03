@@ -1,7 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { ExclamationTriangleIcon, CheckCircleIcon, InformationCircleIcon } from '@heroicons/react/20/solid';
+import { useAuth } from '@/lib/auth';
 
 type ToastType = 'error' | 'success' | 'info';
 
@@ -10,12 +12,16 @@ interface Toast {
   message: string;
   type: ToastType;
   persistent?: boolean;
+  key?: string;
 }
 
 interface ToastOptions {
+  /** Stays up, with a close button, until the user closes it: for a message too long to read in a few seconds. */
   persistent?: boolean;
   /** Override the per-type auto-dismiss duration (ms). Ignored when persistent. */
   duration?: number;
+  /** A toast with the same key replaces the one showing: the latest word on one thing, not a pile of them. */
+  key?: string;
 }
 
 interface ToastContextValue {
@@ -45,6 +51,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return () => { timers.forEach(t => clearTimeout(t)); };
   }, []);
 
+  // A toast that stays is about the page it was shown on, for whoever was signed in: going to another page, or
+  // signing out, closes it. One that times out is left be, as some are shown just before a page change.
+  const pathname = usePathname();
+  const userId = useAuth().user?.id ?? null;
+  useEffect(() => {
+    setToasts((prev: Toast[]) => (prev.some(t => t.persistent) ? prev.filter(t => !t.persistent) : prev));
+  }, [pathname, userId]);
+
   const dismiss = useCallback((id: number) => {
     const timer = timersRef.current.get(id);
     if (timer) { clearTimeout(timer); timersRef.current.delete(id); }
@@ -54,8 +68,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback((message: string, type: ToastType = 'info', options?: ToastOptions) => {
     const id = nextId++;
     const persistent = options?.persistent ?? false;
+    const key = options?.key;
     setToasts((prev: Toast[]) => {
-      const next = [...prev, { id, message, type, persistent }];
+      // The one it replaces goes; its timer, if any, then finds nothing to remove.
+      const kept = key ? prev.filter(t => t.key !== key) : prev;
+      const next = [...kept, { id, message, type, persistent, key }];
       return next.length > MAX_TOASTS ? next.slice(next.length - MAX_TOASTS) : next;
     });
     if (!persistent) {
@@ -72,7 +89,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastCtx.Provider value={{ showToast }}>
       {children}
       {toasts.length > 0 && (
-        <div role="status" aria-live="polite" style={{ position: 'fixed', top: '1.5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 10001, display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', maxWidth: 'calc(100vw - 2rem)' }}>
+        // Just under the nav (52px tall, 57px under 1024px wide) and beneath it (z-50), so a toast that stays never
+        // covers the nav or its phone menu. Modal dialogs open in the top layer, over it either way. Across the page,
+        // so a phone gives a toast its whole width (centred from the middle, it had half); the strip lets clicks
+        // through to the page, and only the toasts themselves take them.
+        <div role="status" aria-live="polite" data-testid="toasts" style={{ position: 'fixed', top: '4.25rem', left: '1rem', right: '1rem', zIndex: 40, display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', pointerEvents: 'none' }}>
           {toasts.map(t => {
             const config = TOAST_CONFIG[t.type];
             const Icon = config.icon;
@@ -93,6 +114,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   alignItems: 'center',
                   gap: '10px',
                   animation: 'toast-in 0.2s ease-out',
+                  maxWidth: '40rem',
+                  pointerEvents: 'auto',
                 }}
               >
                 <Icon style={{ width: '18px', height: '18px', flexShrink: 0, color: config.color }} />
@@ -103,8 +126,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     aria-label="Dismiss"
                     style={{
                       background: 'none', border: 'none', color: 'var(--text-muted)',
-                      cursor: 'pointer', padding: '0 0 0 8px', fontSize: '18px', lineHeight: 1,
-                      flexShrink: 0,
+                      cursor: 'pointer', padding: 0, fontSize: '20px', lineHeight: 1,
+                      flexShrink: 0, width: '32px', height: '32px', margin: '-6px -12px -6px 0',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
                     &times;
