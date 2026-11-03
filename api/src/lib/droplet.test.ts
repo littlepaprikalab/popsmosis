@@ -91,7 +91,7 @@ describe('the public droplet', () => {
     },
     songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null,
     likeCount: 3, commentCount: 1,
-    songTags: ['atpsynthase', 'apbio', 'studysong'], lessonTags: ['atpsynthase', 'apbio'],
+    songTags: ['atpsynthase', 'apbio', 'kpop'], lessonTags: ['atpsynthase', 'apbio'],
     lessonModels: ['claude-opus-5-5', 'claude-opus-5-5'], videoModels: ['gemini-3.1-flash-image', 'eleven_multilingual_v2'],
   };
   const bills = {
@@ -110,7 +110,7 @@ describe('the public droplet', () => {
     expect(card.excerpt).toBe('ATP synthase A rotary motor in the inner membrane. A B 1 2');
     expect(card.video).toEqual({ songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null });
     expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'id', 'likeCount', 'liked', 'madeWith', 'tags', 'title', 'topic', 'video']);
-    expect(card.tags).toEqual({ song: ['atpsynthase', 'apbio', 'studysong'], lesson: ['atpsynthase', 'apbio'] });
+    expect(card.tags).toEqual({ song: ['atpsynthase', 'apbio', 'kpop'], lesson: ['atpsynthase', 'apbio'] });
     expect(card).toMatchObject({ likeCount: 3, commentCount: 1, liked: false }); // nobody signed in
     expect(serializeDropletCard(row, true).liked).toBe(true);
     expect(excerptOf('word '.repeat(100), 20)).toBe('word word word word…');

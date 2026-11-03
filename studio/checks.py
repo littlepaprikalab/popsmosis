@@ -21,7 +21,7 @@ from pathlib import Path
 
 from studio.jobs import write
 from studio.schemas import (BPM_TAG, LESSON_MAX_CHARS, PART_TAG, SONG_SCENES_MAX, Bundle, CheckReport, Fact, Problem,
-                            lesson_scenes_max, with_study_tags)
+                            lesson_scenes_max)
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
 SYMBOL_LETTERS = 3  # what a particle can carry written on it ("Na⁺", "Ca²⁺", "NAD⁺"): anything longer moves as an arrow
@@ -819,9 +819,9 @@ def style_problems(bundle: Bundle, asked: str) -> list[Problem]:
 
 def repair_once(bundle: Bundle, study_guide: str = "") -> tuple[Bundle, list[Problem]]:
     """What the writer is no longer asked to get right, set once by the bundle step before its last code checks: every
-    chorus sung as the first, a head count said as a common answer, only quotes the study guide holds, and the tags
-    every video carries (schemas.with_study_tags). Not part of review(), which runs again after the fact-check: these
-    change words, and a word changed after the check would go out unchecked. The same bundle when nothing changes."""
+    chorus sung as the first, a head count said as a common answer, and only quotes the study guide holds. Not part of
+    review(), which runs again after the fact-check: these change words, and a word changed after the check would go
+    out unchecked. The same bundle when nothing changes."""
     data = bundle.model_dump()
     problems = _same_choruses(data)
     for line in data["narration"]:
@@ -836,7 +836,6 @@ def repair_once(bundle: Bundle, study_guide: str = "") -> tuple[Bundle, list[Pro
         data["lesson_markdown"] = lesson
     facts, unquoted = held_to_guide(bundle.facts, study_guide)
     data["facts"] = [fact.model_dump() for fact in facts]
-    data["tags"] = with_study_tags(bundle.tags, bundle.audience, bundle.sung).model_dump()
     settled = Bundle.model_validate(data)
     return (bundle if settled == bundle else settled), problems + unquoted
 

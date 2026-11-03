@@ -125,11 +125,11 @@ test.describe('the Droplets tab, signed out', () => {
 
   test('tags the droplet, and finds droplets by a tag', async ({ page }) => {
     await page.goto(`/droplets/${S.droplet}`);
-    // Both videos' tags, once each, under the pair: the song's #kpop, the lesson's #explained, and the #biology they share.
+    // Both videos' tags, once each, under the pair: the song's #kpop, the lesson's #chemiosmosis, and the #biology they share.
     const tags = page.getByRole('list', { name: 'Tags' });
     await expect(tags).toHaveCount(1);
     await expect(tags.getByRole('link', { name: '#kpop', exact: true })).toBeVisible();
-    await expect(tags.getByRole('link', { name: '#explained', exact: true })).toBeVisible();
+    await expect(tags.getByRole('link', { name: '#chemiosmosis', exact: true })).toBeVisible();
     await expect(tags.getByRole('link', { name: '#biology', exact: true })).toHaveCount(1);
 
     // A tag opens the tab searched by it.
@@ -429,9 +429,9 @@ test.describe('videos on /learn', () => {
     const card = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first();
     const tags = card.getByRole('list', { name: 'Tags' });
     await expect(tags.getByRole('link', { name: '#kpop', exact: true })).toBeVisible();
-    await expect(tags.getByRole('link', { name: '#explained', exact: true })).toBeVisible();
-    await tags.getByRole('link', { name: '#explained', exact: true }).click();
-    await expect(page).toHaveURL(/\/droplets\?tag=explained$/);
+    await expect(tags.getByRole('link', { name: '#chemiosmosis', exact: true })).toBeVisible();
+    await tags.getByRole('link', { name: '#chemiosmosis', exact: true }).click();
+    await expect(page).toHaveURL(/\/droplets\?tag=chemiosmosis$/);
     await expect(page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' })).toHaveCount(1);
   });
 
@@ -478,9 +478,9 @@ test.describe('videos on /learn', () => {
     await expect(table.getByTestId('breakdown-clock')).toHaveText(/From the request, by the clock/i);
     await expect(table.getByTestId('breakdown-stretch')).toHaveText([
       /^Waiting for the studio to start\s*2\.9 min$/,
-      /^Writing the lesson \(posted at 7\.5 min\)\s*4\.6 min$/,
+      /^Making the lesson \(steps 01–03, posted at 7\.5 min\)\s*4\.6 min$/,
       /^Waiting between the lesson and the videos\s*1\.4 min$/,
-      /^Making the videos\s*6\.3 min$/,
+      /^Making the videos \(steps 04–10\)\s*6\.3 min$/,
     ]);
     await expect(table.getByTestId('breakdown-milestone')).toHaveText([/^End to end\s*15\.2 min$/]);
     await expect(bill.getByText(/^(End to end|Request to lesson):/)).toHaveCount(0); // the stretches say it: no note
@@ -494,12 +494,13 @@ test.describe('videos on /learn', () => {
   test('the time end to end reads right whatever the API sends: no videos bill, a long wait, no videos, failed ones, older APIs', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     // The ATP droplet as the API sends it, then changed as each case needs before the page reads it.
-    type Card = { content: string; answer: Record<string, unknown> & { breakdown: { steps: { part: string }[]; partSeconds?: unknown } } | null };
-    let change: (answer: NonNullable<Card['answer']>) => void = () => {};
+    type Card = { content: string; progress?: unknown;
+      answer: Record<string, unknown> & { breakdown: { steps: { step: string; part: string }[]; partSeconds?: unknown } } | null };
+    let change: (answer: NonNullable<Card['answer']>, card: Card) => void = () => {};
     await page.route('**/api/questions?*', async (route) => {
       const response = await route.fetch();
       const body = await response.json() as { data: Card[] };
-      for (const q of body.data) if (q.content.includes('how do cells actually make ATP') && q.answer) change(q.answer);
+      for (const q of body.data) if (q.content.includes('how do cells actually make ATP') && q.answer) change(q.answer, q);
       await route.fulfill({ response, json: body });
     });
     const lessonOnly = (b: NonNullable<Card['answer']>['breakdown']) => ({
@@ -524,15 +525,15 @@ test.describe('videos on /learn', () => {
     let bill = await billOf();
     await expect(bill.getByTestId('breakdown-total')).toHaveText('15.2 min end to end · 4.6 min of work · $0.71');
     await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/,
-      /^Writing the lesson \(posted at 7\.5 min\)\s*4\.6 min$/, /^Lesson to videos\s*7\.7 min$/, /^End to end\s*15\.2 min$/]);
+      /^Making the lesson \(steps 01–03, posted at 7\.5 min\)\s*4\.6 min$/, /^Lesson to videos\s*7\.7 min$/, /^End to end\s*15\.2 min$/]);
     await expect(bill.getByText(/Waiting between|Making the videos/)).toHaveCount(0);
 
     // A night in the queue reads in hours, a weekend in days; on a phone too.
     change = (a) => { a.endToEnd = { lesson: 6 * 3600, videos: 6.5 * 3600 }; };
     bill = await billOf();
     await expect(bill.getByTestId('breakdown-total')).toHaveText('6.5 h end to end · 10.9 min of work · $0.80 + 3,214 cr');
-    const night = [/^Waiting for the studio to start\s*5\.9 h$/, /^Writing the lesson \(posted at 6\.0 h\)\s*4\.6 min$/,
-      /^Waiting between the lesson and the videos\s*23\.7 min$/, /^Making the videos\s*6\.3 min$/];
+    const night = [/^Waiting for the studio to start\s*5\.9 h$/, /^Making the lesson \(steps 01–03, posted at 6\.0 h\)\s*4\.6 min$/,
+      /^Waiting between the lesson and the videos\s*23\.7 min$/, /^Making the videos \(steps 04–10\)\s*6\.3 min$/];
     await expect(await opened(bill)).toHaveText([...night, /^End to end\s*6\.5 h$/]);
     await page.setViewportSize({ width: 390, height: 900 });
     await expect(bill.getByTestId('breakdown-stretch-phone')).toHaveText(night);
@@ -545,7 +546,7 @@ test.describe('videos on /learn', () => {
     change = (a) => { a.video = null; a.breakdown = lessonOnly(a.breakdown); a.endToEnd = { lesson: 450, videos: null }; };
     bill = await billOf();
     await expect(bill.getByTestId('breakdown-total')).toHaveText('7.5 min end to end · 4.6 min of work · $0.71');
-    await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Writing the lesson\s*4\.6 min$/,
+    await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Making the lesson \(steps 01–03\)\s*4\.6 min$/,
       /^End to end\s*7\.5 min$/]);
 
     // Videos given up: never done end to end, so only the lesson's time from the request.
@@ -555,8 +556,31 @@ test.describe('videos on /learn', () => {
     };
     bill = await billOf();
     await expect(bill.getByTestId('breakdown-total')).toHaveText('10.9 min · $0.80 + 3,214 cr');
-    await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Writing the lesson\s*4\.6 min$/,
+    await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Making the lesson \(steps 01–03\)\s*4\.6 min$/,
       /^Request to lesson\s*7\.5 min$/]);
+
+    // Videos being made: the bill so far, with the render running and the upload still to come. The lesson's work
+    // names its steps by their numbers among those rows, on a phone too.
+    change = (a, card) => {
+      a.video = { ...(a.video as object), status: 'RENDERING' };
+      a.endToEnd = { lesson: 450, videos: null };
+      card.progress = {
+        running: [{ step: 'render', startedAt: new Date().toISOString(), seconds: 30 }], failed: [], videos: true, seconds: 600,
+        breakdown: { ...a.breakdown, steps: a.breakdown.steps.filter((s) => !['render', 'upload'].includes(s.step)) },
+      };
+    };
+    bill = await billOf();
+    const making = [/^Waiting for the studio to start\s*2\.9 min$/, /^Making the lesson \(steps 01–03\)\s*4\.6 min$/];
+    await expect(await opened(bill)).toHaveText([...making, /^Request to lesson\s*7\.5 min$/]);
+    const rows = bill.locator('table').getByTestId('breakdown-step');
+    await expect(rows).toHaveCount(10);
+    await expect(rows.nth(2)).toContainText(/03\s*Fact-check/);
+    await expect(rows.nth(3)).toContainText(/04\s*Draw the diagrams/);
+    await expect(rows.nth(8)).toHaveAttribute('data-status', 'running');
+    await expect(rows.nth(9)).toHaveAttribute('data-status', 'waiting');
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expect(bill.getByTestId('breakdown-stretch-phone')).toHaveText(making);
+    await page.setViewportSize({ width: 1280, height: 720 });
 
     // An API older than the parts' times: no waits it cannot tell from the work, but still pieces that add up.
     change = (a) => { delete a.breakdown.partSeconds; };

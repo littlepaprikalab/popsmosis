@@ -270,8 +270,11 @@ def tag_of(value: str) -> str:
     return unicodedata.normalize("NFKC", kept)
 
 
-# Tags that help no one find the video: they name no subject, only a hope of being shown.
-NO_TAGS = {"fyp", "fypシ", "foryou", "foryoupage", "viral", "trending"}
+# Tags that help no one find the video: they name no subject, only a hope of being shown, or only the video's format.
+# The format ones were added to every video until Nov 3, when the owner judged them low quality: a search for
+# "#studytok" finds every droplet, so it finds none in particular.
+NO_TAGS = {"fyp", "fypシ", "foryou", "foryoupage", "viral", "trending",
+           "studysong", "studytok", "explained", "examprep", "edutok", "learnontiktok", "studywithme"}
 
 
 def clean_tags(values: list[str]) -> list[str]:
@@ -285,25 +288,6 @@ def clean_tags(values: list[str]) -> list[str]:
         if tag and len(tag) <= TAG_MAX_CHARS and tag not in tags and tag not in NO_TAGS:
             tags.append(tag)
     return tags[:TAGS_PER_VIDEO]
-
-
-# What each video is tagged with besides its subject, after the writer's own tags: asked to write them, the writer
-# spent 3 or 4 of its 10 on these same ones in every bundle (Nov 1). "#examprep" is not for a younger audience
-# ("about age 10", "6th grade"), who has no exam ahead.
-SONG_TAGS = ("studysong", "studytok")
-LESSON_TAGS = ("explained", "examprep", "studytok")
-YOUNGER = re.compile(r"\bages?\s+(?:[1-9]|1[0-3])\b|\b[1-8](?:st|nd|rd|th)\s+grade\b|\bgrade\s+[1-8]\b"
-                     r"|\b(?:middle|elementary|primary)\s+school\b|\b(?:kids?|child|children)\b", re.I)
-
-
-def with_study_tags(tags: Tags, audience: str, sung: bool = True) -> Tags:
-    """The tags with SONG_TAGS and LESSON_TAGS after the writer's own, room kept for them; a video with no song has
-    no song tags."""
-    def joined(own: list[str], more: tuple[str, ...]) -> list[str]:
-        more = [t for t in more if t not in own and not (t == "examprep" and YOUNGER.search(audience))]
-        return clean_tags([*own[:TAGS_PER_VIDEO - len(more)], *more])
-
-    return Tags(song=joined(tags.song, SONG_TAGS) if sung else tags.song, lesson=joined(tags.lesson, LESSON_TAGS))
 
 
 class Tags(Strict):

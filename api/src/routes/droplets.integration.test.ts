@@ -145,14 +145,14 @@ d('the Droplets tab', () => {
     // The studio posts the lesson with its bundle, and the tags come in it, written however the brain wrote them.
     const q = await prisma.question.create({ data: { userId: learnerId, content: 'photosynthesis for my AP Bio exam on Friday' } });
     await app.inject({ method: 'POST', url: `/api/questions/${q.id}/claim`, headers: { authorization: `Bearer ${agentKey}` } });
-    const tags = { song: ['#Photosynthesis', '#APBio', '#K-pop', '#photosynthesis'], lesson: ['#Photosynthesis', '#APBio', '#Explained'] };
+    const tags = { song: ['#Photosynthesis', '#APBio', '#K-pop', '#photosynthesis', '#StudyTok'], lesson: ['#Photosynthesis', '#APBio', '#Explained', '#Thylakoid'] };
     const posted = await app.inject({
       method: 'POST', url: `/api/questions/${q.id}/answer`, headers: { authorization: `Bearer ${agentKey}` },
       payload: { content: 'Light makes ATP.', bundle: { ...BUNDLE, topic: 'the light reactions', tags }, factcheck: FACTCHECK },
     });
     expect(posted.statusCode).toBe(201);
     const id = posted.json().id as string;
-    const cleaned = { song: ['photosynthesis', 'apbio', 'kpop'], lesson: ['photosynthesis', 'apbio', 'explained'] };
+    const cleaned = { song: ['photosynthesis', 'apbio', 'kpop'], lesson: ['photosynthesis', 'apbio', 'thylakoid'] }; // no format tags
     expect(await prisma.answer.findUnique({ where: { id }, select: { songTags: true, lessonTags: true } }))
       .toEqual({ songTags: cleaned.song, lessonTags: cleaned.lesson });
     // The learner sees them on /learn as soon as the lesson is up.
@@ -171,7 +171,8 @@ d('the Droplets tab', () => {
     expect(await ids('/api/droplets')).toEqual([id, another, untagged]);
     expect(await ids(`/api/droplets?tag=${encodeURIComponent('#APBio')}`)).toEqual([id, another]);
     expect(await ids('/api/droplets?tag=kpop')).toEqual([id]); // the song's own
-    expect(await ids('/api/droplets?tag=explained')).toEqual([id]); // the lesson's own
+    expect(await ids('/api/droplets?tag=thylakoid')).toEqual([id]); // the lesson's own
+    expect(await ids('/api/droplets?tag=explained')).toEqual([]); // a format tag, dropped
     expect(await ids('/api/droplets?tag=photo')).toEqual([]); // the whole tag, as a hashtag search is
     expect(await ids(`/api/droplets?tag=${'x'.repeat(300)}`)).toEqual([]);
     expect(await ids('/api/droplets?tag=%23')).toEqual([id, another, untagged]); // "#" names no tag
@@ -237,13 +238,13 @@ d('the Droplets tab', () => {
     });
     const ids = async (url: string) => (await get(url)).json().data.map((x: { id: string }) => x.id);
     // As an older API stored it: the tags in the bundle, none in the columns.
-    const tags = { song: ['#Osmosis', '#PopPunk'], lesson: ['#Osmosis', '#Explained'] };
+    const tags = { song: ['#Osmosis', '#PopPunk'], lesson: ['#Osmosis', '#Tonicity'] };
     const old = await droplet(10, { videoStatus: 'RENDERING', bundle: { ...BUNDLE, tags } });
     expect((await patchVideo(old, { status: 'RENDERING', songVideoUrl: SONG })).statusCode).toBe(200);
     expect(await prisma.answer.findUnique({ where: { id: old }, select: { songTags: true } })).toEqual({ songTags: [] });
     expect((await patchVideo(old, { status: 'READY', lessonVideoUrl: LESSON })).statusCode).toBe(200);
     expect(await prisma.answer.findUnique({ where: { id: old }, select: { songTags: true, lessonTags: true } }))
-      .toEqual({ songTags: ['osmosis', 'poppunk'], lessonTags: ['osmosis', 'explained'] });
+      .toEqual({ songTags: ['osmosis', 'poppunk'], lessonTags: ['osmosis', 'tonicity'] });
     expect(await ids('/api/droplets?tag=poppunk')).toEqual([old]);
 
     // Tags the lesson already has are never written over, and a bundle without any changes nothing.
@@ -266,14 +267,14 @@ d('the Droplets tab', () => {
     });
     const ids = async (url: string) => (await get(url)).json().data.map((x: { id: string }) => x.id);
     // As the lesson's post stored them, before anyone knew no song would follow (STUDIO_VIDEOS=lesson).
-    const posted = { videoStatus: 'RENDERING', songTags: ['studysong', 'poppunk'], lessonTags: ['osmosis', 'explained'] };
+    const posted = { videoStatus: 'RENDERING', songTags: ['diffusion', 'poppunk'], lessonTags: ['osmosis', 'tonicity'] };
     const lessonOnly = await droplet(10, posted);
     expect((await patchVideo(lessonOnly, { status: 'READY', lessonVideoUrl: LESSON })).statusCode).toBe(200);
     expect(await prisma.answer.findUnique({ where: { id: lessonOnly }, select: { songTags: true, lessonTags: true } }))
-      .toEqual({ songTags: [], lessonTags: ['osmosis', 'explained'] });
-    expect((await get(`/api/droplets/${lessonOnly}`)).json().tags).toEqual({ song: [], lesson: ['osmosis', 'explained'] });
+      .toEqual({ songTags: [], lessonTags: ['osmosis', 'tonicity'] });
+    expect((await get(`/api/droplets/${lessonOnly}`)).json().tags).toEqual({ song: [], lesson: ['osmosis', 'tonicity'] });
     expect(await ids('/api/droplets?tag=poppunk')).toEqual([]);
-    expect(await ids('/api/droplets?tag=explained')).toEqual([lessonOnly]);
+    expect(await ids('/api/droplets?tag=tonicity')).toEqual([lessonOnly]);
 
     // With its song, sent now or before, a droplet keeps them.
     const sung = await droplet(20, posted);

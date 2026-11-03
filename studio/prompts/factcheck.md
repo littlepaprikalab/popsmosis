@@ -94,12 +94,12 @@ judge a tag by one question: would a student searching for it be right to find t
   ("#thylakoid", "#atpsynthase"). `source` is the fact id, as for any line.
 - **FILLER**: it names no content of its own beyond what `about` gives: the topic, or a
   broader subject that contains it ("#photosynthesis" for the light reactions,
-  "#biology"); the course or exam ("#apbio"); or the video itself, its format or the
-  song's style as `song_style` describes it ("#studysong", "#kpop", "#explained",
-  "#studytok"). `source` is "".
+  "#biology"); the course or exam ("#apbio"); or the song's style as `song_style`
+  describes it ("#kpop"). `source` is "".
 - **UNSUPPORTED**: anything else, such as a topic or term the facts do not cover, even a
-  neighbouring one ("#calvincycle" for a lesson on the light reactions). `problem` says why in a
-  few words, and `corrected` is "": a tag that fails is dropped, never rewritten.
+  neighbouring one ("#calvincycle" for a lesson on the light reactions), or a tag that
+  names only the video's format ("#lesson"), as it would be on every video. `problem` says
+  why in a few words, and `corrected` is "": a tag that fails is dropped, never rewritten.
 
 ## Motions
 

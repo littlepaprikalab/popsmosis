@@ -32,6 +32,10 @@ describe('cleanTags', () => {
   it('leaves out a tag that reads as a phone number: tags are public', () => {
     expect(cleanTags(['#555-123-4567', '#5551234567', '#apbio', '#2026', '#unit7'])).toEqual(['apbio', '2026', 'unit7']);
   });
+  it('leaves out a tag that names only the video\'s format: it is on every droplet, so it finds none in particular', () => {
+    expect(cleanTags(['#vision', '#StudySong', '#studytok', '#Explained', '#exam prep', '#EduTok', '#retina']))
+      .toEqual(['vision', 'retina']); // as the studio drops them
+  });
   it('takes only a list', () => {
     expect(cleanTags(['#FYP', '#ForYouPage', '#viral', '#apbio', '#trending'])).toEqual(['apbio']); // as the studio drops them
     expect(cleanTags('apbio')).toEqual([]);
@@ -41,8 +45,8 @@ describe('cleanTags', () => {
 
 describe('bundleTags', () => {
   it("reads each video's tags from the bundle", () => {
-    expect(bundleTags({ tags: { song: ['#Photosynthesis', '#kpop'], lesson: ['#photosynthesis', '#explained'] } }))
-      .toEqual({ songTags: ['photosynthesis', 'kpop'], lessonTags: ['photosynthesis', 'explained'] });
+    expect(bundleTags({ tags: { song: ['#Photosynthesis', '#kpop'], lesson: ['#photosynthesis', '#thylakoid'] } }))
+      .toEqual({ songTags: ['photosynthesis', 'kpop'], lessonTags: ['photosynthesis', 'thylakoid'] });
   });
   it('gives none for a bundle without tags, or with tags of the wrong shape', () => {
     expect(bundleTags({ topic: 'ATP' })).toEqual({ songTags: [], lessonTags: [] });
