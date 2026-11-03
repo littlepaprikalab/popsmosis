@@ -60,7 +60,7 @@ const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 interface Line {
   name: string;
   version: string | null; // a tool's; a model's name is its version
-  task?: string; // what a model's line did, when the step has more than one job for models (the picture checker)
+  task?: string; // what a model's line did ("paints the pictures", "checks the pictures")
   maker: string | null;
   calls: number | null; // a model's; a tool is run, not called
   cost: string | null; // a model's; a tool is not billed
@@ -71,7 +71,7 @@ function linesOf(s: BreakdownStep): Line[] {
   return [
     ...s.models.map((m) => ({
       name: m.model, version: null, maker: m.maker, calls: m.calls, cost: modelCost(m),
-      ...(m.task === 'check' && { task: 'checks the pictures' }),
+      ...(m.task && { task: m.task }),
     })),
     ...(s.tools ?? []).map((t) => ({ name: t.name, version: t.version, maker: t.maker, calls: null, cost: null })),
   ];

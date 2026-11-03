@@ -404,7 +404,7 @@ def test_logged_ask_makes_no_call_once_the_topic_is_past_its_ceiling(tmp_path, m
     assert asked == ["factcheck round 1", "factcheck round 2"]
 
 
-def test_the_picture_checker_is_a_line_of_its_own_under_the_art_step(tmp_path):
+def test_each_line_says_what_its_calls_did_and_the_checker_is_apart_from_the_painter(tmp_path):
     # The bill says what checked the pictures, apart from what painted them (the owner, Nov 3).
     with ledger.at_step("art"):
         ledger.log(tmp_path, [call("art overview", model="muse-image-1.0", cost=0.01, role="meta"),
@@ -413,4 +413,9 @@ def test_the_picture_checker_is_a_line_of_its_own_under_the_art_step(tmp_path):
                               call("art check overview try 2", cost=0.05, role="checker")])
     art = ledger.breakdown(tmp_path, "videos")["steps"][0]
     assert [(m["model"], m["calls"], m.get("task")) for m in art["models"]] == [
-        ("muse-image-1.0", 1, None), ("claude-opus-5-5", 2, "check"), ("claude-opus-5-5", 1, None)]
+        ("muse-image-1.0", 1, "makes the pictures"), ("claude-opus-5-5", 2, "checks the pictures"),
+        ("claude-opus-5-5", 1, "rewrites a scene's words")]
+    # The same words mean different work by step; a label it does not know leaves the line unlabelled.
+    assert ledger.task_of({"label": "song", "step": "audio"}) == "sings the song"
+    assert ledger.task_of({"label": "song", "step": "timing"}) == "times the song"
+    assert ledger.task_of({"label": "something new", "step": "art"}) == ""

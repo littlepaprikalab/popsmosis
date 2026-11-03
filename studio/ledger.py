@@ -362,15 +362,43 @@ def version(tool: str) -> str | None:
     return words[2] if words[:2] == ["ffmpeg", "version"] and len(words) > 2 else None
 
 
+# What a call did, for its line on the bill, by its label's first words (one or two), and its step where the same
+# words mean different work: the longest match wins. A label none matches leaves its line unlabelled.
+TASKS = {
+    "script": "writes the script", "bundle": "writes the lesson", "lesson rewrite": "rewrites the lesson",
+    ("bundle", "narration"): "writes the narration", "narration edit": "edits the narration",
+    "lyric rewrite": "rewrites the lyrics", "repair": "repairs the lines", "learner": "takes the lesson as a student",
+    "fact": "audits the facts", "fact audit": "audits the facts", "factcheck": "fact-checks every line",
+    "art": "makes the pictures", "art check": "checks the pictures", "art rewrite": "rewrites a scene's words",
+    "locate": "finds the parts", "locate box": "boxes a part it missed", "label check": "checks the labels",
+    "arrows point": "places the arrows", "arrows look": "checks the arrows",
+    ("audio", "song"): "sings the song", ("audio", "narration"): "reads the narration",
+    ("timing", "song"): "times the song", ("timing", "narration"): "times the narration",
+    "judge": "grades the droplet",
+}
+
+
+def task_of(row: dict) -> str:
+    """What a logged call did, in a few words for the bill (TASKS); "" when its label says nothing known."""
+    words, step = str(row.get("label", "")).split(), step_of(row)
+    for n in (2, 1):
+        if len(words) >= n:
+            said = " ".join(words[:n])
+            task = TASKS.get((step, said)) or TASKS.get(said)
+            if task:
+                return task
+    return ""
+
+
 def _models(rows: list[dict]) -> list[dict]:
-    """The calls grouped by the model that answered, in the order each model first appears. Calls the operator's
-    session answered (studio/session.py) are a line of their own, `via: "session"`, at $0 on the API key. So are the
-    picture checker's (brain.py's "checker" role), `task: "check"`, a subline of the art step: the bill says what
-    checked the pictures, apart from what painted them or wrote their words (the owner, Nov 3)."""
+    """The calls grouped by the model that answered and what it did (task_of()), in the order each first appears:
+    the art step's line for the pictures painted is apart from the one for their check (the owner, Nov 3: "it needs
+    to label what the line is doing"). Calls the operator's session answered (studio/session.py) are a line of their
+    own, `via: "session"`, at $0 on the API key."""
     out: dict[tuple[str, str, str], dict] = {}
     for row in rows:
         via = "session" if row.get("via") == "session" else ""
-        task = "check" if row.get("role") == "checker" else ""
+        task = task_of(row)
         m = out.setdefault((row.get("model") or "unknown", via, task), {"calls": 0, "costUsd": 0.0, "credits": None})
         m["calls"] += 1
         if m["costUsd"] is not None:
