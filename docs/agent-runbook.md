@@ -178,7 +178,11 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
 ### Option A: Claude Code routine (simplest)
 
 1. In Claude Code on the web, create an environment for the routine:
-   - **Environment variables:** everything in the table in section 1.
+   - **Environment variables:** everything in the table in section 1, and
+     `POPSMOSIS_TEACHER_ONLY=1` when only the routine uses this environment. The session
+     hook then skips what a developer's session needs and the teacher does not (the node
+     packages, and starting and migrating a test database), so each run starts sooner.
+     Leave it out of an environment you also develop in: the API's tests need both.
    - **Setup script:** none needed. The repository's session hook
      (`.claude/hooks/session-start.sh`) installs everything when a run starts: ffmpeg and
      libEGL, `studio/requirements.txt` (with PyTorch on CPU, Demucs and skia), the song

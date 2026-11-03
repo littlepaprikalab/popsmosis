@@ -1,6 +1,7 @@
 #!/bin/bash
 # Every tool this repo uses, installed when a cloud session starts: a developer's session,
-# or the teacher routine's run (docs/agent-runbook.md). Nothing then stops mid-task to
+# or the teacher routine's run (docs/agent-runbook.md), which with POPSMOSIS_TEACHER_ONLY=1
+# gets only the studio's part (parts 1 to 3). Nothing then stops mid-task to
 # install a package. The container is cached once this finishes, so the heavy parts
 # (PyTorch, the timing models, node_modules) are paid once per environment, not per session.
 # Each part is idempotent, and a part that cannot be done says so and lets the rest run.
@@ -70,6 +71,13 @@ if [ ! -f "$STAMPS/models" ]; then
   if fetch_models || fetch_models; then touch "$STAMPS/models"
   else log "could not fetch the timing models; the first song timing will download them"
   fi
+fi
+
+# An environment that runs only the teacher routine sets POPSMOSIS_TEACHER_ONLY=1. The teacher
+# runs the studio against the live API and needs nothing below, so its runs skip the node
+# packages and the test database's start and migrations (docs/agent-runbook.md, Option A).
+if [ "${POPSMOSIS_TEACHER_ONLY:-}" = 1 ]; then
+  exit 0
 fi
 
 # 4. Node: the API, the web app and their tests. `install` (not `ci`) keeps what the cached

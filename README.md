@@ -350,7 +350,10 @@ In a Claude Code cloud session, `.claude/hooks/session-start.sh` sets all of thi
 the session starts: ffmpeg and libEGL, the studio's packages (PyTorch, Demucs and skia
 included) and the song timing's models, the node packages and Prisma client, and a running
 Postgres with the `popsmosis` database migrated and `DATABASE_URL` set. The first session in
-an environment takes about two minutes; later ones skip what has not changed.
+an environment takes about two minutes; later ones skip what has not changed. An environment
+that runs only the teacher routine sets `POPSMOSIS_TEACHER_ONLY=1`, and the hook stops after the
+studio's part. The browser tests use the session's own Chromium when the pinned Playwright's
+build is not installed.
 
 ## API
 
