@@ -676,12 +676,14 @@ function LearnContent() {
         setQuestions((prev) => [q, ...prev]);
         if (!latestSeenRef.current || q.createdAt > latestSeenRef.current) latestSeenRef.current = q.createdAt;
         changeQuestion('');
+        // Too long to read in a few seconds, so it stays until the learner closes it; so does a refusal below. Each
+        // Submit's word replaces the last one's.
         showToast(`Topic sent${picked ? ` to ${brainLabel(picked)}` : ''}. The teacher picks it up on its next pass; `
-          + `a droplet takes about ${USUAL_MINUTES} minutes to make.`, 'success');
+          + `a droplet takes about ${USUAL_MINUTES} minutes to make.`, 'success', { persistent: true, key: 'ask' });
         readAllowance();
       });
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to send topic', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to send topic', 'error', { persistent: true, key: 'ask' });
       if (err instanceof ApiError && err.status === 429) readAllowance(); // sent elsewhere since, or the limit changed
     }
   };
