@@ -98,8 +98,23 @@ ELEVENLABS_PRICE_VAR = "ELEVENLABS_USD_PER_1K_CREDITS"
 Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
 
 
+# Why the audio failed when its provider did not answer, timed out, was busy or failed on its side, after the tries
+# here: a later try may well find it back (studio/retry.py), unlike a refusal of what was asked.
+OUTAGE = "the audio provider failed"
+# A request the provider took too long to answer: not sent again in the run (it may still be made, and charged for), but
+# a later sweep, on another machine, may get past it (studio/retry.py).
+TOOK_TOO_LONG = "the provider took too long"
+
+
+def _code(status: int) -> str | None:
+    """OUTAGE for a status a later try may not meet (busy, a server's fault), else the plain code."""
+    return OUTAGE if status in (0, 408, 429) or status >= 500 else None
+
+
 class NoAnswer(media.StepFailed):
     """The request never reached the server, or the connection dropped: safe to send again."""
+
+    code = OUTAGE
 
 
 class Blocked(media.StepFailed):
@@ -121,7 +136,7 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tu
         return e.code, dict(e.headers), e.read()
     except TimeoutError as e:
         # Not retried: the server may still be making, and charging for, what was asked.
-        raise media.StepFailed(f"{host} took over {TIMEOUT_S}s to answer") from e
+        raise media.StepFailed(f"{host} took over {TIMEOUT_S}s to answer", code=TOOK_TOO_LONG) from e
     except (urllib.error.URLError, OSError) as e:
         raise NoAnswer(f"{host} did not answer: {getattr(e, 'reason', e)}") from e
 
@@ -327,7 +342,7 @@ def _make_eleven_song(job: Path, bundle: Bundle, instead_of: dict | None = None)
     if status == 200:
         _log_eleven(job, "song", MUSIC_MODEL, headers, started)
     if status != 200 or not audio:
-        raise media.StepFailed(f"Eleven Music refused the song: {status} {_error(audio)}")
+        raise media.StepFailed(f"Eleven Music refused the song: {status} {_error(audio)}", code=_code(status))
     # The plan first, then the audio: the audio file is what says the song is made.
     jobs.write(job / plan_path("song"), {
         "source": song_lines(bundle), "provider": "elevenlabs", "model_id": MUSIC_MODEL,
@@ -387,7 +402,7 @@ def _make_gemini_song(job: Path, bundle: Bundle) -> None:
     started = time.monotonic()
     status, headers, answer = _gemini(f"/models/{urllib.parse.quote(model, safe='')}:generateContent", body)
     if status != 200:
-        raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}")
+        raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}", code=_code(status))
     audio, mime_type, said = read_gemini_song(answer)
     _log(job, "song", model, started, GEMINI_SONG_PRICES.get(model))  # a song came back: one song's price
     audio = as_mp3(audio, mime_type)
@@ -502,7 +517,7 @@ def _make_eleven_speech(job: Path, kind: str, lines: list[tuple[str, str]], text
     if status == 200:
         _log_eleven(job, kind, TTS_MODEL, headers, started)
     if status != 200:
-        raise media.StepFailed(f"text-to-speech refused the {kind}: {status} {_error(answer)}")
+        raise media.StepFailed(f"text-to-speech refused the {kind}: {status} {_error(answer)}", code=_code(status))
     try:
         data = json.loads(answer)
         audio = base64.b64decode(data["audio_base64"])
@@ -536,7 +551,8 @@ def _make_gemini_speech(job: Path, kind: str, lines: list[tuple[str, str]], text
     started = time.monotonic()
     status, headers, answer = _gemini("/interactions", body)
     if status != 200:
-        raise media.StepFailed(f"Gemini's text-to-speech refused the {kind}: {status} {_error(answer)}")
+        raise media.StepFailed(f"Gemini's text-to-speech refused the {kind}: {status} {_error(answer)}",
+                               code=_code(status))
     audio, mime_type, said = read_gemini_speech(answer, kind)
     audio = as_mp3(audio, mime_type, kind)
     _log(job, kind, model, started, gemini_speech_cost(said.get("usage"), duration_of(audio)))

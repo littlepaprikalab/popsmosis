@@ -44,6 +44,7 @@ when the session starts (.claude/hooks/session-start.sh), never here.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import os
@@ -58,10 +59,11 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain, jobs, knobs, ledger, media
+from studio import brain, jobs, knobs, ledger, media, retry, session
 from studio.api import Api, ApiError
-from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, failure_code, job_chosen,
-                        job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl, record_interrupted)
+from studio.run import (BRAIN_FILE, DEFERRED, DONE, FAILED, RENEW_S, STOPPED, Stop, api_outcome, default_brain,
+                        failure_code, job_chosen, job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run,
+                        read_jsonl, record_interrupted)
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
@@ -69,24 +71,27 @@ TAIL = ("timeline", "arrows", "render", "upload")
 LOCAL_TAIL = ("timeline", "arrows", "render")  # a local job has no posted lesson to upload the videos to
 STARTED, RUNNING, RECOVER, NONE = "STARTED", "RUNNING", "RECOVER", "NONE"
 UNAVAILABLE = "the videos cannot be made here"  # the code of a run that stopped on unavailable()
-CLAIM = "videos.json"  # {answerId, attempt}: the attempt this machine holds
+CLAIM = "videos.json"  # {answerId, attempt, maxAttempts}: the attempt this machine holds, and how many the API allows
 BACKGROUND = "videos.background.json"  # {pid, runs}: the detached run and where its outcome will be
 LOG = "videos.log"
 WAIT_MINUTES = 9.0  # under the 10 minutes one tool command may take
 REPO = Path(__file__).resolve().parent.parent
 
 
-def unavailable(job: Path | None = None, studio: dict | None = None) -> str | None:
+def unavailable(job: Path | None = None, studio: dict | None = None, session_answers: bool = False) -> str | None:
     """Why the videos cannot be made here, or None. Checks the step modules exist without importing them, and the
     keys the brain in force and the art's painter need: the job's painter, or without a job, the one the studio
-    settings name (the defaults without them)."""
+    settings name (the defaults without them). session_answers: an operator waits on the run, so its session answers
+    the model calls the API cannot while the admin's knob allows it (studio/session.py), and the brain's key is not
+    needed here; a painter's and the song's still are, since no session paints or sings."""
     if knobs.env("STUDIO_VIDEOS").strip().lower() in ("off", "0", "false", "no"):
         return f"the videos are turned off here ({knobs.named('STUDIO_VIDEOS')})"
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
     settings = jobs.studio_settings(job) if job else studio or {}
-    problem = brain.retired_problem() or brain.settings_problem() or brain.art_problem(settings.get("art"))
+    keys = not (session_answers and session.allowed())
+    problem = brain.retired_problem() or brain.settings_problem(keys=keys) or brain.art_problem(settings.get("art"))
     song = settings.get("song") if isinstance(settings.get("song"), dict) else {}
     lyria = not media.lesson_only(job) and (song.get("provider") or media.DEFAULT_SONG_PROVIDER) == "gemini"  # the lesson alone has no song
     if not problem and lyria and not os.environ.get("GEMINI_API_KEY"):
@@ -121,6 +126,15 @@ def answer_of(job: Path) -> str | None:
         return None
 
 
+def attempts_left(job: Path) -> int:
+    """The attempts at the videos the API still allows after the one held (0 when it did not say)."""
+    try:
+        claimed = json.loads((job / CLAIM).read_text(encoding="utf-8"))
+        return max(0, int(claimed["maxAttempts"]) - int(claimed["attempt"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        return 0
+
+
 def held_attempt(job: Path) -> int | None:
     try:
         return int(json.loads((job / CLAIM).read_text(encoding="utf-8"))["attempt"])
@@ -138,14 +152,15 @@ def claim(api: Api, job: Path) -> dict:
     except ApiError as e:
         result, reason = api_outcome(e)
         raise (Stop if result == STOPPED else media.StepFailed)(f"claim: {reason}") from e
-    jobs.write(job / CLAIM, {"answerId": answer, "attempt": claimed["attempt"]})
+    jobs.write(job / CLAIM, {"answerId": answer, "attempt": claimed["attempt"],
+                             **({"maxAttempts": claimed["maxAttempts"]} if isinstance(claimed.get("maxAttempts"), int) else {})})
     return claimed
 
 
 def start_after_post(job: Path, api: Api) -> str:
     """`run` calls this once the lesson is posted: claim the first attempt, so the page says the videos
     are coming and a routine that dies before `videos` starts is still recovered later. Best effort."""
-    why = unavailable(job)
+    why = unavailable(job, session_answers=True)  # `videos --background` is what makes them
     if why:
         return f"no videos: {why}"
     try:
@@ -165,6 +180,7 @@ class Record:
         self.started, self.clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
         self.steps: list[dict] = []
         self.running: dict[str, float] = {}  # step -> the time.monotonic() it started at
+        self.first: dict[str, float] = {}  # step -> when its first try in this run started, for the time limit
         self.failed: set[str] = set()  # steps whose last try in this run failed
         self.lock = threading.Lock()
         self.reporting = threading.Lock()  # one report at a time, so an older one never lands after a newer
@@ -179,8 +195,15 @@ class Record:
         print(f"{step}: running", file=sys.stderr)
         with self.lock:
             self.running[step] = time.monotonic()
+            self.first.setdefault(step, self.running[step])
             self.failed.discard(step)
             self._save()
+
+    def watched(self) -> dict[str, float]:
+        """The steps running now, each from its first try in this run: the time limit is the step's, its tries and
+        the waits between them together (studio/retry.py)."""
+        with self.lock:
+            return {step: self.first.get(step, since) for step, since in self.running.items()}
 
     def end(self, step: str, seconds: float, result: str, reason: str = "", code: str = "") -> None:
         """reason: the line the step ended on. A done step's is kept with the run too (an art step names the
@@ -217,14 +240,17 @@ class Record:
         record = {"started": self.started, "part": "videos", "seconds": round(time.monotonic() - self.clock, 1),
                   "result": result, "step": step, "reason": reason, "steps": self.steps,
                   **({"code": code} if code and result != DONE else {})}
-        with (self.job / "runs.jsonl").open("a", encoding="utf-8") as log:
-            log.write(json.dumps(record, ensure_ascii=False) + "\n")
-        (self.job / "run.current.json").unlink(missing_ok=True)
+        with retry.finishing():  # the time limit no longer ends the run: it is recorded once
+            with (self.job / "runs.jsonl").open("a", encoding="utf-8") as log:
+                log.write(json.dumps(record, ensure_ascii=False) + "\n")
+            (self.job / "run.current.json").unlink(missing_ok=True)
         return result, step, reason
 
 
-def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
-    """Run the media steps that are not done; return (DONE | FAILED | STOPPED, step, reason)."""
+def videos(question_id: str, api: Api | None = None, ask=None, session_answers: bool = False) -> tuple[str, str, str]:
+    """Run the media steps that are not done; return (DONE | FAILED | STOPPED, step, reason). session_answers: an
+    operator waits on this run (`videos --background`), so its session answers a model call the API fails, while the
+    admin's knob allows it (studio/session.py)."""
     job = job_dir(question_id)
     if not (job / "posted.json").exists():
         return STOPPED, "videos", ("no lesson for this topic was posted from this machine; "
@@ -234,13 +260,14 @@ def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str
             return STOPPED, "videos", "a run of this topic is still going"
         record_interrupted(job)
         with job_chosen(job):
-            return _videos(job, api, ask or logged_ask(job))
+            return _videos(job, api, ask or logged_ask(job, session_answers=session_answers),
+                           session_answers=session_answers)
 
 
-def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
+def _videos(job: Path, api: Api | None, ask, session_answers: bool = False) -> tuple[str, str, str]:
     record = Record(job)
     api = refresh_settings(job, api)
-    why = unavailable(job)
+    why = unavailable(job, session_answers=session_answers)
     if why:
         return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
     try:
@@ -259,11 +286,17 @@ def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
         name = claimed.get("brain") or brain.choice_for_model(lesson_model(job) or claimed.get("model")) or default
         keep_brain(job, name, effort)
         brain.choose(name, effort)
-    why = unavailable(job)  # a painter the setting just changed to may need a key this machine lacks
+    why = unavailable(job, session_answers=session_answers)  # a painter the setting just changed to may need a key
     if why:  # the render goes quiet and `recover` hands it on once the setting or the key is fixed
         return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
 
-    return record.finish(*_make(job, api, ask, record, TAIL))
+    # No step runs past its time limit: one that does ends the run, recorded as failed there (studio/retry.py).
+    stop_watch = retry.watch(job, record.watched, lambda step, why: retry.end_process(job, step, why))
+    try:
+        with renewing(api, job):
+            return record.finish(*_make(job, api, ask, record, TAIL))
+    finally:
+        stop_watch()
 
 
 def _make(job: Path, api: Api | None, ask, record: Record, tail: tuple[str, ...]) -> tuple[str, str, str]:
@@ -280,6 +313,38 @@ def _make(job: Path, api: Api | None, ask, record: Record, tail: tuple[str, ...]
     if result == DONE and not (ran or tail_ran):
         reason = "the videos were already made"
     return result, step, reason
+
+
+@contextlib.contextmanager
+def renewing(api: Api, job: Path):
+    """Claim the attempt again every RENEW_S while the run goes, on a thread of its own, as well as before each step:
+    a step can run long (art whose calls wait for the operator's session, a render in turn behind another job's), and
+    one quiet past VIDEO_STALE_MINUTES would be taken for dead, handed to another machine, or failed on its last
+    attempt. Best effort: a renewal that fails is said once and tried again at the next; one the API refuses for good
+    (another run took the videos over) ends them, and the next step's claim stops the run."""
+    stop, every = threading.Event(), RENEW_S
+
+    def renew() -> None:
+        said = False
+        while not stop.wait(every):
+            try:
+                claim(api, job)
+            except Stop as e:
+                print(f"claim: the videos' attempt no longer renewed: {e}", file=sys.stderr)
+                return
+            except Exception as e:  # noqa: BLE001 (a renewal is never the run's outcome)
+                if not said:
+                    print(f"claim: a renewal of the videos failed, tried again every {every / 60:g} min: {e}",
+                          file=sys.stderr)
+                    said = True
+
+    thread = threading.Thread(target=renew, name=f"renew videos {job.name}", daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        thread.join(timeout=5)
 
 
 def local(job: Path, ask=None) -> tuple[str, str, str]:
@@ -309,10 +374,14 @@ def _step_done(job: Path, name: str) -> bool:
 
 def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: Record,
                fresh: bool = False) -> tuple[str, str, str, bool]:
-    """Run steps in order from the first not done (all of them when fresh); (result, step, reason, ran any)."""
-    first = 0 if fresh else next((i for i, name in enumerate(steps) if not _step_done(job, name)), len(steps))
+    """Run steps in order from the first not done (all of them when fresh); (result, step, reason, ran any). A step
+    whose failure an outage explains is tried again after a wait, and a song or narration the timing step deleted is
+    made again once (studio/retry.py), from the first step of these that is then not done."""
+    i = 0 if fresh else next((i for i, name in enumerate(steps) if not _step_done(job, name)), len(steps))
     result, step, reason, ran = DONE, steps[-1], "already done", False
-    for step in steps[first:]:
+    tried: dict[str, int] = {}  # step -> further tries made in this run
+    while i < len(steps):
+        step = steps[i]
         record.begin(step)
         clock = time.monotonic()
         code = ""
@@ -339,8 +408,18 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: 
         # already carried the last bill, and a run that was stopped has nothing to report.
         if api is not None and (result == FAILED or (result == DONE and step != "upload")):
             record.report(api)
-        if result != DONE:
+        if result == DONE:
+            i += 1
+            continue
+        waits = retry.waits(code) if result == FAILED else ()
+        if tried.get(step, 0) >= len(waits):
             break
+        wait = waits[tried.get(step, 0)]
+        tried[step] = tried.get(step, 0) + 1
+        print(f"{step}: {code}, so it is tried again in {wait:.0f}s: {one_line(reason)}", file=sys.stderr)
+        time.sleep(wait)
+        # From the failed step, or an earlier one it undid (the timing step deletes a song that drifted).
+        i = min(i, next((j for j, name in enumerate(steps) if not _step_done(job, name)), i))
     return result, step, reason, ran
 
 
@@ -359,7 +438,7 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
         return STOPPED, "videos", "no lesson for this topic was posted from this machine"
     api = refresh_settings(job, api)
     with job_chosen(job):  # the detached run reads brain.json itself
-        why = unavailable(job)
+        why = unavailable(job, session_answers=True)
     if why:
         return STOPPED, "videos", why
     if _alive(_background_pid(job)):
@@ -372,7 +451,8 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
         return FAILED, "claim", str(e)
     except ApiError as e:
         return _outcome(e, "claim")
-    command = [sys.executable, "-m", "studio", "videos", question_id]
+    # --session: the operator waits on this run, so its session answers a model call the API fails (studio/session.py).
+    command = [sys.executable, "-m", "studio", "videos", question_id, "--session"]
     with (job / LOG).open("a", encoding="utf-8") as log:
         # A session of its own, so the tool that started it can end its command without ending the run.
         process = subprocess.Popen(command, cwd=REPO, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
@@ -406,15 +486,20 @@ def _alive(pid: int | None) -> bool:
 
 
 def wait(question_id: str, minutes: float = WAIT_MINUTES, poll_s: float = 5.0) -> tuple[str, str, str]:
-    """The background run's outcome line once it ends, or RUNNING after `minutes`."""
+    """The background run's outcome line once it ends, ASK while model calls wait for the operator's session
+    (studio/session.py), or RUNNING after `minutes`."""
     job = job_dir(question_id)
     try:
         started = json.loads((job / BACKGROUND).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return STOPPED, "videos", "no videos were started in the background for this topic here"
     deadline, clock = time.monotonic() + minutes * 60, time.monotonic()
+    asking = session.Asking(job)
     while True:
-        if not _alive(started.get("pid")):
+        alive = _alive(started.get("pid"))
+        if alive and asking.settled():
+            return session.ASK, _step_now(job), asking.reason(question_id)
+        if not alive:
             with only_run(job) as mine:
                 if mine:  # else a run started by hand holds the job: wait for it too
                     record_interrupted(job)
@@ -431,13 +516,16 @@ def wait(question_id: str, minutes: float = WAIT_MINUTES, poll_s: float = 5.0) -
                                               "steps": []}) + "\n")
                     return FAILED, "videos", reason
         if time.monotonic() >= deadline:
-            try:
-                step = json.loads((job / "run.current.json").read_text(encoding="utf-8")).get("step", "videos")
-            except (OSError, ValueError):
-                step = "videos"
-            return RUNNING, step, (f"still going after {(time.monotonic() - clock) / 60:.0f} min; "
-                                   f"run `python -m studio wait {question_id}` again")
-        time.sleep(poll_s)
+            return RUNNING, _step_now(job), (f"still going after {(time.monotonic() - clock) / 60:.0f} min; "
+                                             f"run `python -m studio wait {question_id}` again")
+        time.sleep(min(poll_s, session.SETTLE_S))
+
+
+def _step_now(job: Path) -> str:
+    try:
+        return json.loads((job / "run.current.json").read_text(encoding="utf-8")).get("step", "videos")
+    except (OSError, ValueError, AttributeError):
+        return "videos"
 
 
 # --- a render that died with its machine ------------------------------------------------------
@@ -452,7 +540,7 @@ def recover(api: Api | None = None) -> tuple[str, str, str]:
         return _outcome(e, "recover")
     knobs.use(studio)
     with brain.chosen(*default_brain(studio)):
-        why = unavailable(studio=studio)
+        why = unavailable(studio=studio, session_answers=True)  # `videos --background` makes what it takes
     if why:  # taking one would spend an attempt this machine cannot use
         return NONE, "recover", why
     try:
@@ -500,7 +588,8 @@ def rebuild(job: Path, item: dict) -> None:
     default, effort = default_brain(item.get("studio"))
     keep_brain(job, item.get("brain") or brain.choice_for_model(item.get("model")) or default, effort)
     jobs.keep_studio_settings(job, item.get("studio"))  # who paints its art
-    jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
+    jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"],
+                             **({"maxAttempts": item["maxAttempts"]} if isinstance(item.get("maxAttempts"), int) else {})})
 
 
 def _read_as_now(path: Path) -> dict | None:
@@ -523,6 +612,12 @@ def give_up(job: Path, runs: list[dict], api: Api | None = None) -> tuple[str, s
     answer, attempt = answer_of(job), held_attempt(job)
     if not answer or attempt is None:
         return STOPPED, "this job holds no attempt at the videos"
+    left = attempts_left(job)
+    if retry.deferrable(last.get("code")) and left:
+        # An outage, a kill or a hang: the render is left RENDERING, goes quiet, and once it is stale the video
+        # queue hands it to a later sweep as its next attempt (`recover`), until VIDEO_MAX_ATTEMPTS.
+        return DEFERRED, (f"not given up: {last['step']} failed ({last['code']}), which a later try may get past, "
+                          f"and {left} attempt(s) are left; a later sweep takes the videos up once they go stale")
     reason = one_line(f"{last['step']} failed: {last['reason']}")
     try:
         # With what the failed tries took and cost, so the page's bill counts them too.

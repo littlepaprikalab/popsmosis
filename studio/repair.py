@@ -220,7 +220,13 @@ def repair(job: Path, bundle: Bundle, scene: Scene, located: dict[str, tuple[np.
             before = len(misplaced)
             saved = path.read_bytes()
             path.write_bytes(svg.png(trial))
-            after = check(job, bundle, scene)
+            try:
+                after = check(job, bundle, scene)
+            except BaseException:
+                # The picture as it was, which its record (written only below) still describes: left flipped, the
+                # step's retry would find it out of place by that record's check and could turn it back over.
+                path.write_bytes(saved)
+                raise
             # A flip that turns a painted label over with its part comes back with that label wrong: no better.
             labels = len((made.get("check") or {}).get("labels") or [])
             if len(after.misplaced) < before and len(after.labels) <= labels:

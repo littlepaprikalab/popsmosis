@@ -6,8 +6,12 @@
  * at all: the whole behaviour is what two concurrent transactions do to each
  * other. The failure it prevents is silent — nothing errors, two runs just each
  * write an answer for the same question and one is discarded.
+ *
+ * Also the count of runs: a claim with a run id the topic has not seen last is one,
+ * and a topic whose runs are used up is given up instead of started again
+ * (lib/claim.ts).
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
 const RUN = process.env.INTEGRATION === '1';
@@ -25,6 +29,10 @@ d('question queue claim lease', () => {
     app.inject({ method: 'GET', url: `/api/questions/queue?limit=${limit}`, headers: asAgent(key) });
   const ids = (res: Awaited<ReturnType<typeof queue>>) =>
     (res.json().data as { id: string }[]).map((q) => q.id).sort();
+  const claim = (id: string, key: string, payload?: object) =>
+    app.inject({ method: 'POST', url: `/api/questions/${id}/claim`, headers: asAgent(key), payload });
+  const lapse = (id: string) =>
+    prisma.question.update({ where: { id }, data: { claimedAt: new Date(Date.now() - 60 * 60 * 1000) } });
 
   beforeAll(async () => {
     process.env.JWT_SECRET ||= 'test-secret';
@@ -39,6 +47,7 @@ d('question queue claim lease', () => {
   });
 
   beforeEach(async () => {
+    delete process.env.QUESTION_MAX_RUNS;
     await prisma.$executeRawUnsafe('TRUNCATE replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
     const { generateApiKey } = await import('../lib/apikey.js');
     const ka = generateApiKey();
@@ -119,5 +128,90 @@ d('question queue claim lease', () => {
     expect(await queuesHaveWork()).toBe(false);   // nothing left for anyone else
     await prisma.question.updateMany({ data: { claimedAt: new Date(Date.now() - 60 * 60 * 1000) } });
     expect(await queuesHaveWork()).toBe(true);    // the run died; it is work again
+  });
+
+  it('counts each run once, by its id: not the hand-out, a renewal, or a retry after a lost reply', async () => {
+    const [first] = (await queue(agentA, 1)).json().data;
+    expect(first).toMatchObject({ runs: 0, maxRuns: 3 }); // handed out, not yet tried
+    for (const runId of ['short', 'has spaces in it', 'x'.repeat(65), 42]) {
+      expect((await claim(first.id, agentA, { runId })).statusCode).toBe(400);
+    }
+    expect((await claim(first.id, agentA, { runId: 'run-one-a1' })).json()).toMatchObject({ id: first.id, runs: 1, maxRuns: 3 });
+    // The studio claims with its run's id before every step and every 5 minutes; a claim with no id is a renewal too.
+    for (const payload of [{ runId: 'run-one-a1' }, { runId: 'run-one-a1' }, {}, undefined]) {
+      expect((await claim(first.id, agentA, payload)).json()).toMatchObject({ id: first.id, runs: 1, maxRuns: 3 });
+    }
+
+    // Its machine goes away; the next sweep's run starts it over. The claim counts it and is committed, but the
+    // reply never reaches the studio, which tries again with the same id: one run, not two.
+    await lapse(first.id);
+    expect((await queue(agentB, 1)).json().data[0]).toMatchObject({ id: first.id, runs: 1 });
+    const lookup = vi.spyOn(prisma.question, 'findUnique').mockRejectedValueOnce(new Error('the connection was reset'));
+    expect((await claim(first.id, agentB, { runId: 'run-two-b2' })).statusCode).toBe(500);
+    lookup.mockRestore();
+    expect((await prisma.question.findUniqueOrThrow({ where: { id: first.id } })).runs).toBe(2);
+    expect((await claim(first.id, agentB, { runId: 'run-two-b2' })).json()).toMatchObject({ runs: 2 });
+
+    // Another agent's run is turned away while B holds the lease, and counts nothing.
+    expect((await claim(first.id, agentA, { runId: 'run-three-c3' })).json().error.message).toMatch(/Another agent/);
+    expect((await prisma.question.findUniqueOrThrow({ where: { id: first.id } })).runs).toBe(2);
+  });
+
+  it('turns a new run away at the most while the last run holds the lease, and gives the topic up once it lapses', async () => {
+    const [topic] = (await queue(agentA, 1)).json().data;
+    for (const [i, runId] of ['run-one-a1', 'run-two-b2', 'run-three-c3'].entries()) {
+      if (i > 0) await lapse(topic.id);
+      expect((await claim(topic.id, agentA, { runId })).json()).toMatchObject({ runs: i + 1 });
+    }
+    // The last run renews its lease at the most as any run does.
+    expect((await claim(topic.id, agentA, { runId: 'run-three-c3' })).json()).toMatchObject({ runs: 3 });
+
+    // A fourth machine starts on it while the third is alive (one agent key runs every routine): turned away, and
+    // the third carries on.
+    const alive = await claim(topic.id, agentA, { runId: 'run-four-d4' });
+    expect(alive.statusCode).toBe(409);
+    expect(alive.json().error.message).toBe('Another run holds the claim on this question');
+    expect(await prisma.question.findUniqueOrThrow({ where: { id: topic.id } })).toMatchObject({ status: 'PENDING', runs: 3 });
+    expect((await claim(topic.id, agentA, { runId: 'run-three-c3' })).statusCode).toBe(200);
+
+    // The third's machine goes away too: the next run's claim gives the topic up.
+    await prisma.question.update({ where: { id: topic.id }, data: { progress: { running: [], failed: ['bundle'] } } });
+    await lapse(topic.id);
+    const fourth = await claim(topic.id, agentA, { runId: 'run-four-d4' });
+    expect(fourth.statusCode).toBe(409);
+    expect(fourth.json().error.message).toBe('Question was marked failed');
+    expect(await prisma.question.findUniqueOrThrow({ where: { id: topic.id } })).toMatchObject({
+      status: 'FAILED', runs: 3, progress: null,
+      failedReason: 'given up after 3 runs, each of which ended before the lesson was posted.',
+    });
+  });
+
+  it('gives up in the queue a topic whose last run went away, and hands on the next instead', async () => {
+    const [topic] = (await queue(agentA, 1)).json().data;
+    await prisma.question.update({ where: { id: topic.id }, data: { runs: 3 } });
+    // Alive on its last run: left to it, while another run takes the rest.
+    const others = ids(await queue(agentB, 6));
+    expect(others).toHaveLength(5);
+    expect(others).not.toContain(topic.id);
+    expect((await prisma.question.findUniqueOrThrow({ where: { id: topic.id } })).status).toBe('PENDING');
+
+    // Its machine goes away too: the next sweep gives it up, and hands on the next topic whose lease lapsed.
+    await lapse(topic.id);
+    await lapse(others[0]);
+    expect((await queue(agentB, 1)).json().data).toEqual([expect.objectContaining({ id: others[0], runs: 0, maxRuns: 3 })]);
+    expect(await prisma.question.findUniqueOrThrow({ where: { id: topic.id } })).toMatchObject({
+      status: 'FAILED', failedReason: 'given up after 3 runs, each of which ended before the lesson was posted.',
+    });
+    expect((await claim(topic.id, agentA)).json().error.message).toBe('Question was marked failed');
+  });
+
+  it('takes the most runs from QUESTION_MAX_RUNS', async () => {
+    process.env.QUESTION_MAX_RUNS = '1';
+    const [topic] = (await queue(agentA, 1)).json().data;
+    expect((await claim(topic.id, agentA, { runId: 'run-one-a1' })).json()).toMatchObject({ runs: 1, maxRuns: 1 });
+    await lapse(topic.id);
+    expect(ids(await queue(agentA, 6))).not.toContain(topic.id);
+    expect((await prisma.question.findUniqueOrThrow({ where: { id: topic.id } })).failedReason)
+      .toBe('given up after 1 run, which ended before the lesson was posted.');
   });
 });

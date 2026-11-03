@@ -76,8 +76,18 @@ by its id. One look does it all (look()): since Nov 2 there is no second look at
 the notes. After the last try the scene keeps the picture with the fewest structures out of place, then the
 fewest other problems.
 
+When the painter fails for good on a scene (its API's own retries spent, and for a later stage the picture painted
+afresh after its redraw failed), the other of Gemini and Muse Image paints that try and the scene's next (fallback()),
+when the brain in force may use it (brain.ART_CHOICES) and this machine has its keys (brain.PAINTER_KEYS); the scene
+is checked and kept as any other. Until Nov 3 the step failed, and the videos' one retry asked the same painter
+again (the owner: "Do we retry on Gemini for images if Muse Image fails?"). Not for a picture the painter would not
+make, which is asked for again more plainly, nor for the SVG art. The step's line says how many scenes fell back and
+to whom.
+
 Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
-art/<scene>.json, last: the key (as above), the model, the prompt, that it labels its own parts,
+art/<scene>.json, last: the key (as above), the model that painted the kept picture, and the painter the scene fell
+back from, why and on which try (fell_back_from: a picture painted so counts as done, as the job's painter's would),
+the prompt, that it labels its own parts,
 where its wrong labels are, the helper's check of the kept picture and what was wrong with each
 try, so the picture counts as done only for this bundle. A refused picture is kept as art/<scene>.try<n>.png.
 Removes locations.json: the locate step makes it from these
@@ -89,6 +99,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import re
 import shutil
 import sys
@@ -147,11 +158,31 @@ def painter(job: Path) -> str:
 
 def painter_of(job: Path) -> Painter:
     """The painter that paints this job's pictures (not for svg). Looked up at each call, so tests can stand in."""
-    if painter(job) == "gemini":
+    return painter_named(painter(job))
+
+
+def painter_named(name: str) -> Painter:
+    """Gemini 3.1 Flash Image for "gemini", else Muse Image."""
+    if name == "gemini":
         return Painter("gemini", gemini.NAME, gemini.MODEL, lambda job, label, prompt, reference=None:
                        gemini.paint(job, label, prompt, reference), gemini.Declined, gemini.GeminiError, redraws=False)
     return Painter("muse", "Muse Image", muse.IMAGE_MODEL, lambda *a: muse.paint(*a), muse.Declined, muse.MuseError,
                    redraws=True)
+
+
+OTHER = {"gemini": "muse", "muse": "gemini"}  # who paints a scene the job's painter failed on (fallback())
+
+
+def fallback(by: Painter) -> Painter | None:
+    """The painter a scene is asked of once `by`, the job's, has failed on it for good (paint()): the other of Gemini
+    and Muse Image, when the brain in force may use it (brain.ART_CHOICES) and this machine has its keys
+    (brain.PAINTER_KEYS). None otherwise, and the failure fails the step as before."""
+    other = OTHER.get(by.name)
+    if other is None or other not in brain.ART_CHOICES[brain.provider()]:
+        return None
+    if not all(os.environ.get(var) for var in brain.PAINTER_KEYS[other]):
+        return None
+    return painter_named(other)
 
 
 def drawn(job: Path, bundle: Bundle, scene: Scene) -> bool:
@@ -241,7 +272,8 @@ def run(job: Path, ask=brain.ask) -> str:
 
 
 def is_done(job: Path) -> bool:
-    """The art is there for this bundle, made by the painter the settings name."""
+    """The art is there for this bundle, made by the painter the settings name (or by the other, where it failed:
+    _painted())."""
     try:
         bundle = checks.load(job / "bundle.json")
     except (OSError, ValueError):
@@ -788,6 +820,7 @@ class Painting:
     flags: list[dict] = field(default_factory=list)  # its wrong labels, boxed (look())
     pinned: list[dict] = field(default_factory=list)  # its notes, as sticky notes: at their place, or all 0
     rejected: bool = False  # the writer's role saw it and wrote the scene's words again (rewrite())
+    by: Painter | None = None  # who painted it: the job's painter, or the other once that one failed (fallback())
 
     def problems(self) -> list[str]:
         """What the scene is painted again for: a structure missing or out of place, or anything the picture gets
@@ -876,6 +909,7 @@ def run_painted(job: Path, ask) -> str:
     if painted:
         lines.append(f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
                      f"tr{'ies' if tries != 1 else 'y'}" + (f", kept {kept} painted before" if kept else "")
+                     + fell_back_line(job, todo, results)
                      + refusals(refused, "picture") + (f"; the helper still saw: {'; '.join(left)}" if left else ""))
     elif kept or not to_draw:
         lines.append(f"kept the {kept} scene{'s' if kept != 1 else ''} {by.title} painted before")
@@ -900,10 +934,28 @@ def refusals(refused: list[str], kind: str) -> str:
         return ""
     counted: dict[str, int] = {}  # tries refused for the same reason are named once
     for why in refused:
-        why = why if len(why) <= REFUSAL_CHARS else why[: REFUSAL_CHARS - 1] + "…"
+        why = _cut(why)
         counted[why] = counted.get(why, 0) + 1
     return (f"; {len(refused)} {kind}{'s' if len(refused) != 1 else ''} refused: "
             + "; ".join(why + (f" (×{n})" if n > 1 else "") for why, n in counted.items()))
+
+
+def _cut(why: str) -> str:
+    """A problem cut to REFUSAL_CHARS."""
+    return why if len(why) <= REFUSAL_CHARS else why[: REFUSAL_CHARS - 1] + "…"
+
+
+def fell_back_line(job: Path, scenes: list[Scene], results: list[tuple[Painting, int]]) -> str:
+    """The scenes whose kept picture the other painter made, the job's having failed on them (fallback()), for the
+    step's line, which an operator sees: how many and who painted them, never what the provider said, which each
+    scene's record keeps."""
+    by = painter_of(job)
+    other: dict[str, list[str]] = {}
+    for scene, (best, _) in zip(scenes, results):
+        if best.by is not None and best.by.name != by.name:
+            other.setdefault(best.by.title, []).append(scene.id)
+    return "".join(f"; {len(ids)} scene{'s' if len(ids) != 1 else ''} fell back to {title} when {by.title} failed "
+                   f"({', '.join(ids)})" for title, ids in other.items())
 
 
 def refusal(tried: dict) -> str | None:
@@ -924,43 +976,49 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
     """The scene's picture: the best of up to MAX_PAINTS from the job's painter, saved as its art. Returns it and
     how many pictures were asked for. A process's later stage is redrawn from its first stage's picture
     (`reference`), so the stages share their framing, by a painter that can redraw (Muse Image); if it will
-    not, or the painter cannot, it is painted afresh. `instead_of_svg` says why a scene to be drawn as SVG is
-    painted instead (drawn())."""
-    by = painter_of(job)
+    not, or the painter cannot, it is painted afresh. If the painter then fails for good (not a picture it would not
+    make), this try and the scene's next are asked of the other painter when it may paint here (fallback()).
+    `instead_of_svg` says why a scene to be drawn as SVG is painted instead (drawn())."""
+    own = by = painter_of(job)
     if not by.redraws:
         reference = None
     for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.png"):
         old.unlink()
     best, problems, n, tries = None, [], 0, []
+    fell_back: dict = {}  # the painter the scene fell back from, why, and on which try
     words = scene  # what the next try is painted from: the scene's own words, then a rewrite of them (rewrite())
     for n in range(1, MAX_PAINTS + 1):
         told = problems if words is scene else []  # a rewrite says what to change itself
         prompt = paint_prompt(bundle, words, told, redrawn=reference is not None and not styled,
                               styled=reference is not None and styled)
         label = f"art {scene.id}" + (f" try {n}" if n > 1 else "")
-        try:
-            picture = by.make(job, label, prompt, reference)
-        except by.declined as e:
-            problems = [f"{e}; describe the scene plainly, as a textbook diagram"]
-            tries.append({"try": n, "declined": str(e)})
-            continue
-        except by.failed as e:
-            if reference is None:
-                raise
-            tries.append({"try": n, "redraw_failed": str(e)})
-            reference = None  # painted afresh from here on
-            prompt = paint_prompt(bundle, words, told)
+        picture = None
+        while picture is None:  # the redraw, then afresh, then afresh by the other painter: at most three asks
             try:
-                picture = by.make(job, label, prompt, None)
-            except by.declined as declined:
-                problems = [f"{declined}; describe the scene plainly, as a textbook diagram"]
-                tries.append({"try": n, "declined": str(declined)})
-                continue
+                picture = by.make(job, label, prompt, reference)
+            except by.declined as e:
+                problems = [f"{e}; describe the scene plainly, as a textbook diagram"]
+                tries.append({"try": n, "declined": str(e)})
+                break
+            except by.failed as e:
+                if reference is not None:
+                    tries.append({"try": n, "redraw_failed": str(e)})
+                    reference = None  # painted afresh from here on
+                elif not fell_back and (other := fallback(by)) is not None:
+                    print(f"art: {scene.id}: {by.title} failed, painted with {other.title} instead: {e}",
+                          file=sys.stderr)
+                    fell_back = {"painter": by.name, "why": _cut(str(e)), "try": n}
+                    by = other
+                else:
+                    raise
+                prompt = paint_prompt(bundle, words, told)
+        if picture is None:
+            continue
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
         path.write_bytes(svg.png(fit(picture)))
         named = f"{scene.id}" + (f" try {n}" if n > 1 else "")
         check, flagged, pinned = look(job, bundle, scene, ask, f"art check {named}", path)
-        painting = Painting(path, prompt, n, check, flags=flagged, pinned=pinned)
+        painting = Painting(path, prompt, n, check, flags=flagged, pinned=pinned, by=by)
         tries.append({"try": n, **check.model_dump()})
         if best is None or painting.score() < best.score():
             best = painting
@@ -986,8 +1044,10 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
     best.path.replace(job / media.art_path(scene.id))
     best.refused = [why for tried in tries if tried["try"] != best.attempt and (why := refusal(tried))]
     flagged, pinned = best.flags, best.pinned
-    # `labelled`: the picture names its own parts, so the video draws no labels over it (self_labelled()).
-    write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
+    # `labelled`: the picture names its own parts, so the video draws no labels over it (self_labelled()). `model`:
+    # who painted the kept picture; `fell_back_from`: the job's painter, when it failed on the scene (_painted()).
+    write(_painting(job, scene), {"key": key(bundle, scene), "model": (best.by or own).model, "prompt": best.prompt,
+                                  **({"fell_back_from": fell_back} if fell_back else {}),
                                   "labelled": True, **({"flags": flagged} if flagged else {}),
                                   **({"pinned": pinned} if pinned else {}),
                                   **({"instead_of_svg": instead_of_svg} if instead_of_svg else {}),
@@ -1267,10 +1327,17 @@ def _painting(job: Path, scene: Scene) -> Path:
 
 
 def _painted(job: Path, bundle: Bundle, scene: Scene) -> bool:
-    """Whether the scene's art is the job's painter's picture of the scene as the bundle now has it."""
+    """Whether the scene's art is the job's painter's picture of the scene as the bundle now has it: painted by it, or
+    by the other painter when it failed on the scene (fell_back_from: paint())."""
     try:
         made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
-    return (isinstance(made, dict) and made.get("key") == key(bundle, scene) and made.get("model") == painter_of(job).model
-            and (job / media.art_path(scene.id)).exists())
+    if not (isinstance(made, dict) and made.get("key") == key(bundle, scene)
+            and (job / media.art_path(scene.id)).exists()):
+        return False
+    by = painter_of(job)
+    fell = made.get("fell_back_from")
+    return made.get("model") == by.model or (
+        isinstance(fell, dict) and fell.get("painter") == by.name and by.name in OTHER
+        and made.get("model") == painter_named(OTHER[by.name]).model)

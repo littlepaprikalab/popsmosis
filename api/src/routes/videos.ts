@@ -1,17 +1,18 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../lib/prisma.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { sendError } from '../lib/errors.js';
 import { requireAgent } from '../middleware/auth.js';
 import { FAILED_REASON_MAX_LENGTH, videoStaleMinutes } from '../lib/droplet.js';
-import { videoMaxAttempts } from '../lib/video-claim.js';
+import { UNCLAIMED_VIDEOS_HOURS, videoMaxAttempts, videosTurnedOff } from '../lib/video-claim.js';
 import { parseLimit, secretError, validateString } from '../lib/validation.js';
 import { breakdownError } from '../lib/breakdown.js';
 import { progressError, storedProgress } from '../lib/progress.js';
 import { studioForAgent } from '../lib/studio-settings.js';
 
 // The claim on a droplet's videos (lib/video-claim.ts): who is rendering them, which
-// attempt this is, and the queue that hands a render whose machine died to a later run.
-// For the agent's own answers only, like the video PATCH.
+// attempt this is, and the queue that hands a render whose machine died, or videos never
+// claimed, to a later run. For the agent's own answers only, like the video PATCH.
 
 // Only what these routes read: the page's view of the videos (lib/droplet.ts) is not theirs.
 const answerSelect = {
@@ -33,6 +34,9 @@ function serializeClaim(a: ClaimedAnswer, studio: Awaited<ReturnType<typeof stud
     answerId: a.id,
     questionId: a.questionId,
     attempt: a.videoAttempts,
+    // The attempts there are in all (VIDEO_MAX_ATTEMPTS): with attempt below it, a later run may still make the
+    // videos, so a run that fails for an outage can leave them to it rather than give them up.
+    maxAttempts: videoMaxAttempts(),
     status: a.videoStatus,
     brain: a.question.brain, // the topic's own brain (lib/brains.ts); null: it was the default's
     model: a.model, // the model that wrote the lesson, so a machine that never saw it knows whose brain it was
@@ -100,7 +104,8 @@ export default async function videoRoutes(app: FastifyInstance) {
   });
 
   // GET /api/videos/queue?limit=N — agent: its own droplets whose render went quiet
-  // past the stale time (the machine died), oldest first, each claimed for this caller
+  // past the stale time (the machine died), and those whose videos were never claimed
+  // that long after the lesson was posted, oldest first, each claimed for this caller
   // as its next attempt, with what a fresh machine needs to make the videos. A render
   // that was given up (FAILED) is not retried here: two failures in a row are not
   // what a new machine fixes.
@@ -108,6 +113,29 @@ export default async function videoRoutes(app: FastifyInstance) {
     const { limit } = request.query as Record<string, string | undefined>;
     const take = parseLimit(limit, 1, 5);
     const agentId = request.agent!.id;
+    const maxAttempts = videoMaxAttempts();
+    const staleMinutes = videoStaleMinutes();
+
+    // A render that went quiet on its last attempt has nobody left to make it: give it up, so the droplet says why
+    // instead of waiting on it. The run that went quiet, should it come back, finds them FAILED and stops. Its
+    // attempts are all there were ("2 of 2"), even when an admin has lowered VIDEO_MAX_ATTEMPTS since.
+    await prisma.$executeRaw`
+      UPDATE answers
+      SET "videoStatus" = 'FAILED', "videoUpdatedAt" = now(),
+          "videoError" = format('The machine making them went away before they were finished, on their last attempt (%s of %s).',
+                                "videoAttempts", "videoAttempts")
+      WHERE "agentId" = ${agentId} AND "videoStatus" = 'RENDERING'
+        AND "videoUpdatedAt" < now() - make_interval(mins => ${staleMinutes})
+        AND "videoAttempts" >= ${maxAttempts}
+    `;
+
+    // Videos never claimed, a stale time after the post: both claims failed, or the machine died between the post
+    // and the videos. Only for a day after that (lib/video-claim.ts), and not while the videos are turned off, when
+    // a lesson is text-only by design.
+    const neverClaimed = videosTurnedOff() ? Prisma.empty : Prisma.sql`
+      OR ("videoStatus" IS NULL
+          AND "createdAt" < now() - make_interval(mins => ${staleMinutes})
+          AND "createdAt" > now() - make_interval(hours => ${UNCLAIMED_VIDEOS_HOURS}, mins => ${staleMinutes}))`;
     // The same select-and-claim as the question queue: SKIP LOCKED hands two overlapping
     // runs different droplets.
     const claimed = await prisma.$queryRaw<{ id: string }[]>`
@@ -117,9 +145,10 @@ export default async function videoRoutes(app: FastifyInstance) {
       WHERE id IN (
         SELECT id FROM answers
         WHERE "agentId" = ${agentId} AND bundle IS NOT NULL
-          AND "videoStatus" = 'RENDERING'
-          AND "videoUpdatedAt" < now() - make_interval(mins => ${videoStaleMinutes()})
-          AND "videoAttempts" < ${videoMaxAttempts()}
+          AND "videoAttempts" < ${maxAttempts}
+          AND (("videoStatus" = 'RENDERING'
+                AND "videoUpdatedAt" < now() - make_interval(mins => ${staleMinutes}))
+               ${neverClaimed})
         ORDER BY "createdAt" ASC, id ASC
         LIMIT ${take}
         FOR UPDATE SKIP LOCKED

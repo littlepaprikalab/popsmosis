@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   KNOBS, KNOB_NAMES, REFRESH_MS, keepKnobsFresh, knob, knobsFrom, parseKnobs, putKnobs, reloadKnobsWith, storedKnobs,
 } from './knobs.js';
-import { claimMinutes } from './claim.js';
+import { claimMinutes, questionMaxRuns } from './claim.js';
 import { videoStaleMinutes } from './droplet.js';
 import { commentsPerUserPerHour } from './engagement.js';
 import { lessonHoldMinutes } from './progress.js';
@@ -13,6 +13,7 @@ import { videoMaxAttempts } from './video-claim.js';
 afterEach(() => {
   putKnobs({});
   delete process.env.QUESTION_CLAIM_MINUTES;
+  delete process.env.QUESTION_MAX_RUNS;
   vi.useRealTimers();
 });
 
@@ -33,6 +34,7 @@ describe('KNOBS', () => {
     });
     expect(commentsPerUserPerHour()).toBe(KNOBS.DROPLET_COMMENTS_PER_USER_PER_HOUR.default);
     expect(claimMinutes()).toBe(KNOBS.QUESTION_CLAIM_MINUTES.default);
+    expect(questionMaxRuns()).toBe(KNOBS.QUESTION_MAX_RUNS.default);
     expect(videoStaleMinutes()).toBe(KNOBS.VIDEO_STALE_MINUTES.default);
     expect(lessonHoldMinutes()).toBe(KNOBS.LESSON_HOLD_MINUTES.default);
     expect(videoMaxAttempts()).toBe(KNOBS.VIDEO_MAX_ATTEMPTS.default);
@@ -59,6 +61,7 @@ describe('parseKnobs', () => {
     expect(parseKnobs({ QUESTION_CLAIM_MINUTES: 0 }).error).toBe('knobs.QUESTION_CLAIM_MINUTES must be a whole number from 1 to 1440');
     expect(parseKnobs({ QUESTION_CLAIM_MINUTES: '30' }).error).toBe('knobs.QUESTION_CLAIM_MINUTES must be a whole number from 1 to 1440');
     expect(parseKnobs({ VIDEO_MAX_ATTEMPTS: 2.5 }).error).toBe('knobs.VIDEO_MAX_ATTEMPTS must be a whole number from 1 to 10');
+    expect(parseKnobs({ QUESTION_MAX_RUNS: 0 }).error).toBe('knobs.QUESTION_MAX_RUNS must be a whole number from 1 to 20');
     expect(parseKnobs({ ELEVENLABS_USD_PER_1K_CREDITS: -1 }).error).toBe('knobs.ELEVENLABS_USD_PER_1K_CREDITS must be a number from 0 to 100');
     expect(parseKnobs({ STUDIO_VIDEOS: 'no' }).error).toBe('knobs.STUDIO_VIDEOS must be one of on, lesson, off');
     expect(parseKnobs({ STUDIO_CLAUDE_DRAWS: 'everything' }).error)
@@ -104,6 +107,14 @@ describe('knob', () => {
       topicsPerUserPerDay: 3, topicsPerDay: 0, repliesPerUserPerHour: 4,
       attachmentMbPerUserPerDay: KNOBS.ATTACHMENT_MB_PER_USER_PER_DAY.default, attachmentMbHeldPerUser: 7,
     });
+  });
+
+  it('reaches the most runs the queue hands a topic to, and a value it cannot use falls back', () => {
+    putKnobs({ QUESTION_MAX_RUNS: 5 });
+    expect(questionMaxRuns()).toBe(5);
+    putKnobs({});
+    process.env.QUESTION_MAX_RUNS = '0';
+    expect(questionMaxRuns()).toBe(KNOBS.QUESTION_MAX_RUNS.default);
   });
 
   it('reaches the cooldown and the beta header the routine fires with', () => {

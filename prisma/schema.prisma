@@ -114,6 +114,11 @@ model Question {
   // must not hold a question out of the queue forever.
   claimedAt   DateTime?
   claimedById String? // the agent holding the lease; for the admin page and debugging
+  // How many runs have started on it, each on its own machine (api/src/lib/claim.ts), and the last one's id: a claim
+  // with a run id other than lastRunId starts one more (POST /api/questions/:id/claim), and the same id again counts
+  // nothing. A topic whose runs reach QUESTION_MAX_RUNS without a lesson is given up rather than started again.
+  runs        Int       @default(0)
+  lastRunId   String?
 
   failedReason String? // FAILED: one line on why, shown on the card
 

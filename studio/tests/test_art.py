@@ -1,10 +1,12 @@
-"""The art and locate steps, with a stand-in brain that answers with the SVGs in studio/tests/art/."""
+"""The art and locate steps, with a stand-in brain that answers with the SVGs in studio/tests/art/; last, the painted
+art falling back to the other painter, with test_muse.py's and test_gemini.py's stand-ins."""
 
 import ast
 import colorsys
 import copy
 import hashlib
 import inspect
+import json
 import math
 import tempfile
 import textwrap
@@ -17,11 +19,13 @@ import pytest
 import skia
 from PIL import Image
 
-from studio import checks, jobs, media, svg
+from studio import brain, checks, gemini, jobs, ledger, media, muse, svg
 from studio.schemas import Axes, Bundle, Locations, Structure, locations_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
 from studio.tests.sample import bundle_data
+from studio.tests.test_gemini import FakeGemini
+from studio.tests.test_muse import FakeHelper, FakeMuse, painting, staged
 
 DRAWINGS = Path(__file__).resolve().parent / "art"
 PAGE = tuple(int(svg.PAGE[i:i + 2], 16) for i in (1, 3, 5))
@@ -906,3 +910,106 @@ def test_the_writers_answer_keeps_the_picture_or_gives_no_description(said, kept
         tagged = f"Educational textbook illustration of the {scene.structures[0].name} [[{scene.structures[0].name}]]."
         assert art.rewrite(bundle, scene, picture, "the prompt", check, lambda *a, **k: {"text": tagged},
                            "art rewrite overview") == tagged
+
+
+# --- the painted art when its painter fails for good ----------------------------------------------
+
+
+@pytest.fixture
+def painted(monkeypatch):
+    """Muse Image paints the job's art (not the SVG of this file's other tests), with Meta's API, the Gemini API and the
+    helper stood in for (studio/tests/test_muse.py, test_gemini.py), and both painters' keys set."""
+    monkeypatch.setattr(art, "painter", lambda job: "muse")
+    monkeypatch.setenv("MODEL_API_KEY", "meta-test-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-test-key")
+
+
+def busy() -> muse.MuseError:
+    """Muse Image failing for good: what muse.paint raises once its own retries are spent."""
+    return muse.MuseError("Muse Image refused the picture: 503 busy")
+
+
+def test_a_scene_muse_image_fails_on_for_good_is_painted_by_gemini_checked_and_located(job, monkeypatch, painted):
+    meta = FakeMuse(pictures={"synthase": [busy()]}).install(monkeypatch)
+    google = FakeGemini().install(monkeypatch)
+    helper = FakeHelper()
+    # The operator's line says how many fell back and to whom, never what the provider said.
+    assert art.run(job, helper) == ("painted 3 scenes with Muse Image in 3 tries; 1 scene fell back to "
+                                    "Gemini 3.1 Flash Image when Muse Image failed (synthase)")
+    assert [label for label, _ in google.painted] == ["art synthase"]
+    assert google.painted[0][1] == dict(meta.painted)["art synthase"]  # from the same prompt
+    assert "art check synthase" in dict(helper.asked)  # checked as any other
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["model"] == gemini.MODEL and made["try"] == 1 and made["labelled"] is True
+    assert made["fell_back_from"] == {"painter": "muse", "why": "Muse Image refused the picture: 503 busy", "try": 1}
+    overview = json.loads((job / "art" / "overview.json").read_text())
+    assert overview["model"] == muse.IMAGE_MODEL and "fell_back_from" not in overview
+    assert ("art synthase", gemini.MODEL) in {(row["label"], row["model"]) for row in ledger.read(job)}  # billed
+    assert art.is_done(job) and "synthase" in art.self_labelled(job, checks.load(job / "bundle.json"))
+
+    locate.run(job, helper)  # SAM 3.1 on both painters' pictures
+    assert locate.is_done(job)
+
+
+def test_a_later_stage_whose_redraw_and_fresh_picture_fail_falls_back_to_gemini(job, monkeypatch, painted):
+    staged(job)
+    meta = FakeMuse(pictures={"synthase": [busy()]},
+                    redraw_error=muse.MuseError("Muse Image refused the picture: 400 no images")).install(monkeypatch)
+    google = FakeGemini().install(monkeypatch)
+    art.run(job, FakeHelper())
+    assert [(label, ref is not None) for label, ref in meta.references if label == "art synthase"] == [
+        ("art synthase", True), ("art synthase", False)]  # the redraw, then afresh, as before
+    assert [label for label, _ in google.painted] == ["art synthase"]
+    assert not google.painted[0][1].startswith("Redraw")  # Gemini cannot redraw: afresh
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["model"] == gemini.MODEL and made["redrawn_from"] == ""
+    assert "400 no images" in made["tries"][0]["redraw_failed"] and made["fell_back_from"]["why"].endswith("503 busy")
+
+
+def test_a_picture_muse_image_declines_is_never_asked_of_gemini(job, monkeypatch, painted):
+    FakeMuse(pictures={"synthase": [muse.Declined("Muse Image declined the picture: blocked")]}).install(monkeypatch)
+    google = FakeGemini().install(monkeypatch)
+    with pytest.raises(media.StepFailed, match="scene synthase: no usable picture in 2 tries: Muse Image declined"):
+        art.run(job, FakeHelper())
+    assert google.painted == []
+
+
+@pytest.mark.parametrize("barred", ["no key", "not the brain's"])
+def test_no_fallback_without_the_other_painters_key_or_where_the_brain_may_not_use_it(job, monkeypatch, painted,
+                                                                                      barred):
+    if barred == "no key":
+        monkeypatch.delenv("GEMINI_API_KEY")
+    else:
+        monkeypatch.setitem(brain.ART_CHOICES, "claude", ("muse", "svg"))
+    FakeMuse(pictures={"synthase": [busy()]}).install(monkeypatch)
+    google = FakeGemini().install(monkeypatch)
+    with pytest.raises(muse.MuseError, match="503 busy"):  # fails the step, as before
+        art.run(job, FakeHelper())
+    assert google.painted == [] and art.fallback(art.painter_named("muse")) is None
+
+
+def test_each_painter_falls_back_to_the_other_on_either_brain(monkeypatch, painted):
+    for chosen in ("claude", "muse-spark"):
+        monkeypatch.setattr(brain, "_chosen", chosen)
+        assert art.fallback(art.painter_named("muse")).model == gemini.MODEL
+        assert art.fallback(art.painter_named("gemini")).model == muse.IMAGE_MODEL
+    monkeypatch.delenv("GEMINI_API_KEY")
+    assert art.fallback(art.painter_named("gemini")).name == "muse"  # Muse Image takes Meta's key alone
+
+
+def test_a_rerun_keeps_a_scene_gemini_painted_when_muse_image_failed(job, monkeypatch, painted):
+    meta = FakeMuse(pictures={"synthase": [busy()], "hook": [busy()]}).install(monkeypatch)
+    google = FakeGemini({"hook": [gemini.GeminiError("Gemini 3.1 Flash Image refused the picture: 500 internal")]}
+                        ).install(monkeypatch)
+    with pytest.raises(gemini.GeminiError, match="500 internal"):  # both failed on the hook
+        art.run(job, FakeHelper())
+    assert not art.is_done(job)
+
+    meta.pictures["hook"] = [painting("hook")]  # Meta's API is back
+    assert art.run(job, FakeHelper()) == "painted 1 scene with Muse Image in 1 try, kept 2 painted before"
+    assert sorted(label for label, _ in google.painted) == ["art hook", "art synthase"]  # the first run's alone
+    assert [label for label, _ in meta.painted].count("art synthase") == 1
+    assert art.is_done(job)
+    bundle = checks.load(job / "bundle.json")
+    monkeypatch.setattr(art, "painter", lambda job: "gemini")  # switched: Gemini's picture alone is Gemini's art
+    assert [art._painted(job, bundle, scene) for scene in bundle.scenes] == [False, False, True]

@@ -66,15 +66,17 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
     id: 'leases', title: 'Leases and renders', note: 'How long the API waits on the teacher. A change applies to the next request.',
     knobs: {
       QUESTION_CLAIM_MINUTES: { label: 'How long a run holds a topic', unit: 'minutes', note: 'The queue leases a topic to one run for this long, so two runs never make the same one. The studio renews it before each step and every 5 minutes while one runs: keep it above 5.' },
-      VIDEO_STALE_MINUTES: { label: 'How long a render may go quiet', unit: 'minutes', note: 'A render that has not reported for this long has died with its machine: the page says it failed, and a later run recovers it.' },
+      QUESTION_MAX_RUNS: { label: 'Runs at a topic', unit: 'runs', note: 'The first run, then each later one that starts the topic over because the run before went away before its lesson was posted (it outlasted the routine’s hour, or died). Each pays for the lesson again. A run counts once, when the studio first claims the topic with that run’s id: not its renewals or retries, nor a run stopped by wrong settings. Once a topic has had this many and the last run’s lease has lapsed, it is given up and its card says why.' },
+      VIDEO_STALE_MINUTES: { label: 'How long a render may go quiet', unit: 'minutes', note: 'A render that has not reported for this long has died with its machine: the page says it failed, and a later run recovers it, as it does videos never started this long after their lesson was posted.' },
       LESSON_HOLD_MINUTES: { label: 'How long LEARN holds a lesson for its videos', unit: 'minutes', note: 'After the lesson is posted, its card shows the bill filling in instead of the text until the videos are done or failed, or this passes (never longer than a render may go quiet). 0 shows the text at once.' },
-      VIDEO_MAX_ATTEMPTS: { label: 'Attempts at a droplet’s videos', unit: 'attempts', note: 'The first render, then each recovery of one that died with its machine. A recovery pays for the song and the art again.' },
+      VIDEO_MAX_ATTEMPTS: { label: 'Attempts at a droplet’s videos', unit: 'attempts', note: 'The first render, then each recovery of one that died with its machine. A recovery pays for the song and the art again. One that dies on the last is given up.' },
     },
   },
   {
     id: 'routine', title: 'Waking the teacher', note: 'Only while the routine’s API trigger is set (POPSMOSIS_ROUTINE_FIRE_URL and its token, in the environment). A change applies to the next write.',
     knobs: {
       POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS: { label: 'Cooldown between wake-ups', unit: 'seconds', note: 'Writes inside it collapse into one wake-up when it ends. Keep it at or above how long one run takes; 0 wakes the teacher on every write.' },
+      POPSMOSIS_ROUTINE_EVERY_TOPIC: { label: 'A run of its own for every new topic', note: 'on: every new topic wakes the teacher at once, outside the cooldown, so topics are made side by side, each on a machine of its own. A run makes one topic at a time, 20 minutes or more each, so with this off a burst of topics waits its turn for hours. Each wake-up is one of the routine’s metered runs. off: topics wait for the cooldown, as replies do.' },
       POPSMOSIS_ROUTINE_BETA: { label: 'The fire endpoint’s beta header', note: 'Roll it forward when the routines API dates a new one.' },
     },
   },
@@ -87,6 +89,8 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
       GEMINI_SONG_MODEL: { label: 'The Lyria model, when Lyria sings', note: 'lyria-3.5 sings full songs ($0.08 a song); lyria-3-clip-preview makes 30-second clips ($0.04).', suggest: ['lyria-3.5', 'lyria-3-clip-preview'] },
       ELEVENLABS_USD_PER_1K_CREDITS: { label: 'What 1,000 ElevenLabs credits cost', unit: 'USD', note: 'On your plan, e.g. 0.30, so a droplet’s bill shows its ElevenLabs lines in dollars as well as credits. Unset: credits only.' },
       STUDIO_CLAUDE_DRAWS: { label: 'What Claude draws as SVG, whatever paints the rest', note: 'math: every chart and graph, and every picture of a math lesson but its hook and analogy, since a painter cannot count (Muse Image painted six fraction bars as seven). charts: charts and graphs only. brain: only Claude’s brain draws its charts; a Muse topic has them painted. On a Muse topic Claude Opus 5.5 draws them, on the Anthropic key, about 7¢ a picture; without that key they are painted.' },
+      STUDIO_SESSION_FALLBACK: { label: 'When the API cannot answer, the teacher’s session does', note: 'on: a model call that fails on the API (an outage, a key missing or out of credit, an answer cut off, declined or out of its schema) waits for the teacher’s own Claude session, the routine the API wakes, which answers it with a subagent and the studio checks the answer as it checks the API’s. Those calls are on the routine’s plan, not the API key: the droplet’s bill lists them as in session, and the studio keeps what they would have cost on the API. Painting, singing and reading aloud still need their keys. off: the call fails, and the step with it, after its tries in the run; the teacher retries once, and gives the topic up only when no later sweep would get past the failure.' },
+      STUDIO_STEP_MINUTES: { label: 'The most one step of the studio may run', unit: 'minutes', note: 'A step still running then (a bundle, a render, a call that never answers) is ended and counted as failed, so the teacher gets an outcome within its hour and retries it like any other failure. Time spent waiting for the teacher’s session to answer does not count. 0: no limit.' },
     },
   },
 ];

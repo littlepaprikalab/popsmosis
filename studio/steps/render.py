@@ -66,8 +66,9 @@ def run(job: Path, ask=None) -> str:
             except RenderError as e:
                 raise StepFailed(f"{video}: {e}") from e
 
-    # All the videos at once, on one set of workers (encode_all), and their posters drawn meanwhile.
-    with ThreadPoolExecutor(1) as drawing:
+    # All the videos at once, on one set of workers (encode_all), and their posters drawn meanwhile: in this machine's
+    # turn at its cores, after any other job's render or timing (media.cpu_turn()).
+    with media.cpu_turn(job), ThreadPoolExecutor(1) as drawing:
         drawn = drawing.submit(posters)
         try:
             rendered = encode_all(job, [(timeline, job / media.video_path(video, layout), layout)

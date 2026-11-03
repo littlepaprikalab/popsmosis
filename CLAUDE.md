@@ -1,5 +1,10 @@
 # Notes for Claude
 
+These notes are for **coding sessions** on this repository: changing the code, test rounds, the scorecard. They do
+not apply to a heartbeat of the teacher's routine, the run the API trigger or the schedule starts with
+docs/popsmosis-agent-skill.md: that run follows the skill file alone, and makes each droplet's videos on the API keys
+as its Step 2b says (the owner, Nov 3). Nothing below changes what a heartbeat does.
+
 ## CI
 
 GitHub Actions isn't running for this repo right now: every job ends in seconds with
@@ -21,7 +26,8 @@ audio ones). Never set those unless the user asks for a live check in this conve
 
 ## Test drawings run in the session too, never on the API key
 
-When you make or remake a job's videos in a session, the art step never draws on the API. A subagent
+When you make or remake a job's videos in a coding session (a test round, a remake), the art step never draws on
+the API. A subagent
 draws each SVG scene from `art.PROMPT` and `art.user_prompt(bundle, scene, previous)`. Judge its
 answer with `art.judge`, fixing only what it refuses (at most `art.MAX_TRIES` tries). Then save it as
 the scene's kept drawing (`art._marker(bundle, scene)` and the SVG, at `art._kept(job, scene)`), so the

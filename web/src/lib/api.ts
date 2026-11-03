@@ -217,6 +217,7 @@ export interface BreakdownModel {
   calls: number;
   costUsd: number | null; // null: charged in credits, with no price set for them
   credits: number | null; // what the provider charged in its own credits (ElevenLabs)
+  via?: 'session'; // answered by the teacher's own Claude session after the API failed: on its plan, not the API key
 }
 
 /** Software a step ran on the studio's machine besides its models, at the version installed there. */
@@ -359,6 +360,30 @@ function localClock(q: Question): Question {
 
 function onLocalClock<T extends { data: Question[] }>(page: T): T {
   return { ...page, data: page.data.map(localClock) };
+}
+
+/**
+ * What the learner has left of their topics (GET /api/questions/allowance, api/src/lib/usage.ts). Each topic's
+ * place comes back 24 hours after it was asked for, so the times are by this browser's clock, worked out from the
+ * seconds the API gave as the answer arrived, and shown in the learner's own time zone.
+ */
+export interface TopicAllowance {
+  perDay: number; // topics in any 24 hours
+  left: number; // what the learner may ask for now, by their own limit
+  nextAt: number | null; // with some left, when one more comes back; with none, when they may ask again; null: none coming
+  siteFull: boolean; // every learner's topics together reached the site's day, whatever this one has left
+  siteOpensAt: number | null; // siteFull: when the site takes topics again
+}
+
+interface TopicAllowanceAnswer extends Omit<TopicAllowance, 'nextAt' | 'siteOpensAt'> {
+  nextInSeconds: number | null;
+  siteOpensInSeconds: number | null;
+}
+
+function allowanceClock({ nextInSeconds, siteOpensInSeconds, ...rest }: TopicAllowanceAnswer): TopicAllowance {
+  const now = Date.now();
+  const at = (seconds: number | null) => (seconds === null ? null : now + seconds * 1000);
+  return { ...rest, nextAt: at(nextInSeconds), siteOpensAt: at(siteOpensInSeconds) };
 }
 
 export interface Answer {
@@ -600,6 +625,7 @@ export const api = {
   // deletes nothing, so the learner can be shown the choice.
   deleteQuestion: (id: string, everything = false, expectNoLesson = false) =>
     request<void>(`/questions/${id}${everything ? '/everything' : expectNoLesson ? '?expect=no-lesson' : ''}`, { method: 'DELETE' }),
+  getTopicAllowance: () => request<TopicAllowanceAnswer>('/questions/allowance').then(allowanceClock),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh
   // that changes nothing. since is the caller's watermark: the server then only

@@ -88,7 +88,7 @@ class Steps:
 @pytest.fixture(autouse=True)
 def setup(tmp_path, monkeypatch):
     monkeypatch.setattr(jobs, "ROOT", tmp_path)
-    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: None)
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None, **_: None)
     steps = Steps()
     monkeypatch.setattr(media, "step_module", steps.module)
     return steps
@@ -208,7 +208,7 @@ def test_nothing_to_make_without_a_posted_lesson_or_the_steps(setup, monkeypatch
     api = VideoApi()
     assert videos.videos("q1", api=api)[0] == "STOPPED"
     posted()
-    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: "the media steps are not all built yet (art)")
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None, **_: "the media steps are not all built yet (art)")
     assert videos.videos("q1", api=api) == ("STOPPED", "videos", "the media steps are not all built yet (art)")
     assert claims(api) == []
 
@@ -282,7 +282,7 @@ def test_recover_keeps_a_jobs_files_made_before_a_field_was_added_to_the_bundle(
 def test_recover_takes_nothing_where_the_videos_cannot_be_made(setup, monkeypatch):
     api = VideoApi()
     api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK}]
-    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: "the videos are turned off here (STUDIO_VIDEOS)")
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None, **_: "the videos are turned off here (STUDIO_VIDEOS)")
     assert videos.recover(api=api)[0] == "NONE"
     assert api.names() == ["studio_settings"]  # read the settings; took nothing from the queue
 
@@ -305,7 +305,7 @@ def test_a_failed_video_claim_never_changes_the_lessons_outcome(setup, monkeypat
     api = VideoApi()
     api.taken = True
     assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
-    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: "the videos are turned off here (STUDIO_VIDEOS)")
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None, **_: "the videos are turned off here (STUDIO_VIDEOS)")
     api = VideoApi()
     assert operator_run.run("q2", api=api, ask=FakeBrain())[0] == "DONE"
     assert "claim_videos" not in api.names()
@@ -498,9 +498,15 @@ def test_wrong_brain_settings_stop_the_videos_before_anything_is_claimed(setup, 
     operator_run.keep_brain(posted(), "muse-wonder")
     wrong = "the studio's settings are wrong: Muse Wonder 1.0 needs MODEL_API_KEY"
     assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
-    assert videos.background("q1", api=api) == ("STOPPED", "videos", wrong)
+    # In the background the operator's session answers the brain's calls (studio/session.py), but no session paints
+    # with Muse Image or finds structures with SAM 3.1: the same key stops them, for the art's sake.
+    art = ("the studio's settings are wrong: the art needs MODEL_API_KEY: Muse Image paints it and SAM 3.1 finds its "
+           "structures (an admin can pick another painter on /admin/studio)")
+    assert videos.background("q1", api=api) == ("STOPPED", "videos", art)
     api.studio_settings = lambda: {"brain": {"default": "muse-wonder"}}  # recover checks the default brain
-    assert videos.recover(api=api) == ("NONE", "recover", wrong)
+    assert videos.recover(api=api) == ("NONE", "recover", art)
+    knobs.use({"knobs": {"STUDIO_SESSION_FALLBACK": "off"}})  # no session to fall back on: the brain's key, as before
+    assert videos.background("q1", api=api) == ("STOPPED", "videos", wrong)
     assert claims(api) == [] and setup.ran == []  # no claim, no attempt taken from the queue, no step
 
 
@@ -645,7 +651,9 @@ def test_the_videos_check_the_settings_of_the_topics_brain(setup, monkeypatch):
     operator_run.keep_brain(posted(), "muse-spark")
     wrong = "the studio's settings are wrong: Muse Spark 1.3 needs MODEL_API_KEY"
     assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
-    assert videos.background("q1", api=api) == ("STOPPED", "videos", wrong)
+    # In the background the session can stand in for the brain, but not for SAM 3.1, which needs the same key.
+    assert videos.background("q1", api=api)[:2] == ("STOPPED", "videos")
+    assert "the art needs MODEL_API_KEY" in videos.background("q1", api=api)[2]
     assert claims(api) == [] and setup.ran == []
 
 

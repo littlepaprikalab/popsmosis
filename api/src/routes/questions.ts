@@ -7,7 +7,7 @@ import { validateString, containsPersonalInfo, parseLimit, secretError } from '.
 import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
 import { questionInclude, serializeQuestion, serializeQuestionForAgent } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
-import { claimMinutes } from '../lib/claim.js';
+import { claimMinutes, questionMaxRuns } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
 import { breakdownError } from '../lib/breakdown.js';
@@ -18,11 +18,19 @@ import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { clearSoon, queueFileDeletion } from '../lib/storage-delete.js';
 import { parseBrain } from '../lib/brains.js';
 import { studioForAgent } from '../lib/studio-settings.js';
-import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritten } from '../lib/usage.js';
+import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritten, topicAllowance } from '../lib/usage.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
 export const ANSWER_MAX_LENGTH = 5000;
+
+// Why a topic whose runs are used up was given up (lib/claim.ts), on its card: written by the queue's sweep, and by
+// the claim that would have started one run too many.
+const RUNS_USED_REASON = Prisma.sql`CASE WHEN runs = 1 THEN 'given up after 1 run, which ended before the lesson was posted.'
+  ELSE format('given up after %s runs, each of which ended before the lesson was posted.', runs) END`;
+
+// A run's own id, which the studio makes up as it starts on a topic on a machine (POST /api/questions/:id/claim).
+const RUN_ID = /^[A-Za-z0-9_-]{8,64}$/;
 
 export default async function questionRoutes(app: FastifyInstance) {
   // GET /api/questions/status — cheap "anything new?" probe for polling.
@@ -87,12 +95,32 @@ export default async function questionRoutes(app: FastifyInstance) {
     };
   });
 
+  // GET /api/questions/allowance — how many topics the viewer may still ask for, and when the next comes back
+  // (lib/usage.ts): the Learn page shows it in the topic box. Admins have the same limit as everyone.
+  app.get('/api/questions/allowance', { preHandler: [requireUser] }, async (request) => topicAllowance(request.viewer!.id));
+
   // GET /api/questions/queue — agent: PENDING questions, oldest first, claimed
-  // for this caller so an overlapping run is handed different ones.
+  // for this caller so an overlapping run is handed different ones. One whose
+  // runs are used up (QUESTION_MAX_RUNS, lib/claim.ts) is given up instead.
   app.get('/api/questions/queue', { preHandler: [requireAgent] }, async (request) => {
     const { limit } = request.query as Record<string, string | undefined>;
     const take = parseLimit(limit, 5, 20);
     const agentId = request.agent!.id;
+    const maxRuns = questionMaxRuns();
+
+    // A topic whose lease lapsed with its runs used up: every machine it was started on went away before its
+    // lesson was posted (it outlasted the routine's hour, or died). Give it up rather than pay for it again, as
+    // POST /api/questions/:id/fail does, so its card says why.
+    await prisma.$executeRaw`
+      UPDATE questions
+      SET status = 'FAILED', progress = NULL, "failedReason" = ${RUNS_USED_REASON}
+      WHERE id IN (
+        SELECT id FROM questions
+        WHERE status = 'PENDING' AND runs >= ${maxRuns}
+          AND ("claimedAt" IS NULL OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))
+        FOR UPDATE SKIP LOCKED
+      )
+    `;
 
     // Select and claim in one statement. FOR UPDATE SKIP LOCKED is the whole
     // trick: a concurrent caller steps over rows this one has locked instead of
@@ -103,7 +131,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       SET "claimedAt" = now(), "claimedById" = ${agentId}
       WHERE id IN (
         SELECT id FROM questions
-        WHERE status = 'PENDING'
+        WHERE status = 'PENDING' AND runs < ${maxRuns}
           AND ("claimedAt" IS NULL OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))
         ORDER BY "createdAt" ASC, id ASC
         LIMIT ${take}
@@ -282,29 +310,54 @@ export default async function questionRoutes(app: FastifyInstance) {
   app.delete('/api/questions/:id', { preHandler: [requireUser] }, deleteQuestion(false));
   app.delete('/api/questions/:id/everything', { preHandler: [requireUser] }, deleteQuestion(true));
 
-  // POST /api/questions/:id/claim — agent: take, or renew, the lease on one
+  // POST /api/questions/:id/claim — agent: { runId? }: take, or renew, the lease on one
   // question, and get it back with its attachments. The studio calls it before
   // each step that writes the lesson and every 5 minutes while one runs, so a
   // long bundle or a retried step keeps the question out of an overlapping run's queue. The lease is the
   // queue's own (lib/claim.ts): the same agent may always renew it, another
-  // agent only once it has lapsed.
+  // agent only once it has lapsed. `runId` names the run on the machine that sends it, on every claim of that
+  // run: the first claim with an id the topic has not seen last starts one more of its runs (lib/claim.ts), and
+  // a claim with the same id again (a renewal, or a retry after a lost reply) counts nothing.
   app.post('/api/questions/:id/claim', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const agentId = request.agent!.id;
+    const { runId } = (request.body ?? {}) as { runId?: unknown };
+    if (runId !== undefined && (typeof runId !== 'string' || !RUN_ID.test(runId))) {
+      return sendError(reply, 'VALIDATION_ERROR', 'runId must be 8 to 64 letters, digits, hyphens or underscores');
+    }
+    const maxRuns = questionMaxRuns();
+    const lapsed = Prisma.sql`"claimedAt" < now() - make_interval(mins => ${claimMinutes()})`;
+    // A new run counts in the same statement that leases the topic to it, and only while it has a run left.
+    const countRun = runId === undefined ? Prisma.empty : Prisma.sql`,
+      runs = CASE WHEN "lastRunId" = ${runId} THEN runs ELSE runs + 1 END, "lastRunId" = ${runId}`;
+    const runLeft = runId === undefined ? Prisma.empty : Prisma.sql`AND ("lastRunId" = ${runId} OR runs < ${maxRuns})`;
     const claimed = await prisma.$queryRaw<{ id: string }[]>`
       UPDATE questions
-      SET "claimedAt" = now(), "claimedById" = ${agentId}
+      SET "claimedAt" = now(), "claimedById" = ${agentId} ${countRun}
       WHERE id = ${id} AND status = 'PENDING'
-        AND ("claimedAt" IS NULL OR "claimedById" = ${agentId}
-             OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))
+        AND ("claimedAt" IS NULL OR "claimedById" = ${agentId} OR ${lapsed})
+        ${runLeft}
       RETURNING id
     `;
+    if (claimed.length === 0 && runId !== undefined) {
+      // A new run with none left. Once the last run's lease has lapsed, every machine started on the topic went away
+      // before its lesson was posted: give it up rather than pay for it again, as the queue's sweep does. While the
+      // last run still holds it, that run carries on and this one is turned away.
+      await prisma.$executeRaw`
+        UPDATE questions SET status = 'FAILED', progress = NULL, "failedReason" = ${RUNS_USED_REASON}
+        WHERE id = ${id} AND status = 'PENDING' AND runs >= ${maxRuns}
+          AND "lastRunId" IS DISTINCT FROM ${runId} AND ("claimedAt" IS NULL OR ${lapsed})
+      `;
+    }
     await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
     const question = await prisma.question.findUnique({ where: { id }, include: questionInclude });
     if (!question) return sendError(reply, 'NOT_FOUND', 'Question not found');
     if (claimed.length === 0) {
       if (question.status === 'ANSWERED') return sendError(reply, 'CONFLICT', 'Question already has an answer');
       if (question.status === 'FAILED') return sendError(reply, 'CONFLICT', 'Question was marked failed');
+      if (runId !== undefined && question.runs >= maxRuns && question.lastRunId !== runId) {
+        return sendError(reply, 'CONFLICT', 'Another run holds the claim on this question');
+      }
       return sendError(reply, 'CONFLICT', 'Another agent holds the claim on this question');
     }
     // With the studio's settings (lib/studio-settings.ts), so an admin's change reaches the run.
