@@ -454,11 +454,6 @@ def test_every_label_the_studio_logs_says_what_its_call_did():
         ("bundle", "script"): "writes the script",  # steps/script.py
         ("bundle", "bundle"): "writes the lesson and/or song", ("bundle", "bundle again"): "writes the lesson and/or song",  # steps/bundle.py
         ("bundle", "fact audit"): "audits the facts", ("bundle", "fact audit again"): "audits the facts",  # audit.py
-        ("bundle", "learner"): "takes the lesson as a student",  # steps/learner.py: the student, then its grader
-        ("bundle", "learner grade"): "grades the student's answers",
-        ("bundle", "lesson rewrite"): "writes the lesson and/or song",  # a fix-up: on the line it backs up
-        ("bundle", "learner again"): "takes the lesson as a student",
-        ("bundle", "learner again grade"): "grades the student's answers",
         ("bundle", "narration edit"): "edits the narration",  # steps/narration.py
         ("factcheck", "factcheck round 1"): "fact-checks and fixes every line",  # steps/factcheck.py
         ("factcheck", "lyric rewrite round 1"): "fact-checks and fixes every line",  # steps/songwriter.py

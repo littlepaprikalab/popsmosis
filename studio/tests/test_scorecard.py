@@ -25,8 +25,8 @@ def scores(value: int = 4) -> dict:
 class FakeAsk:
     """Answers each call by its label, as the studio's steps make them, and keeps what each was asked."""
 
-    def __init__(self, judge=None, passed=True, fail=None, cost=0.0, job=None):
-        self.judge, self.passed, self.fail, self.cost, self.job = judge or scores(), passed, fail, cost, job
+    def __init__(self, judge=None, fail=None, cost=0.0, job=None):
+        self.judge, self.fail, self.cost, self.job = judge or scores(), fail, cost, job
         self.calls = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -44,13 +44,6 @@ class FakeAsk:
                     "key_terms": ["ATP synthase"],
                     "key_lines": [{"from_line": "c1-1", "text": "Protons flow back, ATP is made",
                                    "from_narration": "n2"}]}
-        if label.endswith("grade"):
-            return {"core_idea": self.passed, "links": [True, self.passed, False], "missing": [] if self.passed
-                    else ["why the protons flow back"]}
-        if label in ("learner", "learner again"):
-            return {"big_idea": "light makes ATP", "why": "protons flow", "what_if": "no ATP"}
-        if label == "lesson rewrite":
-            return {"lesson_markdown": "# A clearer lesson"}
         if label == "judge":
             return self.judge
         raise AssertionError(f"an unexpected call: {label}")
@@ -115,37 +108,26 @@ def test_the_judge_is_the_same_claude_model_whatever_the_brain(monkeypatch):
 def test_a_run_makes_and_scores_each_topic_and_saves_the_tables(tmp_path):
     ask_for, made = asks()
     card = scorecard.run([topic("one"), topic("two")], tmp_path, ask_for=ask_for, about=ABOUT, workers=2)
-    # The bundle step alone (with its learner test), then the judge: no fact-check, art or audio.
-    assert [c["label"] for c in made["one"].calls] == ["script", "bundle", "learner", "learner grade",
-                                                       "narration edit", "judge"]
+    # The bundle step alone, then the judge: no fact-check, art or audio.
+    assert [c["label"] for c in made["one"].calls] == ["script", "bundle", "narration edit", "judge"]
     judged = made["one"].calls[-1]
     assert judged["role"] == "judge" and judged["system"] == scorecard.RUBRIC
     assert judged["prompt"].startswith("<droplet>") and CHORUS in judged["prompt"]
     assert '"Protons flow back, ATP is made" (from lyric c1-1' in judged["prompt"]
-    for name in ("request.json", "bundle.json", "checks.json", "learner.json", "judge.json"):
+    for name in ("request.json", "bundle.json", "checks.json", "judge.json"):
         assert (tmp_path / "one" / name).exists()
 
     row = card["topics"][0]
     assert row["made"] and not row["failed"] and row["title_line"] == CHORUS
-    assert row["learner"]["first"] == {"core_idea": True, "links": 2, "of": 3, "passed": True, "missing": []}
     assert row["rubric"]["hook"] == {"reason": "hook reason", "score": 4}
     assert row["checks"]["left"] > 0  # the sample sings its chorus without a title line in the intro, and more
     assert card["summary"]["rubric"]["frame"] == {"mean": 4, "lowest": 4, "low": 0}
-    assert card["summary"]["learner"]["first_passed"] == 2
 
     saved = json.loads((tmp_path / "scorecard.json").read_text())
     assert saved["about"]["commit"] == ABOUT["commit"] and len(saved["topics"]) == 2
     table = (tmp_path / "scorecard.md").read_text()
-    assert "| Topic | Level | Checks | Learner | Hook | Connect |" in table  # the rubric's frame, renamed Nov 1
-    assert "| one | AP |" in table and "pass 2/3" in table and "- **Hook 4.** hook reason" in table
-
-
-def test_a_missed_lesson_shows_its_rewrite(tmp_path):
-    ask_for, made = asks(passed=False)
-    card = scorecard.run([topic("one")], tmp_path, ask_for=ask_for, about=ABOUT)
-    assert "lesson rewrite" in [c["label"] for c in made["one"].calls]
-    assert scorecard.learner_cell(card["topics"][0]) == "miss 1/3 (rewrite: miss 1/3)"
-    assert "missed: why the protons flow back" in (tmp_path / "scorecard.md").read_text()
+    assert "| Topic | Level | Checks | Hook | Connect |" in table  # the rubric's frame, renamed Nov 1
+    assert "| one | AP |" in table and "- **Hook 4.** hook reason" in table
 
 
 def test_a_topic_that_fails_is_scored_as_failed_and_the_others_go_on(tmp_path):
@@ -179,19 +161,18 @@ def test_no_topic_starts_once_the_run_has_spent_its_budget(tmp_path):
     card = scorecard.run([topic("one"), topic("two")], tmp_path, ask_for=ask_for, about=ABOUT, workers=1, budget=1.0)
     assert "two" not in made
     assert card["topics"][1]["failed"]["error"].startswith("not run")
-    assert card["topics"][0]["cost"]["bundle"] == 2.5 and card["topics"][0]["cost"]["judge"] == 0.5
+    assert card["topics"][0]["cost"]["bundle"] == 1.5 and card["topics"][0]["cost"]["judge"] == 0.5
 
 
 def test_compare_shows_two_runs_side_by_side_and_warns_when_the_judge_changed(tmp_path):
     ask_for, _ = asks(judge=scores(3))
     a = scorecard.run([topic("one"), topic("two")], tmp_path / "a", ask_for=ask_for, about=ABOUT)
-    ask_for, _ = asks(judge=scores(4), passed=False)
+    ask_for, _ = asks(judge=scores(4))
     b = scorecard.run([topic("one")], tmp_path / "b", ask_for=ask_for, about={**ABOUT, "name": "run-b"})
     text = scorecard.compare(a, b)
     assert "# Scorecards: run-a vs run-b" in text and "on the 1 topics both ran" in text
     assert "| Hook (mean) | 3.00 | 4.00 | +1.00 |" in text
-    assert "| Learner passed on the first read | 1 | 0 | -1 |" in text
-    assert "| one | " in text and "| 3 → 4 |" in text and "pass 2/3 → miss 1/3 (rewrite: miss 1/3)" in text
+    assert "| one | " in text and "| 3 → 4 |" in text
     assert "Not comparable" not in text
     later = scorecard.compare(a, {**b, "about": {**b["about"], "judge": "claude-fable-5-1 at high"}})
     assert "Not comparable: the judge changed" in later

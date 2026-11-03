@@ -55,15 +55,9 @@ const LESSON_STEPS: Step[] = [
       + 'Some problems get fixed right here.',
   },
   {
-    name: 'Student test',
-    kind: 'checks',
-    text: 'A second AI plays a student who has never seen the topic. It reads only the lesson and explains it back, '
-      + 'and if it misses the big idea or why it works, the lesson is rewritten once.',
-  },
-  {
     name: 'Line check',
     kind: 'gate',
-    text: 'Starting fresh again, it checks every line of the lesson, the song and the captions against those facts, '
+    text: 'Starting fresh again, the AI checks every line of the lesson, the song and the captions against those facts, '
       + 'and for whether it is fit for a classroom. A line that fails is rewritten and checked again, up to three rounds.',
   },
 ];
@@ -187,7 +181,7 @@ const JOBS: Job[] = [
     or: [{ name: 'Muse Wonder 1.0', maker: 'Meta' }, { name: 'Muse Spark 1.3', maker: 'Meta' }],
   },
   {
-    job: 'Plays the student and checks the pictures',
+    job: 'Checks the pictures',
     uses: [{ name: 'Claude Sonnet 5.5', maker: 'Anthropic' }],
     or: [{ name: 'Muse Spark 1.3', maker: 'Meta' }],
     orWhen: 'when a Muse model writes',

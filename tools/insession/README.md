@@ -12,7 +12,7 @@ subagent in the Claude Code session saves an answer. No call reaches the Anthrop
     python tools/insession/answer.py spend         # what each job has spent, from its calls.jsonl
     python tools/insession/restep.py <job> art locate timeline render   # some steps of any job folder again
 
-- `drive.py` runs one topic: the bundle (with its script, early audit, learner test and narration edit), the
+- `drive.py` runs one topic: the bundle (with its script, early audit and narration edit), the
   audit and the fact-check, then writes the job's settings.json (`{"song": {"provider": "gemini"}, "art":
   {"claude": "muse"}}`) and makes the videos as `python -m studio make` does. It refuses to start while an
   Anthropic or ElevenLabs key (or a retired setting) is set; `start.sh` unsets them.

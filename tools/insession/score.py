@@ -2,7 +2,7 @@
 
 No model is called here. Subagents answer each call from the prompts and schemas this writes: a writer per topic
 (SCORE_WRITER.md) and a judge per topic (SCORE_JUDGE.md). This script builds their prompts, checks their answers
-and runs the bundle step's code checks. The learner test and the narration edit are skipped.
+and runs the bundle step's code checks. The narration edit is skipped.
 
     python tools/insession/score.py prep                    every topic's prompts and schemas
     python tools/insession/score.py script-check <topic>    script.answer.json against Script
@@ -96,7 +96,7 @@ def bundle_check(t: str) -> None:
 
 
 def run_checks(t: str) -> None:
-    """bundle.run's checks after the bundle call, with no learner test or narration edit: keep in step with it."""
+    """bundle.run's checks after the bundle call, with no narration edit: keep in step with it."""
     d = folder(t)
     request = read(d / "request.json", Request)
     script = _script(d, "script.held.json")

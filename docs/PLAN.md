@@ -211,9 +211,11 @@ explanation before anything is drawn or sung. Round 18's lessons, written a sent
 alongside everything else, came out in pieces a learner could not follow. Then one
 structured-output call returns everything else that can be written from the topic alone,
 handed the script, which stands: code holds the bundle to its essence, facts and narration.
-Without a script (its call failed), that one call writes it all, as it did before. Then the
-learner test, and a narration editor (`studio/steps/narration.py`) that hears the voice-over
-whole and may reorder and reword it, keeping every sentence. The fields are in this order on
+Without a script (its call failed), that one call writes it all, as it did before. Then a
+narration editor (`studio/steps/narration.py`) that hears the voice-over whole and may reorder
+and reword it, keeping every sentence. (A learner test, a helper reading only the lesson as a
+first-time learner, ran here until Nov 3; it passed every lesson on the first read, so it was
+taken out.) The fields are in this order on
 purpose: the model writes in field order, so the later parts build on the facts it has
 already written.
 
