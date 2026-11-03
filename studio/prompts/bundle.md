@@ -412,8 +412,14 @@ explanation left to the narration.
   sodium wants in"). Things the listener can picture and count beat abstract words.
 - **Sung to the listener, never directions**: no narrating the picture or the camera ("zoom
   inside to the chloroplast", "now look at the membrane"), no announcing a section.
-- **The comparison, once at most**: where the facts give one, a couplet of a verse may sing
-  it; the title, the chorus, the bridge and the outro sing the real thing.
+- **One voice, start to finish**: pick one everyday world the listener knows (money, a
+  building site, a kitchen, a game) and sing the real parts in its words all the way through,
+  the title and the chorus too: "Cash in the carriers", "Spend two, make four, so net two in
+  the bank", or "Call the crew, the wall's been cracked / Platelets pile in, patch it back".
+  The real terms stay; the world lends them its verbs, its stakes and its attitude. It is a
+  way of talking, not a comparison to map: nothing stands in for a part (no tower for the
+  pump), so the listener never has to translate. Choose a world whose verbs are true of the
+  real thing, since a rhyme makes them sound true.
 - **One surprise**, where the facts give one that serves the core idea: a line a listener
   repeats to a friend, in a verse.
 - **Terms as they are sung**: the course's real terms, written as a singer says them: "NAD

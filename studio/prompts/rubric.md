@@ -38,8 +38,10 @@ How the droplet connects the new idea to what the learner already knows (this cr
 - 5: It builds on something the learner already knows at that level, an earlier idea in the course or an everyday
   experience, and says how it connects. Where it uses an everyday comparison, the comparison does the same job as the
   whole idea, its parts are matched to the real ones, it says where it stops fitting, and it is used where it helps,
-  not stretched over every step or every line of the song. A topic concrete enough to need no comparison (a story in
-  time, a play) scores 5 when each step is tied to things the learner can picture.
+  not stretched over every step. A song sung in one everyday world's words all the way through, naming the real parts
+  ("Cash in the carriers"), is a voice, not a stretched or competing comparison; a song that leaves the listener to
+  map stand-ins (a tower for the pump) is one. A topic concrete enough to need no comparison (a story in time, a play)
+  scores 5 when each step is tied to things the learner can picture.
 - 3: The link is loose: a comparison that fits only one part, a stock one that fits any topic, or one stretched until
   it strains; or the droplet never ties the idea to anything the learner knows.
 - 1: A comparison that misleads about how the real thing works, or several competing ones.
