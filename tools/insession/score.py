@@ -87,7 +87,9 @@ def bundle_prompt(t: str) -> None:
     write(d / "unquoted.json", {"problems": [p.model_dump() for p in unquoted]})
     (d / "bundle.user.md").write_text((d / "user.md").read_text(encoding="utf-8") + "\n\n"
                                       + script_step.as_prompt(script), encoding="utf-8")
-    print("written", d / "bundle.user.md")
+    # The bundle call's brief with its script standing, as bundle.run sends it (bundle_step.with_script).
+    (d / "bundle.system.md").write_text(bundle_step.with_script(bundle_step.PROMPT), encoding="utf-8")
+    print("written", d / "bundle.user.md", "and", d / "bundle.system.md")
 
 
 def bundle_check(t: str) -> None:

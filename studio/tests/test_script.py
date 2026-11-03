@@ -52,9 +52,12 @@ def test_the_script_is_written_first_and_the_bundle_keeps_its_essence_facts_and_
     labels = [a[0] for a in ask.asked]
     assert labels.count("fact audit") == 1 and [x for x in labels if x != "fact audit"] == [
         "script", "bundle", "narration edit"]
-    (_, first, system), (_, second, _) = [a for a in ask.asked if a[0] != "fact audit"][:2]
+    (_, first, system), (_, second, bundle_system) = [a for a in ask.asked if a[0] != "fact audit"][:2]
     assert "## The question" in system and "## The audience" in system and "## The facts" in system
     assert "## The song" not in system  # the script writer gets the brief's audience and facts, not the rest
+    # The facts' own rules are the script writer's; the bundle call, its script standing, reads what they mean.
+    assert "Write 3 or 4 facts" in system and "Write 3 or 4 facts" not in bundle_system
+    assert bundle_system == bundle_step.with_script(bundle_step.PROMPT) and "## The song" in bundle_system
     assert second.startswith(first) and "<script>" in second and '"id": "n2"' in second
     assert '"text": "The light reactions happen in the thylakoid membrane."' in second  # one space between words
     assert bundle.core_idea == "Light pumps protons, and their flow back makes ATP."

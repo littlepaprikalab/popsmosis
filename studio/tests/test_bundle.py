@@ -251,3 +251,21 @@ def test_the_bill_says_the_lesson_call_writes_the_lesson_and_or_song(tmp_path, v
     knobs.use({"knobs": {}})
     [step] = ledger.breakdown(tmp_path, "lesson")["steps"]
     assert [m["task"] for m in step["models"]] == ["writes the lesson and/or song", "edits the narration"]
+
+
+def test_with_a_script_the_bundle_call_reads_what_the_facts_mean_not_how_to_write_them():
+    """script.follow() puts the script's facts and essence back over the bundle's, so the bundle call is spared the
+    rules for writing them (Nov 3), and keeps what they mean for the rest, its course and its topic."""
+    brief = bundle_step.PROMPT
+    cut = bundle_step.with_script(brief)
+    for gone in ("Write 3 or 4 facts", "`source_quote`", "the one sentence the learner should still be able to say"):
+        assert gone in brief and gone not in cut
+    flat = " ".join(cut.split())
+    for kept in ("rejects any that claims what the facts do not support", "Every technical name not in `key_terms`",
+                 "- `course`:", "- `topic`:", "## Scenes and structures", "## The song", "## How we teach"):
+        assert kept in flat
+    assert cut.count("## The facts") == 1 and len(cut) < len(brief) - 4000
+    # The lesson-only brief is cut the same way, and a brief whose headings were renamed is kept whole.
+    assert "Write 3 or 4 facts" not in bundle_step.with_script(bundle_step.LESSON_ONLY_PROMPT)
+    renamed = "Intro\n\n## Facts\n\nWrite them.\n\n## Scenes\n\nDraw.\n"
+    assert bundle_step.with_script(renamed) == renamed

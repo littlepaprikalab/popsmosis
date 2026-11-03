@@ -221,7 +221,7 @@ sentences. The illustrator draws best the diagrams it already knows:
   Sun"). Code puts that part's colour and label there for the illustrator, on the thing you
   just described; a part with no tag gets them in a list after your words, and the
   illustrator puts them on the wrong thing. Tag each structure once, where the picture shows
-  it, and name no colour yourself: the tag gives the one from `color_hex`. To tell apart two
+  it. To tell apart two
   parts of one real thing, ask for a soft tint over it ("the globe's northern half
   [[Northern hemisphere]] softly tinted, the continents showing through"), never solid paint.
 - Leave out what the lesson does not need, and never ask for text, labels, letters or
@@ -333,8 +333,8 @@ explanation left to the narration.
   sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat; shimmering
   synths lead, claps accent the beat", with sounds of your own for this topic. Concrete sounds ("a
   warm Rhodes", "an 808 that slides", "stacked harmonies on the hook") beat adjectives ("upbeat",
-  "educational"). The voice stays close and natural, one clear lead: never soaring, belted or
-  shouted, and no group shouts. Its rapped verses are confident and rhythmic, every syllable
+  "educational"). The voice stays close and natural, one clear lead: never soaring or
+  belted. Its rapped verses are confident and rhythmic, every syllable
   on the beat, in a flow of their own that suits the genre and the song (a quick double-time run,
   a laid-back flow just behind the beat, a bouncing triplet flow, a clipped staccato one); its
   chorus is sung in an easy range. Instruments
