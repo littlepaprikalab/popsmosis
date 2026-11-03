@@ -1584,11 +1584,39 @@ narration edit, which cost more than the two fact-check rounds. Its looks at the
   it, secretion was in 0 of 2 scripts (the Claude writer's and Muse Wonder's); with the facts half alone, in the facts
   of 2 of 2 and the narration of none; as shipped, walked in the narration of 2 of 2, over the tubule close-up ("The
   tubule also does secretion, moving extra acid and some drugs from blood into the filtrate").
-- A test left stale by the art step's look at each picture (`test_videos.py`): it failed on `main`.
 
 The job was checked again and its timeline and videos made again with the first three (`step check`, `step
 timeline`, `step render`: no paid call; the arrows already pointed were kept, the moved sentences carrying no flow).
 The brief's rule needs a new lesson, so it is not in this droplet.
+
+### The topic again, with the stages rule
+
+The owner approved a second job (`kid-mw2`, $6 ceiling) on the same command with every fix above. Its first bundle call
+dropped ("muse-wonder-1.0: Connection error", unbilled; the proxy logged nothing), after $0.57 of script and audit;
+`step bundle`, `audit` and `factcheck`, then `make`, ran it again. $4.74 in all: $0.57 lost, $2.16 the lesson, $1.70
+the videos with the arrows pointed twice ($0.31 the second time, below).
+
+- **Secretion is taught**, in plain words rather than the course's: "Then, in the later coiled tubule, salts are
+  adjusted and extra wastes are added from the blood into the filtrate for removal", and sung ("Later tubule tunes the
+  salts just right / Extra wastes are added to the flight"). The key terms took antidiuretic hormone, not secretion.
+- **But it is not shown.** Its arrow, pointed by the helper at the vessel beside the tubule, was left out by the
+  renderer's gate as starting "away from Blood vessels": SAM's mask of the vessels was only those by their label, 583
+  px off (fixed below). Pointed again, it passed the gate and failed the helper's look, "It starts at the later coiled
+  tubule edge and ends out in the blood vessels", though the still it was shown runs from the vessel into the coil.
+  The look failed filtration's arrow too ("starts and ends in the yellow filtrate", leaving the glomerulus's edge):
+  6 of 15 arrows left out. Muse Spark misreads short arrows (about 40 px in the 960 px still), as it read the first
+  job's water arrow backwards.
+- **Worse elsewhere.** The overview is a crowded diagram cut off at the top, the loop not joined to the proximal
+  tubule, membrane beads along every tube, and antidiuretic hormone painted as two chains of yellow beads; the check
+  passed it. The narration ran to 434 words, over 420. The diabetes case plays over the overview, its own picture the
+  song's alone. 27 of 34 parts located; the filter close-up's water, glucose, salts and nitrogen waste were not.
+- **Better**: the hook is a plain figure with his kidneys; the fact-check passed with 87 lines supported, none
+  unsupported; the song drifted 1.0 s at most.
+
+Fixed on this branch from it: **a pointed arrow is not judged by the boxes** (`Renderer._wrong_arrow`): the box of a
+part painted in many places is only the copy SAM found, and the arrows step looks at a pointed arrow as drawn, as the
+gate already did not guess its way. Too short or leaving the picture still leaves it out. Still open: the look itself,
+which needs the arrow larger in its still, or a stronger model, to read which way it goes.
 
 ## Not tested
 
