@@ -217,8 +217,8 @@ pictures it already knows:
   - astronomy, Earth science, physics or chemistry: "a clean textbook schematic, each
     object simplified but recognisable."
   - a scene of people, places or everyday things, the hook among them: "a rich editorial
-    illustration: painterly, cinematic light, real depth, the things the lesson names clear
-    in front."
+    illustration: painterly, bright and evenly lit with no deep shadows, real depth, each
+    thing the lesson names painted solidly in its own colour, clear in front."
 - Name the real things, never their shapes ("Earth's northern hemisphere", not "a blue
   dome"). Place things with plain words (left, right, above, below, inside, through, tilted
   toward), each said once, never a relation such as "at right angles to".
