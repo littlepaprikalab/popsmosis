@@ -161,9 +161,11 @@ function TeacherNotesLink({ href }: { href: string }) {
  * leaving the lesson on the Droplets tab naming no one (api/src/lib/privacy.ts). When people have liked or commented
  * on it, Everything says how many, so what it takes from them is plain before it is chosen.
  */
-function DeleteChoice({ everything, onChange, likes = 0, comments = 0 }: {
+function DeleteChoice({ everything, onChange, typed, onType, likes = 0, comments = 0 }: {
   everything: boolean;
   onChange: (everything: boolean) => void;
+  typed: string; // what is in the box Everything asks the word in
+  onType: (typed: string) => void;
   likes?: number;
   comments?: number;
 }) {
@@ -202,9 +204,25 @@ function DeleteChoice({ everything, onChange, likes = 0, comments = 0 }: {
           </label>
         ))}
       </div>
+      {/* Everything cannot be undone and takes what other people left on it: a word typed, not a click that slipped. */}
+      {everything && (
+        <div className="mt-3">
+          <label htmlFor="delete-confirm-text" className="block mb-1.5 text-[13px]">
+            To delete everything, type <strong style={{ color: 'var(--text-primary)' }}>{DELETE_WORD}</strong> below.
+          </label>
+          <input id="delete-confirm-text" data-testid="delete-confirm-text" value={typed} onChange={(e) => onType(e.target.value)}
+            placeholder={DELETE_WORD} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={20}
+            className="w-full px-3 py-2 rounded text-sm outline-none focus:ring-1"
+            style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+        </div>
+      )}
     </fieldset>
   );
 }
+
+/** The word Everything asks to be typed before it deletes; any case, so a phone's capital still counts. */
+const DELETE_WORD = 'delete';
+const typedDeleteWord = (typed: string) => typed.trim().toLowerCase() === DELETE_WORD;
 
 /**
  * One topic request, its lesson, and the follow-ups under it. Memoized on purpose: the armed poll hands
@@ -440,6 +458,7 @@ function LearnContent() {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   // For a topic with a lesson: whether the lesson goes too (the API's /everything route), or only the request.
   const [deleteLesson, setDeleteLesson] = useState(true);
+  const [typedDelete, setTypedDelete] = useState(''); // the word Everything asks for (DeleteChoice)
   // Submit pressed signed out: the box asks them to sign in, keeping what they typed.
   const [askSignIn, setAskSignIn] = useState(false);
   const signInRef = useRef<HTMLAnchorElement>(null);
@@ -626,6 +645,7 @@ function LearnContent() {
   // Stable identity, like the callbacks below: each card is handed it. Every opening starts at Everything.
   const requestDelete = useCallback((id: string) => {
     setDeleteLesson(true);
+    setTypedDelete('');
     setPendingDelete(id);
   }, []);
   const handleDelete = async (id: string, everything: boolean) => {
@@ -649,6 +669,8 @@ function LearnContent() {
   };
   const deleting = questions.find((q) => q.id === pendingDelete);
   const deletingLesson = deleting?.status === 'ANSWERED';
+  // Everything waits for the word; only my request, and a topic with no lesson, are one confirm as before.
+  const deleteBlocked = deletingLesson && deleteLesson && !typedDeleteWord(typedDelete);
 
   // Stable identity: QuestionCard is memoized, and a callback rebuilt each
   // render would re-render every card on the page anyway.
@@ -690,12 +712,17 @@ function LearnContent() {
         open={!!pendingDelete}
         title="Delete topic"
         message={deletingLesson
-          ? <DeleteChoice everything={deleteLesson} onChange={setDeleteLesson}
+          ? <DeleteChoice everything={deleteLesson} onChange={setDeleteLesson} typed={typedDelete} onType={setTypedDelete}
               likes={deleting?.answer?.likeCount} comments={deleting?.answer?.commentCount} />
           : 'Delete this topic request? This cannot be undone.'}
         confirmLabel={!deletingLesson ? 'Delete' : deleteLesson ? 'Delete everything' : 'Delete my request'}
         variant="danger"
-        onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete, deleteLesson); setPendingDelete(null); }}
+        confirmDisabled={deleteBlocked}
+        onConfirm={() => {
+          if (deleteBlocked) return;
+          if (pendingDelete) handleDelete(pendingDelete, deletingLesson && deleteLesson);
+          setPendingDelete(null);
+        }}
         onCancel={() => setPendingDelete(null)}
       />
 

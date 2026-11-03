@@ -801,7 +801,9 @@ one, they choose. **Only my request** takes it back: their words, files and thre
 deleted and `questions.userId` is set to null, so the lesson stays on the tab naming no one.
 **Everything** (`DELETE /api/questions/:id/everything`) deletes the request and the droplet
 with all that hangs on it (its follow-ups, the likes, comments and play counts others left,
-and the files in both R2 buckets), so it leaves the tab. Anything still writing to it (a like,
+and the files in both R2 buckets), so it leaves the tab. It is the default, and the dialog
+will not delete until the learner types `delete` (any case), so a slipped click or Enter
+deletes nothing; it also says how many likes and comments go with it. Anything still writing to it (a like,
 a comment, a follow-up, the teacher's reply, the studio's video calls) gets a 404, never a
 server error, and the studio stops at its next step ("the topic was deleted"). The files are
 cleared by `api/src/lib/storage-delete.ts`: the droplet is recorded in `storage_deletions` in

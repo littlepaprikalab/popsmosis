@@ -301,6 +301,8 @@ test.describe('signed in', () => {
     await expect(dialog.getByTestId('delete-everything')).toBeChecked();
     await expect(dialog.getByTestId('delete-engagement')).toHaveCount(0); // nobody has liked or commented on it
     await dialog.getByRole('radio', { name: /Only my request/ }).check();
+    // Only Everything asks for the word typed: taking the request back is one confirm, as it was.
+    await expect(dialog.getByTestId('delete-confirm-text')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Delete my request' }).click();
     await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
     await expect(page.getByText('The lesson stays for others to learn from')).toBeVisible();
@@ -339,7 +341,16 @@ test.describe('signed in', () => {
     await expect(dialog).toContainText('the likes and comments people left on it');
     await expect(dialog.getByTestId('delete-engagement')).toHaveText('This also deletes 1 like and 1 comment on it.');
     await expect(dialog.getByTestId('delete-everything')).toBeChecked();
-    await dialog.getByRole('button', { name: 'Delete everything' }).click();
+    // Not until the word is typed: a click, or an Enter, that slipped deletes nothing.
+    const confirm = dialog.getByRole('button', { name: 'Delete everything' });
+    await expect(confirm).toBeDisabled();
+    await page.keyboard.press('Enter');
+    const box = dialog.getByLabel(/To delete everything, type/);
+    await box.fill('delet');
+    await expect(confirm).toBeDisabled();
+    await box.fill('Delete'); // a phone's capital counts
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
     await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
     await expect(page.getByText('Deleted: your topic, its lesson and its videos.')).toBeVisible();
 
@@ -367,6 +378,7 @@ test.describe('signed in', () => {
     await page.goto('/learn');
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
     await card.getByRole('button', { name: 'delete' }).click();
+    await page.getByRole('dialog').getByTestId('delete-confirm-text').fill('delete');
     await page.getByRole('dialog').getByRole('button', { name: 'Delete everything' }).click();
     await expect(page.getByText('nothing was deleted')).toBeVisible();
     await expect(card).toBeVisible();
