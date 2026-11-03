@@ -5,7 +5,7 @@
  */
 
 /** Who runs Popsmosis: the "we" in both pages, and who people's data is entrusted to. */
-export const OPERATOR_NAME = 'Spicy Ginger Labs';
+export const OPERATOR_NAME = 'Spicy Ginger Labs LLC';
 
 /** Where the operator is based, as the pages say it. */
 export const OPERATOR_LOCATION = 'Washington State, USA';
