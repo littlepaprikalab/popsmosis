@@ -190,7 +190,7 @@ def check_ceiling(job: Path) -> None:
 def call_row(call: brain.Call) -> str:
     cost = f"${call.cost_usd:.4f}" if call.cost_usd is not None else "n/a"
     flags = "".join([" fell back" if call.fell_back else "",
-                     f" ({call.stop_reason})" if call.stop_reason not in ("end_turn", "stop", "") else "",
+                     f" ({call.stop_reason})" if call.stop_reason not in ("end_turn", "stop", "completed", "") else "",
                      f" {call.credits:g} credits" if call.credits is not None else ""])
     return (f"{call.label:<20} {call.model:<17} {call.input_tokens:>7} {call.output_tokens:>7} {cost:>8} "
             f"{call.seconds:>6.1f}s{flags}")
