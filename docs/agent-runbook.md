@@ -68,7 +68,7 @@ models](../README.md#choosing-the-models). `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL
 stops with `the studio's settings are wrong` and says to set it there and remove it, so
 nothing changes without you seeing why. Give the environment the key of every brain and
 painter picked there: a default brain or painter whose key is missing stops each run the
-same way, and a topic an admin sent to a brain whose key is missing is given up with that
+same way, and a topic sent to a brain whose key is missing is given up with that
 reason.
 
 Inkmory takes back an adopted agent that logs no cycle for 3 days. So when the queues are

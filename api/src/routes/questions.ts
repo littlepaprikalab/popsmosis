@@ -153,9 +153,9 @@ export default async function questionRoutes(app: FastifyInstance) {
 
   // POST /api/questions — signed-in user asks a question. `attachments` are
   // files sent with it (lib/attachments.ts), which is why the body may be
-  // large — and why the caller is checked before it is read. An admin may
-  // pick the `brain` that makes it (lib/brains.ts); anyone else's topic is
-  // made by the teacher's own.
+  // large — and why the caller is checked before it is read. The caller may
+  // pick the `brain` that makes it (lib/brains.ts: Muse Wonder for admins
+  // only); left out, the default brain makes it.
   // A caller already at a limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
   const topicOpen = async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.viewer) return; // requireUser replied

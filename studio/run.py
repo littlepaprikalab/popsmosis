@@ -27,7 +27,7 @@ most: `run <id> --background` starts the run detached from the command and retur
 at once, and `python -m studio wait <id>` waits up to 9 minutes for its outcome line
 (the same line `run` prints), or says RUNNING when it is still going.
 
-The brain (studio/brain.py) is the one an admin picked for the topic on /learn, else the
+The brain (studio/brain.py) is the one picked for the topic on /learn, else the
 default brain set on /admin/studio, both as the claim says; never the environment, which
 holds only the keys. Before it claims anything, `run` reads the settings with the agent
 key and checks the default brain can run here: if not (its key missing, say), it stops,

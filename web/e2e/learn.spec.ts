@@ -505,6 +505,7 @@ test.describe('signed in', () => {
     await signIn(context, S.users.ada);
     await page.goto('/learn');
     const picker = page.getByTestId('brain-picker');
+    await expect(picker.getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Wonder', 'Muse Spark']);
     await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
     await picker.getByRole('radio', { name: 'Muse Spark' }).click();
     await expect(picker.getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
@@ -601,11 +602,31 @@ test.describe('signed in', () => {
     await expect(note).toHaveText(new RegExp(`^Popsmosis has made all the droplets it can for now\\. It takes topics again ${await threeHoursOn()}\\.$`));
   });
 
-  test('a learner gets no brain picker: their topics are made by the teacher\'s own', async ({ page, context }) => {
+  test('a learner picks the brain too, from all but Muse Wonder, and is not told whose key pays', async ({ page, context, request }) => {
+    await page.addInitScript(() => window.localStorage.setItem('popsmosis.brain', 'muse-wonder')); // an admin's, on this browser
     await signIn(context, S.users.ben);
     await page.goto('/learn');
-    await expect(page.getByPlaceholder('A topic, e.g. ATP synthesis')).toBeVisible();
-    await expect(page.getByTestId('brain-picker')).toHaveCount(0);
+    const picker = page.getByTestId('brain-picker');
+    await expect(picker.getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Spark']);
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('brain-note')).toHaveText('The teacher’s usual brain.');
+    await picker.getByRole('radio', { name: 'Claude' }).click();
+    await expect(page.getByTestId('brain-note')).toHaveText('Claude Opus 5.5 writes and checks the lesson.');
+
+    const text = `E2E ${Date.now()}: osmosis, on Claude by a learner`;
+    await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('topic-brain')).toHaveText('Claude');
+
+    // The API takes Claude from a learner, never Muse Wonder.
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
+    const sent = own.data.find((q: { content: string }) => q.content === text);
+    expect(sent.brain).toBe('claude');
+    const wonder = await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: `${text}, on Wonder`, brain: 'muse-wonder' } });
+    expect(wonder.status()).toBe(403);
+    expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).status()).toBe(204);
   });
 
   test('a topic asked with files shows them: a picture as its thumbnail, a text file as a link', async ({ page, context, request }) => {

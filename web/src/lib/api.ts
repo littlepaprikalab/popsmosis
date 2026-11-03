@@ -416,7 +416,7 @@ export interface Question {
   content: string;
   status: 'PENDING' | 'ANSWERED' | 'FAILED';
   failedReason: string | null; // FAILED: why the teacher gave up
-  // The brain an admin picked for it (lib/brains.ts); null: the teacher's own. Absent from an API older than this page.
+  // The brain picked for it on /learn (lib/brains.ts); null: the default. Absent from an API older than this page.
   brain?: Brain | null;
   attachments: Attachment[];
   createdAt: string;
@@ -615,7 +615,7 @@ export const api = {
   getQuestion: (id: string) => request<Question>(`/questions/${id}`).then(localClock),
   getQuestionsByIds: (ids: string[]) =>
     request<{ data: Question[]; nextCursor: null }>(`/questions?ids=${encodeURIComponent(ids.join(','))}`).then(onLocalClock),
-  // brain: an admin's pick for the topic (lib/brains.ts); left out, the teacher's own makes it.
+  // brain: the sender's pick for the topic (lib/brains.ts); left out, the default brain makes it.
   askQuestion: (content: string, brain?: Brain | null) =>
     request<Question>('/questions', { method: 'POST', body: JSON.stringify(brain ? { content, brain } : { content }) }).then(localClock),
   // everything: a topic with a lesson goes whole, the lesson, its videos, likes and comments too; without it, the

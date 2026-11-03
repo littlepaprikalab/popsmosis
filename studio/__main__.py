@@ -33,8 +33,8 @@ Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every model call is logg
 to the job's calls.jsonl with its step, tokens, cost and time (studio/ledger.py), and
 `show` ends with each step's time, cost and models, as the droplet's page shows them.
 
-The brain is set by an admin, never by the environment, which holds only the keys: the
-default brain and Claude's effort on /admin/studio, or a topic's own on /learn. `run` reads
+The brain is set on the site, never by the environment, which holds only the keys: the
+default brain and Claude's effort on /admin/studio, or a topic's own picked on /learn. `run` reads
 them from the API and keeps the topic's in the job's brain.json, and `videos` and `step` use
 it (studio/run.py). A local job takes `plan --brain claude|muse-wonder|muse-spark` and
 `--effort` (default Claude Opus 5.5 at high); muse-spark vets a prompt change for about a
