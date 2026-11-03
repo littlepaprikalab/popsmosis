@@ -3,7 +3,7 @@
  * both read these, so the shape is fixed here rather than leaking Prisma rows.
  */
 import { serializeVideo, type VideoStatus } from './droplet.js';
-import { serializeBreakdown } from './breakdown.js';
+import { endToEndOf, serializeBreakdown } from './breakdown.js';
 import { serializeTags } from './tags.js';
 import { termsCurrent } from './terms.js';
 import { awaitingVideos, lessonProgress, readProgress, videoProgress } from './progress.js';
@@ -180,7 +180,9 @@ function progressOf(q: QuestionRow, answer: ReturnType<typeof serializeAnswer> |
 export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new Date()) {
   const isOwner = !!viewerId && q.userId === viewerId;
   const videosPlanned = readProgress(q.progress).videos === true;
-  const answer = q.answers[0] ? serializeAnswer(q.answers[0], viewerId, videosPlanned, now) : null;
+  const row = q.answers[0];
+  // With how long it took from the request (lib/breakdown.ts), which the bill shows beside the studio's own time.
+  const answer = row ? { ...serializeAnswer(row, viewerId, videosPlanned, now), endToEnd: endToEndOf(q.createdAt, row) } : null;
   return {
     id: q.id,
     content: q.content,

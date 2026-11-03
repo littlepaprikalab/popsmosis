@@ -425,7 +425,7 @@ reads text any learner writes ([the skill file](docs/popsmosis-agent-skill.md#wh
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
-`awaitingVideos`, true while the page holds the text back for the videos (below);
+`endToEnd`, how long it took from the request ([End to end](#end-to-end)); `awaitingVideos`, true while the page holds the text back for the videos (below);
 `hidden`, true when an admin took it off the Droplets tab; and `awaitingReview`, true while it waits for an admin to
 approve it. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
@@ -482,7 +482,7 @@ droplets, under a millisecond either way.
 
 Under each lesson on `/learn`, folded to its totals, is how the droplet was made: one line
 per step, the models that ran it with their number of calls and what they cost, how long
-it took, and the total time and cost. Under a step's models are the tools it ran on the
+it took, and the total time and cost, with how long it took from the request ([End to end](#end-to-end)). Under a step's models are the tools it ran on the
 studio's machine, with their versions, and every line has a chip in its maker's colour. The
 studio logs every model call to the job's `calls.jsonl` with the step that made it
 (`studio/ledger.py`), and sends what it adds up to
@@ -521,6 +521,28 @@ the studio's machine for free. ElevenLabs bills in its plan's credits: they are 
 credits (`credits`) unless `ELEVENLABS_USD_PER_1K_CREDITS` gives their price. A model whose
 provider said neither is counted in `unpriced`. The bill stays on `/learn`: the public
 Droplets tab shows only the models it names ([Made with](#made-with)).
+
+#### End to end
+
+The bill's time is the studio's steps alone, the art and the audio side by side. A learner waits longer: for the
+studio to pick the topic up, from the lesson's post to the videos' start, and before a retry. So a question's
+`answer` also says how long the droplet took from its request, by the API's clock (`endToEndOf` in
+`api/src/lib/breakdown.ts`), worked out from times the API keeps anyway: the question's `createdAt`, the lesson's
+post (the answer's `createdAt`) and the videos' READY (their last status change, which READY makes final):
+
+```json
+"endToEnd": { "lesson": 450.0, "videos": 912.0 }
+```
+
+in seconds from the request; `videos` is `null` until they are READY, and stays so for videos given up or never
+made. The database's clock stamps the lesson and the API's the READY, so `videos` is held to no less than `lesson`. The bill shows them under its total, "Request to lesson" and "End to end", and its folded line leads with the
+end to end ("15.2 min end to end · 10.9 min of work · $0.80"). A droplet is done end to end with its videos, or with
+its lesson when it has none; until then, and when its videos failed, the bill shows the lesson's time alone. A note
+says what the end to end counts besides the studio's time ("the studio's 10.9 min, and 4.3 min waiting for the
+studio to start and between the lesson and its videos"), only when the bill has every part up to the end: a READY
+sent without the videos' bill would otherwise count their work as waiting. A night in the queue reads in hours, a
+weekend in days. Nothing is stored for it, and the cards' queries already read the three times, so it costs no query
+and about 40 bytes a card. The reply queue's `answer` does not carry it.
 
 #### While a droplet is made
 
