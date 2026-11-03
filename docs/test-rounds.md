@@ -2136,7 +2136,35 @@ illustration: painterly, cinematic light, real depth, the things the lesson name
   Romeo not at all; the new Bastille added "Storming of Iuly 1789". Both Romeo and Juliet hooks wrote "PLAY SCRIPT"
   on the book, though a hook asks for no writing.
 
-The pictures and prompts were in the session's scratchpad (`lookpaint/`); not decided whether the wording stays.
+**The fix: bright light, each part in its own colour.** The look line became "a rich editorial illustration:
+painterly, bright and evenly lit with no deep shadows, real depth, each thing the lesson names painted solidly in
+its own colour, clear in front." The same six scenes, repainted ($0.41), came back as bright as the old ones with
+the colours back (purple clergy, red nobles, a green girl on a blue screen, red bubbles) and no "PLAY SCRIPT". Blind
+beside the old wording (a new Opus judge): each preferred 3 times in 6 again, but the fix scored higher on all three
+(appeal 4.5 vs 3.7, clarity 4.2 vs 3.8, correct 3.7 vs 3.2). Its slips: "Nobles" labelled twice, a few red bubbles
+on the leaves above the water, the Bastille's labels white on black and the picture flatter.
+
+**Segmentation, run for real** (locate.find_all: SAM 3.1 on the Meta key, $0.22; the helper's boxes and label
+checks answered by subagents, the repair step left out), old wording against the fix:
+
+| Scene | Old: found | Fix: found |
+|---|---|---|
+| Romeo and Juliet hook | 4 of 5 (no Danger) | 5 of 5 |
+| French Revolution hook | 2 of 2 | 2 of 2 |
+| Light reactions hook | 3 of 4 (no Oxygen) | 4 of 4 |
+| Three estates | 3 of 4 (no Third Estate) | 3 of 4 (no Third Estate) |
+| Bastille | 4 of 4 | 4 of 4 |
+| Capulet tomb | 0 of 4 | 1 of 4 |
+| All | 16 of 23, 9 by SAM's first words | 19 of 23, 14 by SAM's first words |
+
+Every part found was on the right thing, in both. The fix needed the helper's box 5 times, the old wording 7. The
+tomb fails the locate step either way (fewer than half found): its setting ("Capulet tomb") is the whole picture and
+the edge colour, so it reads as background, and Romeo's dark blue is lost in it. The first try's dark pictures were
+not segmented; the colour count on them (locate.Colours) had the clergy's purple at 0.3% of the picture against 6.4%
+in the old one, and three of the three estates' four parts at risk.
+
+The wording stays as fixed. Still one look for every droplet, as "textbook" was: whether the look should change by
+droplet (a rotation in code, or the writer's pick for the topic) is not decided.
 
 ## Not tested
 
