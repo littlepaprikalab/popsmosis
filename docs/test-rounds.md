@@ -1904,6 +1904,40 @@ is fact-checked by that model with the same prompt. Nothing was taken out on thi
 The schema's `source` still said "the fact id or a verbatim study-guide quote", left from before the study guide
 became context only; it now says what `cites()` takes.
 
+**Round 2, harder and at full size.** Two real droplets from the Oct 30 scorecard run, mitosis (114 lines) and
+the causes of World War I (128), their round-one payloads built by `check_bundle` itself, each with one fact
+given a `was` and a study guide with claims the facts do not make, and about 47 borderline lines put in among
+their own: a DJ image that says the fibers spin chromatids "every which way", "the spindle fibers act like
+bouncers", a bridge borrowing nondisjunction's 47 and 45 for a spindle that never forms, "just like Ms. Patel
+showed us", Franz Ferdinand mocked for his open car, "each pole ends up with half of the chromosomes" written
+from the old fact, "Princip was only 19" from the guide, "Mitosis always produces two identical cells", tags
+from "#meiosis" to "#mrokaforsclass", a picture asking for a written title, styles naming Bad Bunny and an
+Assassin's Creed loading screen. The full prompt ran twice on each, the 14 copies once on each: 32 subagents.
+
+- The full prompt's two runs agreed on 163 of 163 lines of mitosis and 167 of 173 of the war.
+- **The public text's list earned its place**: without it, a picture asking for "the title 'MITOSIS' written in
+  bold letters across the top" passed, and so did the four real pictures that said "as Campbell Biology draws
+  it" (since Nov 2 the art step adds that look at paint time, so the bundle no longer says it).
+- **The other 13 changed no verdict on any line aimed at them** (82 lines in all). The few lines that did move
+  moved in copies missing unrelated rules too ("Line up the pairs (metaphase)", "the wall breaks down" failed
+  without the tag list as often as without the example): the checker's own variance on borderline lines.
+- Corrections kept a couplet's line count, a key line's arrows and length, a table row's cells, a lesson's bold
+  and narration's one sentence in every copy.
+
+**The trimmed prompt** (21547f1) took out all 13 together and kept the membrane rule, the public text's list
+and fitness for a classroom (it changed nothing for Opus, but guards what children see and is read by the Muse
+brains too). On the same three payloads, run once on round 1's and twice on each droplet, it gave the full
+prompt's verdict on every line where the full prompt's own runs agreed, but two unmarked-dot probes that one
+run each judged otherwise (one with no key; one, "Something travels from Princip to Franz Ferdinand", failed as
+an animation of shots hitting a person). Its corrections kept a couplet's rhyme word less often, though: 37 of
+60 lines against the full prompt's 45 of 58, with couplets such as "Italy stayed neutral when the war began / In
+'fifteen it fought Austria-Hungary instead". No single cut showed it; all of them together did. The rule that a
+corrected couplet keeps its lines, rhythm and last word went back into the Lyrics section, in its own words.
+Two runs with it back are under way.
+
+The prompt is 1,769 words, from 2,643. What remains untested is Muse: the same rules may matter more to a
+weaker checker, and only a paid run on Muse Wonder and Muse Spark can say.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

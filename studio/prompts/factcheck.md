@@ -73,6 +73,10 @@ its own: would a student who sings it come away believing something false?
   another; its image makes a wrong point about the real thing; or it is not fit for a
   classroom. `problem` says what a student would wrongly believe, in one sentence.
 
+A couplet's `corrected` stays a couplet: as many lines as it had, separated by line breaks,
+each a singable lyric of about the same length and rhythm, in the same casual voice, keeping
+its last word when a true line can end on it, since the lines rhyme.
+
 ## Tags
 
 A line whose id starts with "tag:" is a hashtag under a video ("tag:song-3" under the song
