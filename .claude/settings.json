@@ -13,8 +13,16 @@
   },
   "permissions": {
     "allow": [
+      "Bash(python -m studio run:*)",
       "Bash(python -m studio videos:*)",
-      "Bash(python -m studio wait:*)"
+      "Bash(python -m studio wait:*)",
+      "Bash(python -m studio fail:*)",
+      "Bash(python -m studio recover:*)",
+      "Bash(python -m studio summary:*)",
+      "Bash(python -m studio session:*)",
+      "Bash(python -m studio fetch:*)",
+      "Bash(python -m studio reply:*)",
+      "Bash(python -m studio answer:*)"
     ]
   }
 }
