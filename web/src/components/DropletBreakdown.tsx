@@ -16,7 +16,7 @@ const STEP_LABELS: Record<string, string> = {
   audio: 'Make the audio', // the song and the voice, or the voice alone (STUDIO_VIDEOS=lesson): its models say which
   timing: 'Time the words',
   timeline: 'Plan the videos',
-  arrows: 'Place the arrows',
+  arrows: 'Show what moves', // the arrows a model aims on a painting; the particles' motion is the timeline's and render's
   render: 'Render',
   upload: 'Upload',
 };
@@ -60,7 +60,7 @@ const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 interface Line {
   name: string;
   version: string | null; // a tool's; a model's name is its version
-  task?: string; // what a model's line did ("paints the pictures", "checks the pictures")
+  task?: string; // what the line did: a model's ("checks the pictures"), or a tool's ("runs htdemucs")
   maker: string | null;
   calls: number | null; // a model's; a tool is run, not called
   cost: string | null; // a model's; a tool is not billed
@@ -73,11 +73,13 @@ function linesOf(s: BreakdownStep): Line[] {
       name: m.model, version: null, maker: m.maker, calls: m.calls, cost: modelCost(m),
       ...(m.task && { task: m.task }),
     })),
-    ...(s.tools ?? []).map((t) => ({ name: t.name, version: t.version, maker: t.maker, calls: null, cost: null })),
+    ...(s.tools ?? []).map((t) => ({
+      name: t.name, version: t.version, maker: t.maker, calls: null, cost: null, ...(t.task && { task: t.task }),
+    })),
   ];
 }
 
-/** A line's name, with a tool's version after it in a lighter colour. */
+/** A line's name, with a tool's version after it in a lighter colour, then what the line did. */
 function LineName({ line }: { line: Line }) {
   return <>
     {line.name}{line.version && <span style={{ color: 'var(--text-muted)' }}> {line.version}</span>}
@@ -424,7 +426,8 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
                       {making && <td className={`${cell} !pr-1`}>{j === 0 && <StatusMark status={r.status} />}</td>}
                       <td className={`${cell} tabular-nums`} style={{ color: 'var(--text-muted)' }}>{j === 0 ? String(i + 1).padStart(2, '0') : ''}</td>
                       <td className={cell} style={{ color: 'var(--text-primary)' }}>{j === 0 && <StepName row={r} />}</td>
-                      <td className={`${cell} break-all`}>
+                      {/* A long name breaks where it must; a line's words wrap whole (break-all split "the less on") */}
+                      <td className={`${cell} wrap-anywhere`}>
                         {l ? <LineName line={l} /> : <span style={{ color: 'var(--text-muted)' }}>{r.bill && r.status !== 'running' ? 'code' : '—'}</span>}
                       </td>
                       <td className={cell}><MakerChip maker={l?.maker ?? null} /></td>
@@ -498,7 +501,7 @@ function PhoneBill({ rows, bill, making, time, timeline }: {
             {r.bill && linesOf(r.bill).map((l, k) => (
               // By place: one model can have two lines, its API calls' and those answered in session.
               <div key={k} className={`flex gap-2 ${making ? 'pl-11' : 'pl-6'}`}>
-                <span className="min-w-0 break-all">
+                <span className="min-w-0 wrap-anywhere">
                   <LineName line={l} />{l.calls !== null && l.calls > 1 ? ` ×${l.calls}` : ''}<MakerChip maker={l.maker} className="ml-1.5" />
                 </span>
                 <span className="ml-auto tabular-nums whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{l.cost ?? ''}</span>

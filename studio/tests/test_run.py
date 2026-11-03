@@ -160,7 +160,8 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
                           "checks": json.loads((job / "checks.json").read_text())}
     # The steps before the post, each timed; the call logged before this run is the bundle's.
     assert [s["step"] for s in breakdown["steps"]] == ["request", "bundle", "audit", "factcheck"]
-    assert breakdown["steps"][1]["models"] == [{"model": "claude-opus-5-5", "calls": 1, "costUsd": None, "credits": None}]
+    assert breakdown["steps"][1]["models"] == [{"model": "claude-opus-5-5", "calls": 1, "costUsd": None, "credits": None,
+                                                "task": "writes the lesson and/or song"}]
     assert all(s["tries"] == 1 and s["seconds"] is not None for s in breakdown["steps"])
     assert json.loads((job / "posted.json").read_text())["id"] == "ans1"
     [record] = operator_run.read_jsonl(job / "runs.jsonl")

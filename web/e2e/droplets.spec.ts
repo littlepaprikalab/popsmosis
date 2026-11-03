@@ -463,6 +463,10 @@ test.describe('videos on /learn', () => {
       ['torch 2.11.0+cpu', 'Meta']]) {
       await expect(line(name).first().getByTestId('maker')).toHaveText(maker);
     }
+    // Each line says what it did: what Demucs is for, and what each tool ran.
+    await expect(line('separates the vocals')).toContainText('htdemucs · separates the vocals so the words can be timed');
+    await expect(line('demucs 4.1.0')).toContainText('demucs 4.1.0 · runs htdemucs');
+    await expect(line('torchaudio 2.11.0+cpu')).toContainText('runs mms-fa');
     const render = bill.getByTestId('breakdown-step').filter({ hasText: 'Render' });
     await expect(render).toContainText('skia-python 144.1');
     await expect(render.getByTestId('maker')).toHaveText('Google');

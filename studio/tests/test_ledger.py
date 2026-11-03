@@ -78,9 +78,11 @@ def test_the_lesson_counts_every_try_and_every_model_that_answered(tmp_path):
     assert (steps["bundle"]["seconds"], steps["bundle"]["tries"]) == (180.0, 2)
     assert steps["bundle"]["costUsd"] == pytest.approx(0.9)
     assert steps["bundle"]["models"] == [
-        {"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.4, "credits": None},
-        {"model": "claude-opus-5", "calls": 1, "costUsd": 0.5, "credits": None}]  # after a refusal fell back
-    assert steps["factcheck"]["models"] == [{"model": "claude-opus-5-5", "calls": 2, "costUsd": 0.25, "credits": None}]
+        {"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.4, "credits": None, "task": "writes the lesson and/or song"},
+        {"model": "claude-opus-5", "calls": 1, "costUsd": 0.5, "credits": None,
+         "task": "writes the lesson and/or song"}]  # after a refusal fell back
+    assert steps["factcheck"]["models"] == [{"model": "claude-opus-5-5", "calls": 2, "costUsd": 0.25, "credits": None,
+                                             "task": "fact-checks and fixes every line"}]
     assert steps["request"]["models"] == [] and steps["request"]["costUsd"] == 0
 
 
@@ -115,10 +117,11 @@ def test_elevenlabs_without_a_price_keeps_its_credits(tmp_path):
     with ledger.at_step("audio"):
         ledger.log(tmp_path, [call("song", model="lyria-3.5", cost=0.08, role="audio"),
                               call("narration", model="eleven_multilingual_v2", cost=None, role="audio", credits=2900),
-                              call("frq", model="eleven_multilingual_v2", cost=None, role="audio", credits=400)])
+                              call("narration", model="eleven_multilingual_v2", cost=None, role="audio", credits=400)])
     [audio] = ledger.breakdown(tmp_path, "videos")["steps"]
     assert audio["costUsd"] == 0.08 and audio["seconds"] is None and audio["tries"] == 0
-    assert audio["models"][1] == {"model": "eleven_multilingual_v2", "calls": 2, "costUsd": None, "credits": 3300}
+    assert audio["models"][1] == {"model": "eleven_multilingual_v2", "calls": 2, "costUsd": None, "credits": 3300,
+                                  "task": "reads the narration"}
     assert ledger.cost_text(ledger.read(tmp_path)) == "$0.08 + 3300 credits"
 
 
@@ -212,15 +215,22 @@ def test_each_media_step_lists_the_software_it_runs_at_the_version_installed_her
     with ledger.at_step("timing"):
         ledger.log(tmp_path, [call("song vocals", model="htdemucs", cost=0.0, role="local")])
     steps = {s["step"]: s for s in ledger.breakdown(tmp_path, "videos")["steps"]}
-    assert steps["timing"]["models"] == [{"model": "htdemucs", "calls": 1, "costUsd": 0.0, "credits": None}]
-    assert steps["timing"]["tools"] == [{"name": "demucs", "version": "4.1.0"}, {"name": "torchaudio", "version": "2.11.0"},
-                                        {"name": "torch", "version": "2.11.0+cpu"}, {"name": "ffmpeg", "version": "7.1.1"}]
-    assert steps["render"]["tools"] == [{"name": "skia-python", "version": "144.1"}, {"name": "ffmpeg", "version": "7.1.1"}]
+    assert steps["timing"]["models"] == [{"model": "htdemucs", "calls": 1, "costUsd": 0.0, "credits": None,
+                                          "task": "separates the vocals so the words can be timed"}]
+    # Each tool with what it did in the step: the bill says what Demucs is for (the owner, Nov 3).
+    assert steps["timing"]["tools"] == [
+        {"name": "demucs", "version": "4.1.0", "task": "runs htdemucs"},
+        {"name": "torchaudio", "version": "2.11.0", "task": "runs mms-fa"},
+        {"name": "torch", "version": "2.11.0+cpu", "task": "runs the models"},
+        {"name": "ffmpeg", "version": "7.1.1", "task": "decodes the audio for them"}]
+    assert steps["render"]["tools"] == [{"name": "skia-python", "version": "144.1", "task": "draws the frames"},
+                                        {"name": "ffmpeg", "version": "7.1.1", "task": "encodes the videos"}]
     assert steps["timeline"]["tools"] == []  # the studio's own code
 
 
 def test_the_lesson_video_alone_times_the_voice_with_no_song_software(tmp_path, monkeypatch):
-    """STUDIO_VIDEOS=lesson: no Demucs or aligner runs, so the bill does not say they did."""
+    """STUDIO_VIDEOS=lesson with a voice that came with its timings (ElevenLabs): no Demucs or aligner runs, so the bill
+    does not say they did."""
     from studio import knobs
 
     monkeypatch.setattr(ledger, "version", lambda name: "1.0")
@@ -231,6 +241,23 @@ def test_the_lesson_video_alone_times_the_voice_with_no_song_software(tmp_path, 
     assert steps["timing"]["tools"] == []
     assert [t["name"] for t in steps["audio"]["tools"]] == ["ffmpeg"]  # ffprobe still reads the voice's length
     assert [t["name"] for t in steps["render"]["tools"]] == ["skia-python", "ffmpeg"]
+
+
+def test_the_lesson_video_alone_lists_what_the_aligner_ran_on_when_it_timed_the_voice(tmp_path, monkeypatch):
+    """STUDIO_VIDEOS=lesson with Gemini's voice, which has no timings of its own: MMS aligns it, so the bill lists what
+    MMS ran on beside it. Demucs's package is still left out: there is no song to separate."""
+    from studio import knobs
+
+    monkeypatch.setattr(ledger, "version", lambda name: "1.0")
+    (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [{"step": "timing", "seconds": 9.0}]}))
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    with ledger.at_step("timing"):
+        ledger.log(tmp_path, [call("narration alignment", model="mms-fa", cost=0.0, role="local")])
+    [timing] = ledger.breakdown(tmp_path, "videos")["steps"]
+    assert [m["task"] for m in timing["models"]] == ["times the narration"]
+    assert timing["tools"] == [{"name": "torchaudio", "version": "1.0", "task": "runs mms-fa"},
+                               {"name": "torch", "version": "1.0", "task": "runs the models"},
+                               {"name": "ffmpeg", "version": "1.0", "task": "decodes the audio for them"}]
 
 
 def test_the_lessons_steps_run_no_software_of_their_own(tmp_path):
@@ -256,7 +283,7 @@ def test_a_broken_install_costs_its_version_never_the_bill(tmp_path, monkeypatch
     ledger.version.cache_clear()
     (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [{"step": "art", "seconds": 1.0}]}))
     [art] = ledger.try_breakdown(tmp_path, "videos")["steps"]
-    assert art["tools"] == [{"name": "skia-python", "version": None}]
+    assert art["tools"] == [{"name": "skia-python", "version": None, "task": "renders and sizes the pictures"}]
     ledger.version.cache_clear()  # what the fake said is not this machine's
 
 
@@ -414,8 +441,73 @@ def test_each_line_says_what_its_calls_did_and_the_checker_is_apart_from_the_pai
     art = ledger.breakdown(tmp_path, "videos")["steps"][0]
     assert [(m["model"], m["calls"], m.get("task")) for m in art["models"]] == [
         ("muse-image-1.0", 1, "makes the pictures"), ("claude-sonnet-5-5", 2, "checks the pictures"),
-        ("claude-opus-5-5", 1, "rewrites a scene's words")]
+        ("claude-opus-5-5", 1, "fixes the description of a failed picture")]
     # The same words mean different work by step; a label it does not know leaves the line unlabelled.
     assert ledger.task_of({"label": "song", "step": "audio"}) == "sings the song"
     assert ledger.task_of({"label": "song", "step": "timing"}) == "times the song"
     assert ledger.task_of({"label": "something new", "step": "art"}) == ""
+
+
+def test_every_label_the_studio_logs_says_what_its_call_did():
+    """Each label as the code logs it (the step's module in the comment), and what its line on the bill says."""
+    said = {
+        ("bundle", "script"): "writes the script",  # steps/script.py
+        ("bundle", "bundle"): "writes the lesson and/or song", ("bundle", "bundle again"): "writes the lesson and/or song",  # steps/bundle.py
+        ("bundle", "fact audit"): "audits the facts", ("bundle", "fact audit again"): "audits the facts",  # audit.py
+        ("bundle", "learner"): "takes the lesson as a student",  # steps/learner.py: the student, then its grader
+        ("bundle", "learner grade"): "grades the student's answers",
+        ("bundle", "lesson rewrite"): "writes the lesson and/or song",  # a fix-up: on the line it backs up
+        ("bundle", "learner again"): "takes the lesson as a student",
+        ("bundle", "learner again grade"): "grades the student's answers",
+        ("bundle", "narration edit"): "edits the narration",  # steps/narration.py
+        ("factcheck", "factcheck round 1"): "fact-checks and fixes every line",  # steps/factcheck.py
+        ("factcheck", "lyric rewrite round 1"): "fact-checks and fixes every line",  # steps/songwriter.py
+        ("art", "art overview try 2"): "makes the pictures",  # steps/art.py
+        ("art", "art check overview"): "checks the pictures",
+        ("art", "art rewrite overview"): "fixes the description of a failed picture",
+        ("locate", "locate overview pump try 2"): "finds the parts",  # steps/locate.py: SAM
+        ("locate", "locate overview pump box"): "finds the parts",  # SAM again, in the helper's box
+        ("locate", "locate box overview pump"): "checks and fixes the parts and labels",  # the helper's box
+        ("locate", "label check overview"): "checks and fixes the parts and labels",
+        ("locate", "repair overview"): "checks and fixes the parts and labels",  # repair.py
+        ("locate", "repair check overview"): "checks a fixed picture",
+        ("audio", "song"): "sings the song", ("audio", "narration"): "reads the narration",  # steps/audio.py
+        ("timing", "song vocals"): "separates the vocals so the words can be timed",  # steps/timing.py: Demucs
+        ("timing", "song alignment"): "times the song",  # MMS
+        ("timing", "narration alignment"): "times the narration",
+        ("arrows", "arrows point overview"): "places the arrows",  # steps/arrows.py
+        ("arrows", "arrows look overview ATP pump > cell"): "checks the arrows",
+    }
+    assert {key: ledger.task_of({"label": key[1], "step": key[0]}) for key in said} == said
+
+
+def test_the_bill_names_the_aligner_as_the_timing_step_logs_it():
+    from studio.steps import timing
+
+    assert ledger.ALIGNER == timing.MMS_MODEL
+    assert set(ledger.ALIGNER_TOOLS) < set(ledger.TOOLS["timing"])
+
+
+def test_every_tool_on_the_bill_says_what_it_did_in_its_step():
+    for step, tools in ledger.TOOLS.items():
+        for tool, task in tools.items():
+            assert task.strip() and len(task) <= 60, (step, tool)  # the API keeps 60 characters
+
+
+def test_a_fix_up_shares_the_line_of_the_work_it_backs_up(tmp_path):
+    """A call that runs only when something went wrong is on its model's line for that work, not a line of its own
+    (the owner, Nov 3: the bill said too much)."""
+    with ledger.at_step("locate"):
+        ledger.log(tmp_path, [call("locate overview pump", model="sam-3.1", cost=0.0025, role="meta"),
+                              call("label check overview", model="muse-spark-1.3", cost=0.01, role="helper"),
+                              call("locate box overview pump", model="muse-spark-1.3", cost=0.01, role="helper"),
+                              call("repair overview", model="muse-spark-1.3", cost=0.01, role="helper"),
+                              call("repair check overview", model="claude-sonnet-5-5", cost=0.003, role="checker")])
+    with ledger.at_step("factcheck"):
+        ledger.log(tmp_path, [call("factcheck round 1"), call("lyric rewrite round 1"), call("factcheck round 2")])
+    steps = {s["step"]: s for s in ledger.breakdown(tmp_path, "videos")["steps"]}
+    assert [(m["model"], m["calls"], m["task"]) for m in steps["locate"]["models"]] == [
+        ("sam-3.1", 1, "finds the parts"), ("muse-spark-1.3", 3, "checks and fixes the parts and labels"),
+        ("claude-sonnet-5-5", 1, "checks a fixed picture")]
+    [factcheck] = ledger.breakdown(tmp_path, "lesson")["steps"]
+    assert [(m["calls"], m["task"]) for m in factcheck["models"]] == [(3, "fact-checks and fixes every line")]

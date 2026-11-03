@@ -36,6 +36,7 @@ export interface BreakdownTool {
   name: string; // as it is installed: demucs, torchaudio, torch, skia-python, ffmpeg
   version: string | null; // as installed on the machine that made the videos; null: it did not say
   maker: string | null;
+  task?: string; // what it did in the step ("runs htdemucs": studio/ledger.py's TOOLS); absent on an older bill
 }
 
 export interface BreakdownStep {
@@ -118,7 +119,10 @@ function readModel(raw: unknown): BreakdownModel | null {
 
 function readTool(raw: unknown): BreakdownTool | null {
   if (!isObject(raw) || !text(raw.name)) return null;
-  return { name: text(raw.name), version: text(raw.version) || null, maker: makerOf(text(raw.name)) };
+  return {
+    name: text(raw.name), version: text(raw.version) || null, maker: makerOf(text(raw.name)),
+    ...(text(raw.task) && { task: text(raw.task).slice(0, 60) }),
+  };
 }
 
 function readPart(raw: unknown, part: Part): { steps: BreakdownStep[]; seconds: number | null } | null {
