@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import type { Progress } from '@/lib/api';
 
 /**
- * About how many minutes a droplet takes to make, as the card tells the learner. docs/speed.md measured about half
- * an hour from request to videos, a few minutes of it before the studio starts.
+ * About how many minutes a droplet takes to make, as the card tells the learner. Droplets take about 30 minutes from
+ * request to videos (the owner, Nov 3); the card says a little more, so most finish inside it and "taking longer
+ * than most" past it stays true.
  */
-export const USUAL_MINUTES = 25;
+export const USUAL_MINUTES = 35;
 
 // The drop from the Droplets heading (Highlights.tsx), with room in the box for a hollow drop's outline.
 const DROP = 'M32 12.5C32 12.5 20.3 28 20.3 38a11.7 11.7 0 0 0 23.4 0C43.7 28 32 12.5 32 12.5Z';
