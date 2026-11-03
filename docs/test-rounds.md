@@ -1749,6 +1749,26 @@ writer (Claude) would say nothing about Muse Spark.
 Not good enough to show judges as it is: the pictures, timing and karaoke are clean, but the ending misses the
 question the learner asked, and round 22's droplet answered it.
 
+### Then: a second Muse Spark droplet
+
+The same command on Muse Spark again (`ns-spark2`), on this branch's fixes: $1.05, every call Meta's, Lyria's or
+Gemini TTS's ($0.10 of it a first try whose bundle call was cut off when this sandbox's network relay restarted). Its
+lesson draws the generations: the overview's 3 light and 3 dark beetles on dark bark become 1 light and 6 dark
+"generations later", on the same bark in the same style. It says early that "Natural selection is one cause", and it
+answers the question: "So no, evolution is the change itself, from varied alleles in to shifted frequencies out,
+driven by natural selection." Still: no drift or gene flow named, the misconception after the shift, some filler
+("Now your thermometer still sits beside the bottle", "Next gen sings that same dark song"), and the bird a bare
+orange beak. Good enough to show, with those.
+
+- **Lyria blocked its song once** ("PROHIBITED_CONTENT"; Eleven Music, the fallback, was off) and sang the same
+  prompt on the next try, so a block is not always the prompt's. Proposed: ask Lyria once more before Eleven Music.
+- **The last word of a chorus line was aligned 14 s late**, across a 10-second instrumental break ("Blend with bark,
+  pass dark" sung at 116-119 s, "on" at 132.6 s), so it waits unlit through the break.
+- **Fixed: unnamed parts faded to white.** A part not yet named faded toward the page, so the dark beetles on dark
+  bark showed white while the voice spoke of dark and light variation, and the bark spotlit washed its beetles white
+  too. A ghost now fades toward what is around it as it shows on screen (`renderer.SceneArt.ground`), and a
+  spotlight keeps the parts on its part. Re-rendered (free); the first droplet's stills look as they did.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
