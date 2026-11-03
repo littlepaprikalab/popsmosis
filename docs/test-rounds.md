@@ -1618,12 +1618,144 @@ part painted in many places is only the copy SAM found, and the arrows step look
 gate already did not guess its way. Too short or leaving the picture still leaves it out. Still open: the look itself,
 which needs the arrow larger in its still, or a stronger model, to read which way it goes.
 
+## Nov 2: natural selection on Meta's models, end to end
+
+Round 22's natural selection, made again before the hackathon demo, locally, on Meta's models wherever the studio
+uses one, on the real APIs: `python -m studio plan --topic "natural selection" --course "AP Biology" --request "Is
+evolution the same thing as natural selection? For AP Biology" --style "pop-punk" --brain muse-wonder --videos`. The
+owner approved the paid calls and their prices. The environment held `MODEL_API_KEY` and `GEMINI_API_KEY` only: the
+Anthropic and ElevenLabs keys unset, so a call to Claude or ElevenLabs would fail rather than bill;
+`POPSMOSIS_API_URL` and `POPSMOSIS_API_KEY` unset, so nothing could be posted; `STUDIO_CLAUDE_DRAWS=brain`, so Muse
+Image paints any chart. No `settings.json`: Muse Image paints, Lyria sings, Gemini TTS reads, and MMS times the
+narration as well as the song.
+
+Muse Wonder never got past the lesson: two of its four big answers were broken. On the owner's word the topic was
+then made on Muse Spark (`--brain muse-spark`), which made the whole droplet.
+
+| | Muse Wonder (`ns-wonder`) | Muse Spark (`ns-spark`) |
+|---|---|---|
+| Spend | $2.80, the lesson only | $1.08: the lesson $0.56, the videos $0.52 |
+| How far | Try 1: the bundle refused (no lyrics). Try 2, after the fixes below: a script about something else, its facts in the bundle; stopped in the fact-check | Lesson, song (182 s), narration (142 s), both videos and the hook clip (28 s) |
+| Time | Try 2's bundle step 10 min | Lesson 14 min (bundle 9, fact-check 4); videos 10 min |
+| Bill | muse-wonder-1.0, muse-spark-1.3 (the learner test) | muse-spark-1.3 $0.85, Muse Image $0.05 (5 pictures), SAM 3.1 $0.07, Lyria 3.5 $0.08, Gemini 3.8 Flash TTS $0.03; Demucs and MMS on the machine. No other model |
+| Fact audit, fact-check | Audit passed four facts about a club (below) | Audit: all four CORRECT. Fact-check passed in 2 rounds, 2 fixes |
+
+The session spent $3.88 in all. A fact-check call cut off when the Muse Wonder run was stopped is not on its bill.
+
+### Muse Wonder
+
+- **Try 1: a song with no lyrics.** Its script was the best writing of the night: green and brown beetles on
+  brown soil, a bird on a branch, evolution defined before selection ("Evolution is change in allele frequency, the
+  share of one allele, in a population over time. Natural selection is one process that can drive that change in a
+  particular direction."), the mistake asked where it forms, over the bird's close-up ("So will a surviving green
+  beetle turn brown during its own life?"), a later population in a scene of its own, and an antibiotic case. It
+  gave all four facts the id "[generated]". The bundle call ($0.73, 3 min) then planned a 37-line song (a direction
+  for each of s1 to s37, key lines on s3, s7, s17 and s19, a pop-punk style) and sent `"lyrics": []`, and the step
+  failed. Every object in that answer had its keys in alphabetical order, not the schema's: `direction` before
+  `lyrics`, `axes` before `id`. Written in that order, a line's direction comes before the line. Whether Meta's
+  structured output orders them so was not tested (a paid call).
+- **Try 2: a script about something else.** The question "Question", one scene ("hook": "Tokyo"), three lines of
+  narration ("What's the deal with Seattle weather?", "Is evolution the same thing as natural selection?", "5th
+  grade, AP Biology"), a why chain ending "PreparedAmtrak Empire passengers should check their seat assignment on
+  their smartphones", and four facts on a club's interviews, a C++ tournament, a 28-person cap and a lab procedure
+  ("Dimethoxychlor (DMC) binds irreversibly to CDK"). The audit judged each UNSURE ("I cannot confirm this club's 4v4
+  tournament history since 2023 ... from established AP Biology course knowledge") and passed them, as an UNSURE
+  fact is kept. The bundle took the script's facts word for word, as told. Its own lesson was good (rock pocket mice
+  on dark lava, an owl, and the only one of the three that named drift, mutation and gene flow), but every line
+  cited a fact about the club. It was stopped in the fact-check, before any picture.
+
+### Muse Spark
+
+What worked: the bill, every call Meta's, Lyria's or Gemini TTS's; four pictures in five tries, each labelling its
+own parts with every word spelled right ([the pictures](test-rounds-nov2/natural-selection-spark-pictures.jpg)); SAM
+found all 19 parts (3 by the helper's box); the narration aligned with no line unsure; and the song's lines this
+time sit where the singer sings them (the vocals stop at 135 s, where the last chorus is timed to end). The lesson
+video holds together as one path: the pills, the beetles, the birds, the next generation, the bacteria.
+
+Read as a learner, worst first:
+
+1. **The ending does not answer the question.** The last line is "So evolution is not the same as natural
+   selection because variation goes in, selection sorts it, and adaptation comes out"
+   ([still](test-rounds-nov2/natural-selection-ending.jpg)): how selection works, not why the two differ. Fact f1
+   names mutation, gene flow and drift as other causes; no line says them. The core idea on screen the whole time,
+   "Evolution is inherited change over generations, and natural selection drives it by favoring traits that improve
+   survival", reads as if selection were the cause. The song asks "Evolution or selection?" twice and never answers.
+   Round 22 showed drift as a rockfall, and Muse Wonder's mice named all three.
+2. **No picture of the generations.** The population's change is told over the overview, which always shows three
+   light beetles and three dark ones: "Back in the group, the next generation holds more dark offspring and fewer
+   light offspring" ([still](test-rounds-nov2/natural-selection-next-generation-same-picture.jpg)). So there were no
+   counts to keep from one picture to the next, and no chart for Muse Image to get wrong. Round 22 painted three
+   generations side by side with a bar under each; Muse Wonder's script had a later population of its own.
+3. **The misconception is corrected late**: "So did hungry birds make individual beetles turn dark because they
+   needed it?" comes after the allele shift and adaptation (n16 to n19), not at the birds, where it forms.
+4. **The overview contradicts the narration.** Its light beetles sit on the leaves, its dark ones on the soil,
+   while the narration says "hungry birds hunt over the dark soil, so light beetles stand out". The leaves came out
+   teal, under a song that sings "leaves so green" (fixed for later bundles, below).
+5. **Filler lyrics, passed by the fact-check**: "High fitness lays more eggs at night", "More dark kids hatch with
+   tiny legs", "Whole population claims the spark", "Resistant bugs own the situation"; "Heritable tint from mom and
+   dad / Kids copy it, good or bad" makes inheritance sound like copying; "It ain't need that paints them dark" opens
+   the hook clip. The fact-check's two fixes were right ("Tough winners always win" became "Here tough winners
+   win"), but Muse Spark passed every other lyric. The chorus ("Birds eat light, dark lives on / Light fades out, dark
+   carries on") is catchy and true; the code checks noted it "says too little of the core idea".
+6. **A sticky note that teaches nothing.** The helper found the close-up's light beetle "buried in soil" (it sits a
+   little into the painted ground), the repaint did not satisfy it, and the note shown is "Light beetles stay on dark
+   soil" ([still](test-rounds-nov2/natural-selection-false-note.jpg)), which reads as a fact about beetles.
+7. **A 27-second instrumental break.** Lyria added an empty section (`[[E6]]` in its own text of the song) between
+   the last chorus and the outro, and the video holds the overview with a blank band from 129 s to 158 s. With the
+   two choruses before it, the song stays on that one picture from 87 s to 158 s.
+8. Smaller: the hook paints bacteria the size of tennis balls beside the pills; the bacteria case reads as a blood
+   vessel with capsules floating in it; "Last winter ... this winter the same antibiotic pills barely work" casts one
+   person's two infections as one population; the upright hook crops the left bird.
+
+### Fixed on this branch
+
+1. **A refused bundle is asked again** (`studio/steps/bundle.py`). Muse Wonder's songless bundle failed the step,
+   and a retry of the step writes the script again too. The call is now asked a second time with what was wrong
+   ("lyrics and narration must not be empty"), pydantic's echo of the answer left out.
+2. **Facts are numbered** (`studio/steps/script.py`). The script's facts get ids f1, f2, ... unless they have
+   them. With "[generated]" on all four, the bundle numbered them itself, so it no longer kept the script's facts and
+   the early audit was thrown away; the audit, which corrects a fact by its id, would have given all four one text.
+3. **A script about something else is not followed.** A script whose facts name no word of the topic ("selected"
+   is not "selection"), or with fewer than 3 scenes, is treated as no script: the bundle is written without one, as
+   when the script call fails. None of the 36 saved scorecard bundles' facts would be refused. The in-session scorer
+   checks scripts the same way.
+4. **Green runs to a hue of 170** (`studio/checks.py`). The writer's "light green leaves" (#43AA8B, hue 162) were
+   named teal, the picture's words made to agree, and painted teal. Teal itself is 180; one saved part moves.
+5. **The audit is billed once.** The bundle step audits the script's facts beside the bundle call and writes
+   audit.json, so the audit step finds itself done, but `run` and `plan` ran every step after the bundle: a second
+   audit on every topic with a script ($0.012 and 19 s here, more on Opus or Muse Wonder).
+
+Two more were fixed on main the same night, the same way: `make` checked the keys on the default brain, so
+`plan --brain muse-spark --videos` wrote and fact-checked the lesson, then stopped with "Claude Opus 5.5 needs
+POPSMOSIS_ANTHROPIC_API_KEY" (d22e623); and seven video tests failed since the art step began asking the writer to
+look at each first picture (f08578b).
+
+No prompt rule was added. What went wrong in Muse Spark's lesson is the writer's, and a rule tried on a subagent
+writer (Claude) would say nothing about Muse Spark.
+
+### Still wrong, worst first
+
+1. **Muse Wonder is not reliable enough to run unwatched**: two broken answers in four, each now caught (a second
+   ask; no script), at up to $0.85 a bundle call. Whether Meta's structured output writes keys in alphabetical order,
+   which would put the song's direction before its lyrics, is one cheap test away.
+2. **Muse Spark's lesson does not answer this question**, and its fact-check passes filler a stricter checker
+   would not (above).
+3. **An audit that cannot confirm any fact still passes.** All four UNSURE, about a club, passed; the script check
+   now catches that case first.
+4. **The helper's notes are not reviewed** (since Nov 2), and a false one is shown as a disclosure.
+5. **A long instrumental break holds one picture.** Proposed: add "long instrumental break" to the song's avoid list
+   (`audio.AVOID`, beside "long instrumental intro"); it needs a paid song to try ($0.08).
+
+Not good enough to show judges as it is: the pictures, timing and karaoke are clean, but the ending misses the
+question the learner asked, and round 22's droplet answered it.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
   API in `POPSMOSIS_API_URL`, which here is production, and Supabase is not set up.
 - The SVG art (`ART_PROVIDER=svg`) through the videos: round 16 drew one plan's scenes with it,
-  but made no videos from them. Muse Wonder through the videos only once (Nov 2, the kidneys).
+  but made no videos from them. Muse Wonder through the videos only once (Nov 2, the kidneys); the
+  same day natural selection did not get past its lesson (above).
 
 ## Running a round again
 
@@ -1634,6 +1766,11 @@ python -m studio show <id> --brief
 ```
 
 For the art alone: `plan`, then `python -m studio step art <id>` and `step locate <id>`.
+
+To run a topic on Meta's models alone, as on Nov 2: unset `POPSMOSIS_ANTHROPIC_API_KEY`, `ANTHROPIC_API_KEY`,
+`ELEVENLABS_API_KEY`, `POPSMOSIS_API_URL` and `POPSMOSIS_API_KEY`, set `STUDIO_CLAUDE_DRAWS=brain`, keep
+`MODEL_API_KEY` and `GEMINI_API_KEY`, and `plan ... --brain muse-spark` (or `muse-wonder`). A call to Claude or
+ElevenLabs then fails rather than bills, and nothing can be posted.
 
 To run topics with every Claude call answered by subagents in a Claude Code session, as the Nov 1 round did, see
 `tools/insession/README.md`: `tools/insession/start.sh <topic id>`, then answer what `answer.py groups` lists.
