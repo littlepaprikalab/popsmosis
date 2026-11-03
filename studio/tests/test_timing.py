@@ -678,3 +678,143 @@ def test_a_narration_the_aligner_cannot_hear_fails_the_step_and_is_read_again(re
         timing.run(read_by_gemini)
     assert not (read_by_gemini / media.audio_path("narration")).exists()
     assert (read_by_gemini / media.audio_path("song")).exists() and not audio.is_done(read_by_gemini)
+
+
+def test_a_chorus_sung_again_word_for_word_is_found_in_the_lyrics():
+    texts = {"i": "Carry silk from east to west", "v": "Soldiers guard the roads", "c1": "Carry silk from east to west",
+             "c2": "Faith and plague ride with the rest", "w": "Paper rolls west", "d1": "Carry silk from east to west",
+             "d2": "Faith and plague ride with the rest!", "o": "Carry silk from east to west"}
+    order = list(texts)
+    # One line sung again is not a run; the punctuation is not sung.
+    assert timing.repeated_runs(order, texts) == [[[2, 3], [5, 6]]]
+
+
+def _notes(seconds, tunes):
+    """Pitch classes every frame: the (start, end, pitch) stretches in `tunes` sing one note each, the rest a
+    murmur of every note at once."""
+    notes = np.full((round(seconds / timing.FRAME_S), 12), 1 / np.sqrt(12), dtype=np.float32)
+    for start, end, pitch in tunes:
+        notes[round(start / timing.FRAME_S):round(end / timing.FRAME_S)] = np.eye(12)[pitch]
+    return notes
+
+
+def _two_lines(start, line_id):
+    """Two four-word lines sung from `start`, two seconds each."""
+    return [TimedLine(line_id=f"{line_id}{n}", start=start + 2 * n, end=start + 2 * n + 2, words=[
+        Word(word=w, start=start + 2 * n + 0.5 * i, end=start + 2 * n + 0.5 * (i + 1))
+        for i, w in enumerate(["Sodium", "out", "potassium", "in"])]) for n in range(2)]
+
+
+def test_a_chorus_the_aligner_put_a_line_late_is_found_by_its_melody():
+    """Nov 3's Silk Roads song: the singer went from the line before the last chorus straight into the chorus, and
+    the aligner, hearing none of it, put the line it skipped where the chorus began and the chorus a line late."""
+    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]  # the chorus's two lines, each to its own note
+    lines = [*_two_lines(0.0, "c"), TimedLine(line_id="v", start=8.0, end=9.6, words=[
+        Word(word="Silk", start=8.0, end=9.6)]), TimedLine(line_id="s", start=10.0, end=12.0, words=[
+            Word(word=w, start=10.0 + i, end=11.0 + i) for i, w in enumerate(["Gods", "germs"])]),
+        *_two_lines(12.0, "d"), TimedLine(line_id="o", start=17.0, end=18.0, words=[
+            Word(word="West", start=17.0, end=18.0)])]
+    texts = {"c0": "Sodium out potassium in", "c1": "Sodium out potassium in.", "v": "Silk", "s": "Gods germs",
+             "d0": "Sodium out potassium in", "d1": "Sodium out potassium in", "o": "West"}
+    # Sung: the chorus at 0 s, the verse line, the chorus again from 10 s; "s" is not sung.
+    notes = _notes(20.0, [*tune, (8.0, 9.6, 3), *[(10.0 + a, 10.0 + b, p) for a, b, p in tune], (17.0, 18.0, 5)])
+    scores = {"c0": 0.9, "c1": 0.6, "v": 0.9, "s": 0.1, "d0": 0.1, "d1": 0.1, "o": 0.9}
+    runs = timing.repeated_runs([line.line_id for line in lines], {**texts, "c1": texts["c0"]})
+    assert runs == [[[0, 1], [4, 5]]]
+
+    def alone(ids, t0, t1):
+        pytest.fail("no room for the line the chorus now covers: it is not aligned again")
+
+    moved = timing.by_the_melody(lines, scores, runs, notes, alone, texts)
+    assert moved == ["d0", "d1"]
+    d0, d1, s = lines[4], lines[5], lines[3]
+    assert (d0.start, d0.end, d1.start, d1.end) == (10.0, 12.0, 12.0, 14.0)  # the heard chorus's timing
+    assert [w.start for w in d0.words] == [10.0, 10.5, 11.0, 11.5]
+    assert not s.sung and s.start == s.end == 9.6 and scores["s"] is None
+    Timing(audio="audio/song.mp3", duration=20.0, lines=lines)  # in order, every word inside its line
+    # Counted as heard: nothing left to spread over the singing.
+    assert timing.by_the_singing(lines, scores, _levels(20.0), placed=set(moved)) == []
+
+
+def test_a_chorus_where_its_melody_is_sung_stays_and_a_chorus_nobody_heard_is_left():
+    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]
+    lines = [*_two_lines(0.0, "c"), *_two_lines(8.0, "d")]
+    texts = {line.line_id: "Sodium out potassium in" for line in lines}
+    notes = _notes(14.0, [*tune, *[(8.0 + a, 8.0 + b, p) for a, b, p in tune]])
+    runs = timing.repeated_runs([line.line_id for line in lines], texts)
+    before = [line.model_copy() for line in lines]
+    scores = {"c0": 0.9, "c1": 0.9, "d0": 0.1, "d1": 0.1}
+    assert timing.by_the_melody(lines, scores, runs, notes, None, texts) == []  # already where its melody is
+    assert lines == before
+    scores = {line.line_id: 0.1 for line in lines}  # no repeat it heard to go by
+    late = [*lines[:2], *_two_lines(9.0, "d")]
+    assert timing.by_the_melody(late, scores, runs, notes, None, texts) == []
+    assert timing.by_the_melody(late, {**scores, "c0": 0.9, "c1": 0.9}, runs, None, None, texts) == []  # no vocals
+
+
+def test_a_line_a_chorus_found_by_its_melody_covers_is_aligned_again_where_there_is_room():
+    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]
+    lines = [*_two_lines(0.0, "c"), TimedLine(line_id="s", start=11.0, end=13.0, words=[
+        Word(word=w, start=11.0 + i, end=12.0 + i) for i, w in enumerate(["Gods", "germs"])]), *_two_lines(13.0, "d")]
+    texts = {"c0": "Sodium out potassium in", "c1": "Sodium out potassium in", "s": "Gods germs",
+             "d0": "Sodium out potassium in", "d1": "Sodium out potassium in"}
+    notes = _notes(18.0, [*tune, (8.0, 10.0, 4), *[(12.0 + a, 12.0 + b, p) for a, b, p in tune]])
+    scores = {"c0": 0.9, "c1": 0.9, "s": 0.1, "d0": 0.1, "d1": 0.1}
+    calls = []
+
+    def alone(ids, t0, t1):
+        calls.append((ids, t0, t1))
+        return [(TimedLine(line_id="s", start=8.0, end=10.0, words=[Word(word="Gods", start=8.0, end=9.0),
+                                                                  Word(word="germs", start=9.0, end=10.0)]), 0.7)]
+
+    runs = timing.repeated_runs([line.line_id for line in lines], texts)
+    assert timing.by_the_melody(lines, scores, runs, notes, alone, texts) == ["d0", "d1"]
+    assert calls == [(["s"], 4.0, 12.0)] and scores["s"] == 0.7
+    assert (lines[2].start, lines[2].end, lines[3].start) == (8.0, 10.0, 12.0)
+    Timing(audio="audio/song.mp3", duration=18.0, lines=lines)
+
+
+def test_the_notes_name_the_lines_placed_by_the_chorus_melody():
+    report = {"drift": [], "drifting": [], "unsure": [], "by_melody": ["c3-1", "c3-2"]}
+    assert "placed by the chorus melody: c3-1, c3-2" in timing.song_notes(report)
+
+
+def test_the_chroma_of_a_sung_note_is_its_pitch_class():
+    t = np.arange(int(2.0 * timing.SAMPLE_RATE)) / timing.SAMPLE_RATE
+    notes = timing.chroma(np.sin(2 * np.pi * 440.0 * t)[None, :])  # an A
+    assert notes.shape[1] == 12 and notes[5:-5].argmax(axis=1).tolist() == [0] * (len(notes) - 10)
+    assert np.allclose(np.linalg.norm(notes, axis=1), 1.0, atol=1e-4)
+
+
+def test_a_heard_chorus_at_the_end_of_the_song_is_heard_as_far_as_the_chroma_reaches():
+    """chroma() hears whole windows only, so it stops a little short of the song's end: the chorus heard last, sung to
+    the end, is matched over the frames it has rather than failing the step."""
+    tune = [(2.0, 4.0, 0), (4.0, 6.0, 7)]
+    lines = [*_two_lines(1.0, "c"), *_two_lines(6.0, "d")]  # c, unheard and a second early; d heard, to the end
+    texts = {line.line_id: "Sodium out potassium in" for line in lines}
+    notes = _notes(10.0, [*tune, *[(a + 4.0, b + 4.0, p) for a, b, p in tune]])[:-5]  # 0.25 s short
+    scores = {"c0": 0.1, "c1": 0.1, "d0": 0.9, "d1": 0.9}
+    runs = timing.repeated_runs([line.line_id for line in lines], texts)
+    assert timing.by_the_melody(lines, scores, runs, notes, None, texts, length=10.0) == ["c0", "c1"]
+    assert (lines[0].start, lines[1].end) == (2.0, 6.0)
+
+
+def test_a_last_line_a_chorus_now_covers_is_aligned_again_up_to_the_end_of_the_song():
+    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]
+    lines = [*_two_lines(0.0, "c"), *_two_lines(8.0, "d"), TimedLine(line_id="o", start=12.0, end=14.0, words=[
+        Word(word=w, start=12.0 + i, end=13.0 + i) for i, w in enumerate(["Gods", "germs"])])]
+    texts = {"c0": "Sodium out potassium in", "c1": "Sodium out potassium in", "d0": "Sodium out potassium in",
+             "d1": "Sodium out potassium in", "o": "Gods germs"}
+    notes = _notes(20.0, [*tune, *[(10.0 + a, 10.0 + b, p) for a, b, p in tune], (15.0, 17.0, 4)])
+    scores = {"c0": 0.9, "c1": 0.9, "d0": 0.1, "d1": 0.1, "o": 0.1}
+    calls = []
+
+    def alone(ids, t0, t1):
+        calls.append((ids, t0, t1))
+        return [(TimedLine(line_id="o", start=15.0, end=17.0, words=[Word(word="Gods", start=15.0, end=16.0),
+                                                                  Word(word="germs", start=16.0, end=17.0)]), 0.7)]
+
+    runs = timing.repeated_runs([line.line_id for line in lines], texts)
+    assert timing.by_the_melody(lines, scores, runs, notes, alone, texts, length=20.0) == ["d0", "d1"]
+    assert calls == [(["o"], 14.0, 20.0)] and lines[4].sung and lines[4].start == 15.0
+    Timing(audio="audio/song.mp3", duration=20.0, lines=lines)
