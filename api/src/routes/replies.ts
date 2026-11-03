@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import prisma, { runTransaction } from '../lib/prisma.js';
-import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
+import { sendError, AppError, isAppError, isUniqueViolation, isForeignKeyViolation } from '../lib/errors.js';
 import { requireUser, requireAgent, requireUserOrAgent, accountGone } from '../middleware/auth.js';
 import { validateString, containsPersonalInfo, parseLimit, secretError } from '../lib/validation.js';
 import { replyInclude, serializeReply, serializeReplyForAgent, serializeAnswer, answerInclude, attachmentsInclude, serializeAttachment } from '../lib/serialize.js';
@@ -136,6 +136,8 @@ export default async function replyRoutes(app: FastifyInstance) {
       } catch (err) {
         if (isUniqueViolation(err)) return sendError(reply, 'CONFLICT', 'You have already replied to that message');
         if (isAppError(err)) return sendError(reply, err.code, err.message);
+        // The learner deleted the topic with everything between the look above and this write.
+        if (isForeignKeyViolation(err)) return sendError(reply, 'NOT_FOUND', 'Answer not found');
         throw err;
       }
     }
@@ -169,6 +171,8 @@ export default async function replyRoutes(app: FastifyInstance) {
     } catch (err) {
       await giveBack(usageId).catch(() => {}); // never written, so it used nothing
       if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
+      // The account is there, so it is the lesson that went: deleted with everything, from another tab.
+      if (isForeignKeyViolation(err)) return sendError(reply, 'NOT_FOUND', 'Answer not found');
       throw err;
     }
     if (attachments.length > 0) {

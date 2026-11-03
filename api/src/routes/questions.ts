@@ -232,17 +232,15 @@ export default async function questionRoutes(app: FastifyInstance) {
 
   // DELETE /api/questions/:id — owner. One with no lesson yet (PENDING or FAILED) goes entirely. One with a lesson
   // is taken back: the learner's words, files and follow-ups go and the request no longer names them, while the
-  // lesson stays for everyone else (lib/privacy.ts). With ?everything=true the lesson goes too: the droplet, its
-  // follow-ups, the likes, comments and play counts on it (they cascade from the question), and its files in R2
-  // (lib/storage-delete.ts), so it leaves the Droplets tab. What it used of the learner's limits is not given back
-  // either way (lib/usage.ts).
-  app.delete('/api/questions/:id', { preHandler: [requireUser] }, async (request, reply) => {
+  // lesson stays for everyone else (lib/privacy.ts).
+  // DELETE /api/questions/:id/everything — owner. The same, but the lesson goes too: the droplet, its follow-ups, the
+  // likes, comments and play counts on it (they cascade from the question), and its files in R2
+  // (lib/storage-delete.ts), so it leaves the Droplets tab. A route of its own rather than a flag on the one above:
+  // an API from before it answers 404 and deletes nothing, where it would ignore a flag and only take the request
+  // back, leaving a lesson the learner can no longer reach while the page says it is gone.
+  // What either used of the learner's limits is not given back (lib/usage.ts).
+  const deleteQuestion = (everything: boolean) => async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
-    const { everything: rawEverything } = request.query as Record<string, string | undefined>;
-    if (rawEverything !== undefined && rawEverything !== 'true' && rawEverything !== 'false') {
-      return sendError(reply, 'VALIDATION_ERROR', 'everything must be true or false');
-    }
-    const everything = rawEverything === 'true';
     const userId = request.viewer!.id;
 
     let deletedAnswers: string[] = [];
@@ -272,7 +270,9 @@ export default async function questionRoutes(app: FastifyInstance) {
     // Not awaited: the learner's 204 does not wait on R2, and the hourly sweep finishes what this does not.
     void clearSoon(deletedAnswers, prisma, request.log);
     return reply.status(204).send();
-  });
+  };
+  app.delete('/api/questions/:id', { preHandler: [requireUser] }, deleteQuestion(false));
+  app.delete('/api/questions/:id/everything', { preHandler: [requireUser] }, deleteQuestion(true));
 
   // POST /api/questions/:id/claim — agent: take, or renew, the lease on one
   // question, and get it back with its attachments. The studio calls it before

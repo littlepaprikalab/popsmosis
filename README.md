@@ -391,7 +391,8 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
 | POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
-| DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one. `?everything=true` deletes the lesson too: the droplet, its follow-ups, likes, comments and play counts, and its files in both R2 buckets ([Privacy](#privacy-and-the-legal-pages)); it leaves the tab |
+| DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
+| DELETE | `/api/questions/:id/everything` | own topic, with its lesson: the droplet, its follow-ups, likes, comments and play counts, and its files in both R2 buckets ([Privacy](#privacy-and-the-legal-pages)); it leaves the tab. A route of its own, not a flag, so an API from before it answers 404 and deletes nothing |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars; 429 past `REPLIES_PER_USER_PER_HOUR` (30), or when its files would pass the learner's file limits |
 | DELETE | `/api/replies/:id` | own reply |
 | PUT | `/api/droplets/:id/like` | thumbs-up a droplet on the tab: `{ liked: true, likeCount }`; idempotent, so a second PUT changes nothing; 404 unless it is on the tab. 60 a minute with the DELETE |
@@ -798,14 +799,18 @@ plays got and how often a hook clip was shared or downloaded, seen only by admin
 A learner can **delete** a request from its card: with no lesson yet it is deleted. With
 one, they choose. **Only my request** takes it back: their words, files and thread are
 deleted and `questions.userId` is set to null, so the lesson stays on the tab naming no one.
-**Everything** (`?everything=true`) deletes the request and the droplet with all that hangs
-on it (its follow-ups, the likes, comments and play counts others left, and the files in both
-R2 buckets), so it leaves the tab. The files are cleared by `api/src/lib/storage-delete.ts`:
-the droplet is recorded in `storage_deletions` in the transaction that deletes it, its
-`<answerId>/` folders are emptied at once, and an hourly sweep goes over them again until a
-pass after every upload URL signed for it has run out (`UPLOAD_URL_SECONDS`, 2 hours, and half
-an hour more), so a render still running at the delete leaves nothing behind. A copy Cloudflare
-already caches can be served a while longer to someone who has its link. Nothing it used of
+**Everything** (`DELETE /api/questions/:id/everything`) deletes the request and the droplet
+with all that hangs on it (its follow-ups, the likes, comments and play counts others left,
+and the files in both R2 buckets), so it leaves the tab. Anything still writing to it (a like,
+a comment, a follow-up, the teacher's reply, the studio's video calls) gets a 404, never a
+server error, and the studio stops at its next step ("the topic was deleted"). The files are
+cleared by `api/src/lib/storage-delete.ts`: the droplet is recorded in `storage_deletions` in
+the transaction that deletes it and its `<answerId>/` folders are emptied at once; then an
+hourly sweep clears any droplet whose first pass did not (R2 down, the API restarted), and
+makes one last pass once every upload URL signed for it has run out (`UPLOAD_URL_SECONDS`,
+2 hours, and half an hour more), so a render still running at the delete leaves nothing
+behind. A droplet that keeps failing is tried after the others, so it holds none up. A copy
+Cloudflare already caches can be served a while longer to someone who has its link. Nothing it used of
 the learner's daily limits is given back. **Deleting an account** (`/account`) takes back every
 request with a lesson and deletes everything else, except for the only admin, who has to make
 someone else an admin first.

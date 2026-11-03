@@ -352,6 +352,29 @@ test.describe('signed in', () => {
     await expect(page.getByText(text)).toHaveCount(0);
   });
 
+  test('deleting everything against an API from before it deletes nothing, and says so', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: buoyancy, on an old API`;
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const questionId = (await (await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: text } })).json()).id;
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    const answerId = (await (await bot.answer(questionId, 'Things float when they push aside their weight in water.')).json()).id;
+
+    // The API mid-deploy or rolled back: it has no such route, as Fastify answers for one it does not know.
+    await page.route('**/api/questions/*/everything', (route) =>
+      route.fulfill({ status: 404, json: { error: { code: 'NOT_FOUND', message: 'Route not found' } } }));
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await card.getByRole('button', { name: 'delete' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete everything' }).click();
+    await expect(page.getByText('nothing was deleted')).toBeVisible();
+    await expect(card).toBeVisible();
+    // The request is still the learner's, with its lesson: not taken back behind the page's back.
+    const row = await (await request.get(apiUrl(`/api/questions/${questionId}`), { headers: asBen })).json();
+    expect([row.content, row.answer.id]).toEqual([text, answerId]);
+  });
+
   test('a topic the teacher gives up says why, in place, and can be deleted', async ({ page, context, request }) => {
     await signIn(context, S.users.ada);
     await page.goto('/learn');

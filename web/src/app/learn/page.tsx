@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo, mem
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LightBulbIcon } from '@heroicons/react/24/outline';
-import { api, Question, Answer } from '@/lib/api';
+import { api, isMissingRoute, Question, Answer } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useGuardedSubmit } from '@/lib/useGuardedSubmit';
 import { usePolling } from '@/lib/usePolling';
@@ -157,7 +157,7 @@ function TeacherNotesLink({ href }: { href: string }) {
 }
 
 /**
- * What deleting a topic with a lesson takes: everything (the API's ?everything=true), or only the learner's request,
+ * What deleting a topic with a lesson takes: everything (the API's /everything route), or only the learner's request,
  * leaving the lesson on the Droplets tab naming no one (api/src/lib/privacy.ts). When people have liked or commented
  * on it, Everything says how many, so what it takes from them is plain before it is chosen.
  */
@@ -438,7 +438,7 @@ function LearnContent() {
   const [brain, setBrain] = useState<Brain | null>(null);
   const [defaultBrain, setDefaultBrain] = useState<Brain | null>(null); // the Studio page's, for the Default button
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  // For a topic with a lesson: whether the lesson goes too (api: ?everything=true), or only the request.
+  // For a topic with a lesson: whether the lesson goes too (the API's /everything route), or only the request.
   const [deleteLesson, setDeleteLesson] = useState(true);
   // Submit pressed signed out: the box asks them to sign in, keeping what they typed.
   const [askSignIn, setAskSignIn] = useState(false);
@@ -639,6 +639,11 @@ function LearnContent() {
           : 'Your request is deleted. The lesson stays for others to learn from.', 'success');
       }
     } catch (err) {
+      // An API from before deleting everything (mid-deploy, or rolled back) has no such route, so it deleted nothing.
+      if (isMissingRoute(err)) {
+        showToast('Deleting everything is not available for a moment, so nothing was deleted. Please try again in a few minutes.', 'error');
+        return;
+      }
       showToast(err instanceof Error ? err.message : 'Failed to delete topic', 'error');
     }
   };

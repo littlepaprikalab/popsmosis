@@ -1,13 +1,14 @@
 /**
- * Clears a deleted droplet's files from R2 (DELETE /api/questions/:id?everything=true): everything under <answerId>/ in
+ * Clears a deleted droplet's files from R2 (DELETE /api/questions/:id/everything): everything under <answerId>/ in
  * both buckets, the public videos, hook cut and posters, and the private re-render kit (art, masks, audio, timings).
  *
  * The route records the droplet in storage_deletions in the transaction that deletes it (queueFileDeletion), then has
- * its files cleared at once (clearSoon), and the API sweeps the table again every hour (sweepDeletedFiles). A row stays
+ * its files cleared at once (clearSoon), and the API sweeps the table every hour (sweepDeletedFiles). A row stays
  * until a pass that starts after every upload URL signed for the droplet has run out (SETTLE_MS) clears its folders: a
  * render still running when the learner deleted the topic holds URLs it can still upload with, and that later pass
- * takes whatever it put there. When R2 refuses or does not answer, the row keeps the reason and the next sweep tries
- * again.
+ * takes whatever it put there. So a droplet costs two passes: the first, and the one after SETTLE_MS; a sweep skips a
+ * row whose first pass cleared it (clearedAt) until then. When R2 refuses or does not answer, the row keeps the reason
+ * and the next sweep tries again, after the rows that failed fewer times, so one that never clears holds up no other.
  *
  * Cloudflare's cache can go on serving a public file it already holds for a while after R2 lets it go (they are sent
  * as immutable, lib/storage.ts); nothing on the site links to one any more.
@@ -26,7 +27,7 @@ const LIST_MAX_KEYS = 1000; // S3's most per page
 const MAX_ROUNDS = 20; // 20,000 files: far past what a droplet has
 const PARALLEL = 8;
 const TIMEOUT_MS = 30_000;
-const SWEEP_BATCH = 100;
+const SWEEP_BATCH = 500; // a few minutes of R2 calls at most; the site's daily cap on topics keeps it far from full
 const ANSWER_ID_RE = /^[A-Za-z0-9_-]{1,64}$/; // one plain folder name: never "", "." or a path
 
 export type ClearReport = { cleared: { answerId: string; files: number; done: boolean }[]; failed: { answerId: string; reason: string }[] };
@@ -92,17 +93,19 @@ export async function clearDropletFiles(config: StorageConfig, answerId: string,
 }
 
 /**
- * Clears the files of the droplets in storage_deletions (only `answerIds`, when given), oldest first. A row goes once
- * a pass that began past its SETTLE_MS clears it; one that fails keeps the reason for the next sweep.
+ * Clears the files of the droplets in storage_deletions that are due: never cleared, last pass failed, or past
+ * SETTLE_MS (only `answerIds`, when given, whatever their state). A row goes once a pass that began past its SETTLE_MS
+ * clears it; one that fails keeps the reason for the next sweep.
  */
 export async function clearDeletedFiles(
   config: StorageConfig,
   db: typeof prisma,
   { answerIds, fetchImpl = fetch, now = () => new Date() }: { answerIds?: string[]; fetchImpl?: typeof fetch; now?: () => Date } = {},
 ): Promise<ClearReport> {
+  const settledBefore = new Date(now().getTime() - SETTLE_MS);
   const rows = await db.storageDeletion.findMany({
-    where: answerIds ? { answerId: { in: answerIds } } : {},
-    orderBy: { createdAt: 'asc' },
+    where: answerIds ? { answerId: { in: answerIds } } : { OR: [{ clearedAt: null }, { createdAt: { lte: settledBefore } }] },
+    orderBy: [{ tries: 'asc' }, { createdAt: 'asc' }],
     take: SWEEP_BATCH,
   });
   const report: ClearReport = { cleared: [], failed: [] };
@@ -112,11 +115,15 @@ export async function clearDeletedFiles(
       const files = await clearDropletFiles(config, row.answerId, fetchImpl);
       const done = row.createdAt.getTime() <= began - SETTLE_MS;
       if (done) await db.storageDeletion.deleteMany({ where: { answerId: row.answerId } });
+      else await db.storageDeletion.updateMany({ where: { answerId: row.answerId }, data: { clearedAt: new Date(began), lastError: null } });
       report.cleared.push({ answerId: row.answerId, files, done });
     } catch (err) {
       const reason = (err as Error).message;
       report.failed.push({ answerId: row.answerId, reason });
-      await db.storageDeletion.updateMany({ where: { answerId: row.answerId }, data: { tries: { increment: 1 }, lastError: reason.slice(0, 500) } });
+      await db.storageDeletion.updateMany({
+        where: { answerId: row.answerId },
+        data: { tries: { increment: 1 }, lastError: reason.slice(0, 500), clearedAt: null },
+      });
     }
   }
   return report;

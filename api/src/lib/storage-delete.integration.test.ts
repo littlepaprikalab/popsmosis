@@ -115,7 +115,7 @@ describe.runIf(RUN)('clearing a deleted droplet\'s files from R2', () => {
     const kept = await droplet('Glycolysis');
     expect(r2.filesOf(gone.answerId)).toHaveLength(6);
 
-    const del = await app.inject({ method: 'DELETE', url: `/api/questions/${gone.questionId}?everything=true`, headers: asUser(learner.cookie) });
+    const del = await app.inject({ method: 'DELETE', url: `/api/questions/${gone.questionId}/everything`, headers: asUser(learner.cookie) });
     expect(del.statusCode).toBe(204);
     await vi.waitFor(() => expect(r2.filesOf(gone.answerId)).toEqual([]));
     expect(r2.filesOf(kept.answerId)).toHaveLength(6);
@@ -125,27 +125,30 @@ describe.runIf(RUN)('clearing a deleted droplet\'s files from R2', () => {
 
   it('keeps the record until a pass after the last upload URL ran out, which takes what a running render uploaded', async () => {
     const { questionId, answerId } = await droplet('ATP synthase');
-    await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(learner.cookie) });
+    await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asUser(learner.cookie) });
     await vi.waitFor(() => expect(r2.filesOf(answerId)).toEqual([]));
     const { createdAt } = await prisma.storageDeletion.findUniqueOrThrow({ where: { answerId } });
+
+    expect((await prisma.storageDeletion.findUniqueOrThrow({ where: { answerId } })).clearedAt).not.toBeNull();
 
     // The render, still going, uploads its lesson video with a URL it was signed before the delete.
     r2.store.droplets.add(`${answerId}/a1/out/lesson_h.mp4`);
     const at = (ms: number) => () => new Date(createdAt.getTime() + ms);
-    const early = await lib.clearDeletedFiles(config, prisma, { fetchImpl: r2.fetchImpl, now: at(60 * 60 * 1000) });
-    expect(early).toEqual({ cleared: [{ answerId, files: 1, done: false }], failed: [] });
-    expect(r2.filesOf(answerId)).toEqual([]);
-    expect(await prisma.storageDeletion.count()).toBe(1);
+    // The hourly sweeps in between leave it be: its first pass cleared it, and only the one after the window is due.
+    const calls = r2.calls();
+    expect(await lib.clearDeletedFiles(config, prisma, { fetchImpl: r2.fetchImpl, now: at(60 * 60 * 1000) })).toEqual({ cleared: [], failed: [] });
+    expect(r2.calls()).toBe(calls);
 
     const settled = await lib.clearDeletedFiles(config, prisma, { fetchImpl: r2.fetchImpl, now: at(lib.SETTLE_MS) });
-    expect(settled).toEqual({ cleared: [{ answerId, files: 0, done: true }], failed: [] });
+    expect(settled).toEqual({ cleared: [{ answerId, files: 1, done: true }], failed: [] });
+    expect(r2.filesOf(answerId)).toEqual([]);
     expect(await prisma.storageDeletion.count()).toBe(0);
   });
 
   it('keeps the reason when R2 refuses, and the next sweep finishes', async () => {
     const { questionId, answerId } = await droplet('ATP synthase');
     r2.refuse(true);
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(learner.cookie) })).statusCode).toBe(204);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asUser(learner.cookie) })).statusCode).toBe(204);
     // The droplet is gone from the database whatever R2 says.
     expect(await prisma.answer.count({ where: { id: answerId } })).toBe(0);
     await vi.waitFor(async () => expect((await prisma.storageDeletion.findUniqueOrThrow({ where: { answerId } })).tries).toBe(1));
@@ -160,6 +163,24 @@ describe.runIf(RUN)('clearing a deleted droplet\'s files from R2', () => {
     expect(await prisma.storageDeletion.count()).toBe(0);
   });
 
+  it('clears at the next sweep a droplet whose first pass never ran (the API restarted), and takes the rows that failed least first', async () => {
+    // Deleted, recorded, and the instance went down before its first pass: nothing was cleared.
+    const fresh = await droplet('ATP synthase');
+    const stuck = await droplet('Glycolysis');
+    await prisma.answer.deleteMany({ where: { id: { in: [fresh.answerId, stuck.answerId] } } });
+    await prisma.storageDeletion.createMany({ data: [
+      { answerId: stuck.answerId, createdAt: new Date(Date.now() - 60_000), tries: 5, lastError: 'R2 did not answer' },
+      { answerId: fresh.answerId },
+    ] });
+    const report = await lib.clearDeletedFiles(config, prisma, { fetchImpl: r2.fetchImpl });
+    // The one that never failed first, though it is the newer; both are done, neither for good yet.
+    expect(report.cleared.map((c) => c.answerId)).toEqual([fresh.answerId, stuck.answerId]);
+    expect(r2.filesOf(fresh.answerId)).toEqual([]);
+    expect(r2.filesOf(stuck.answerId)).toEqual([]);
+    const rows = await prisma.storageDeletion.findMany({ orderBy: { tries: 'asc' } });
+    expect(rows.map((r) => [r.clearedAt !== null, r.lastError])).toEqual([[true, null], [true, null]]);
+  });
+
   it('records nothing and touches no file when the request is only taken back: the lesson stays', async () => {
     const { questionId, answerId } = await droplet('ATP synthase');
     expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}`, headers: asUser(learner.cookie) })).statusCode).toBe(204);
@@ -171,7 +192,7 @@ describe.runIf(RUN)('clearing a deleted droplet\'s files from R2', () => {
   it('runs one sweep at a time in a process', async () => {
     const { questionId } = await droplet('ATP synthase');
     r2.refuse(true); // so the record stays for the sweeps below
-    await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(learner.cookie) });
+    await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asUser(learner.cookie) });
     await vi.waitFor(async () => expect((await prisma.storageDeletion.findFirstOrThrow()).tries).toBe(1));
     const [first, second] = await Promise.all([lib.sweepDeletedFiles(config, prisma, r2.fetchImpl), lib.sweepDeletedFiles(config, prisma, r2.fetchImpl)]);
     expect(first?.failed).toHaveLength(1);

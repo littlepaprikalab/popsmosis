@@ -242,8 +242,9 @@ Since a public file never changes once viewers can see it, it is uploaded with
 
 **Deleted droplets.** When a learner deletes a topic with everything, the API empties the
 droplet's `<answerId>/` folder in both buckets itself, with the same key (Object Read & Write
-covers deletes), and goes over it again every hour until no upload URL signed before the delete
-can still be used (`api/src/lib/storage-delete.ts`). The log says `cleared N file(s) of a
+covers deletes), and once more after no upload URL signed before the delete can still be used,
+about 2.5 hours later; an hourly sweep does that pass and retries any that failed
+(`api/src/lib/storage-delete.ts`). The log says `cleared N file(s) of a
 deleted droplet from R2`, or why its files stay for now (the next sweep tries again); the
 reason is also kept in `storage_deletions."lastError"`. Cloudflare's cache can serve a deleted
 public file a while longer to someone who has its link; purge it in the dashboard (Caching >
@@ -455,9 +456,10 @@ refused (404) and drops them.
 `20261114120000_storage_deletions` (a learner deleting a topic with everything, README: Privacy
 and the legal pages) creates one small table (`storage_deletions`, row-level security on, no
 foreign key); it rewrites no row and needs no downtime. Deploy `popsmosis-api` first, then
-`popsmosis-web`: a web app ahead of the API sends `?everything=true` to an API that ignores it
-and only takes the request back, so the lesson would stay. The studio has no change: it already
-stops on the 404 a deleted topic or droplet answers with.
+`popsmosis-web`. Either order is safe, and so is rolling the API back: a web app ahead of its
+API calls `DELETE /api/questions/:id/everything`, which an older API does not have, so it
+answers 404, nothing is deleted, and the learner is told to try again in a few minutes. The
+studio has no change: it already stops on the 404 a deleted topic or droplet answers with.
 
 ## Troubleshooting
 

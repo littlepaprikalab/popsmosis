@@ -320,9 +320,12 @@ model DropletPlays {
 // learner deleted it can upload a file after the first pass. Only the id: nothing about the learner or the lesson, and
 // no foreign key, as the answer is gone.
 model StorageDeletion {
-  answerId  String   @id
-  createdAt DateTime @default(now()) // when the droplet was deleted
-  tries     Int      @default(0) // sweeps that failed, for the log
+  answerId  String    @id
+  createdAt DateTime  @default(now()) // when the droplet was deleted
+  // When a pass last left both folders empty. Null: none has yet, or the last one failed. A sweep skips a row that is
+  // cleared until its last pass is due (after SETTLE_MS), so each droplet costs two passes, not one an hour.
+  clearedAt DateTime?
+  tries     Int       @default(0) // passes that failed, for the log; a sweep takes the rows that failed least first
   lastError String? // why the last one did
 
   @@map("storage_deletions")

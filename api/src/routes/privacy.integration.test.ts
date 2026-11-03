@@ -195,7 +195,7 @@ d('learner privacy', () => {
     const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(grace.cookie) })).json();
     expect([card.answer.likeCount, card.answer.commentCount]).toEqual([2, 1]);
 
-    const del = await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(grace.cookie) });
+    const del = await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asUser(grace.cookie) });
     expect(del.statusCode).toBe(204);
 
     // Nothing of it is left: the request, the lesson and everything under it.
@@ -223,36 +223,30 @@ d('learner privacy', () => {
     // The teacher has nothing left to answer under it, and a lesson for it is refused as for any deleted topic.
     expect((await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent() })).json().data).toEqual([]);
     expect((await app.inject({ method: 'POST', url: `/api/answers/${answerId}/video/claim`, headers: asAgent(), payload: {} })).statusCode).toBe(404);
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(grace.cookie) })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asUser(grace.cookie) })).statusCode).toBe(404);
   });
 
-  it('deletes a request with no lesson the same with everything or without, and takes everything as true or false only', async () => {
+  it('deletes a request with no lesson the same with everything or without', async () => {
     const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(grace.cookie), payload: { content: 'Tides' } });
     const id = asked.json().id as string;
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}?everything=yes`, headers: asUser(grace.cookie) })).statusCode).toBe(400);
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}?everything=true`, headers: asUser(grace.cookie) })).statusCode).toBe(204);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}/everything`, headers: asUser(grace.cookie) })).statusCode).toBe(204);
     expect(await prisma.question.count({ where: { id } })).toBe(0);
-
-    // ?everything=false is the take back.
-    const { questionId, answerId } = await lesson(grace);
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=false`, headers: asUser(grace.cookie) })).statusCode).toBe(204);
-    expect((await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).statusCode).toBe(200);
   });
 
   it('deletes everything only of the learner\'s own request: not someone else\'s, not as an admin, not once taken back', async () => {
     const { questionId, answerId } = await lesson(grace);
     for (const who of [ben, admin]) {
-      const res = await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(who.cookie) });
+      const res = await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asUser(who.cookie) });
       expect(res.statusCode).toBe(403);
     }
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asAgent() })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asAgent() })).statusCode).toBe(401);
     // CSRF: a cookie write without the header is refused.
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: { cookie: grace.cookie } })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: { cookie: grace.cookie } })).statusCode).toBe(403);
     expect(await prisma.answer.count({ where: { id: answerId } })).toBe(1);
 
     // Taken back, it is no one's: the lesson can no longer be deleted by the learner who asked for it.
     expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}`, headers: asUser(grace.cookie) })).statusCode).toBe(204);
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}?everything=true`, headers: asUser(grace.cookie) })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}/everything`, headers: asUser(grace.cookie) })).statusCode).toBe(403);
     expect((await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).statusCode).toBe(200);
   });
 
@@ -376,7 +370,7 @@ d('learner privacy', () => {
       await app.inject({ method: 'POST', url: `/api/questions/${id}/claim`, headers: asAgent() });
       const [answer, del] = await Promise.all([
         app.inject({ method: 'POST', url: `/api/questions/${id}/answer`, headers: asAgent(), payload: { content: 'The Moon pulls the oceans.' } }),
-        app.inject({ method: 'DELETE', url: `/api/questions/${id}?everything=true`, headers: asUser(ben.cookie) }),
+        app.inject({ method: 'DELETE', url: `/api/questions/${id}/everything`, headers: asUser(ben.cookie) }),
       ]);
       expect(del.statusCode).toBe(204);
       expect([201, 404]).toContain(answer.statusCode);
@@ -411,4 +405,57 @@ d('learner privacy', () => {
       expect(await prisma.reply.count({ where: { answerId, userId: { not: null } } })).toBe(0);
     }
   });
+  // Deleting with everything is the first way a droplet goes while people and the teacher still write to it. Every
+  // route that writes to one is sent in the moment between its look at the droplet and the delete's commit: the
+  // delete is held open, the request goes, then the delete commits. Each has to end in a 4xx, never a server error.
+  it('every write to a droplet that lands as it is deleted with everything ends in a 4xx, never a server error', async () => {
+    type Case = { name: string; state: 'READY' | 'RENDERING'; send: (ids: { answerId: string; followUpId: string; commentId: string }) => Promise<{ statusCode: number; body: string }> };
+    const cases: Case[] = [
+      { name: 'like', state: 'READY', send: ({ answerId }) => app.inject({ method: 'PUT', url: `/api/droplets/${answerId}/like`, headers: asUser(ben.cookie) }) },
+      { name: 'unlike', state: 'READY', send: ({ answerId }) => app.inject({ method: 'DELETE', url: `/api/droplets/${answerId}/like`, headers: asUser(admin.cookie) }) },
+      { name: 'comment', state: 'READY', send: ({ answerId }) => app.inject({ method: 'POST', url: `/api/droplets/${answerId}/comments`, headers: asUser(ben.cookie), payload: { content: 'Nice' } }) },
+      { name: 'delete comment', state: 'READY', send: ({ answerId, commentId }) => app.inject({ method: 'DELETE', url: `/api/droplets/${answerId}/comments/${commentId}`, headers: asUser(admin.cookie) }) },
+      { name: 'play', state: 'READY', send: ({ answerId }) => app.inject({ method: 'POST', url: `/api/droplets/${answerId}/plays`, payload: { video: 'song', event: 'started' } }) },
+      { name: 'follow-up', state: 'READY', send: ({ answerId }) => app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(grace.cookie), payload: { content: 'One more?' } }) },
+      { name: 'teacher reply', state: 'READY', send: ({ answerId, followUpId }) => app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asAgent(), payload: { content: 'Here is why.', replyToId: followUpId } }) },
+      { name: 'admin hide', state: 'READY', send: ({ answerId }) => app.inject({ method: 'PATCH', url: `/api/answers/${answerId}`, headers: asUser(admin.cookie), payload: { hidden: true } }) },
+      { name: 'video claim', state: 'RENDERING', send: ({ answerId }) => app.inject({ method: 'POST', url: `/api/answers/${answerId}/video/claim`, headers: asAgent(), payload: { attempt: 1 } }) },
+      { name: 'video progress', state: 'RENDERING', send: ({ answerId }) => app.inject({ method: 'PUT', url: `/api/answers/${answerId}/video/progress`, headers: asAgent(), payload: { attempt: 1, running: [{ step: 'render', seconds: 3 }] } }) },
+      { name: 'video report', state: 'RENDERING', send: ({ answerId }) => app.inject({ method: 'PATCH', url: `/api/answers/${answerId}/video`, headers: asAgent(), payload: { status: 'RENDERING', attempt: 1 } }) },
+      { name: 'video fail', state: 'RENDERING', send: ({ answerId }) => app.inject({ method: 'POST', url: `/api/answers/${answerId}/video/fail`, headers: asAgent(), payload: { reason: 'render crashed', attempt: 1 } }) },
+    ];
+    for (const c of cases) {
+      const { questionId, answerId } = await lesson(grace, `${c.name}: tides`);
+      // A follow-up of Grace's waiting for the teacher, and a comment of Ben's, for the routes that name one.
+      const followUp = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(grace.cookie), payload: { content: 'And the Sun?' } });
+      const comment = await app.inject({ method: 'POST', url: `/api/droplets/${answerId}/comments`, headers: asUser(ben.cookie), payload: { content: 'Thanks' } });
+      await app.inject({ method: 'PUT', url: `/api/droplets/${answerId}/like`, headers: asUser(admin.cookie) });
+      if (c.state === 'RENDERING') {
+        await prisma.answer.update({ where: { id: answerId }, data: { videoStatus: null, songVideoUrl: null, lessonVideoUrl: null } });
+        expect((await app.inject({ method: 'POST', url: `/api/answers/${answerId}/video/claim`, headers: asAgent(), payload: {} })).statusCode).toBe(200);
+      }
+      const ids = { answerId, followUpId: followUp.json().id as string, commentId: comment.json().id as string };
+
+      let commit!: () => void;
+      let deleted!: () => void;
+      const ready = new Promise<void>((resolve) => { deleted = resolve; });
+      const holding = prisma.$transaction(async (tx) => {
+        await tx.question.delete({ where: { id: questionId } });
+        deleted();
+        await new Promise<void>((resolve) => { commit = resolve; });
+      }, { timeout: 20_000 });
+      await ready;
+      const sent = c.send(ids);
+      await new Promise((resolve) => setTimeout(resolve, 300)); // it reads, then waits on the delete's locks
+      commit();
+      await holding;
+      const res = await sent;
+      // Gone, as the studio reads a 404 ("the topic was deleted"); deleting a comment and counting a play answer 204
+      // whether or not there was anything left to do.
+      expect(res.statusCode, `${c.name}: ${res.body}`).toBe(c.name === 'delete comment' || c.name === 'play' ? 204 : 404);
+      expect(await prisma.answer.count({ where: { id: answerId } }), c.name).toBe(0);
+      await prisma.usageEvent.deleteMany({});
+    }
+  });
 });
+
