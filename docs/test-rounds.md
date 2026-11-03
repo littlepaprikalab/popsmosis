@@ -1875,6 +1875,35 @@ The lesson video, yes, with the caveat of the hemoglobin picture: it teaches the
 right and the misconception lands. The song video is weaker for a demo: the choruses sit over a still overview, and
 the one hemoglobin line sings "four" over five. Showing the lesson video and a verse of the song avoids both.
 
+## Nov 3: which of the fact-check prompt's rules change what the checker does
+
+The rule the owner keeps for the writer's brief (CLAUDE.md, "Rules in the prompts earn their place"), applied to
+`prompts/factcheck.md`. One round-one payload on the light reactions, 62 lines (9 facts, one corrected by the
+audit with `was`, a study guide with two wrong claims), each line aimed at a rule: overgeneralizations, an image
+that makes a wrong point, the jammed-turbine bridge that once borrowed the herbicide's "no NADPH" (Round 5), a
+crude couplet, two appeals, form-keeping corrections (a couplet, a key line, a table row, a list item), tags of
+every kind, motions through a wall and from a teacher to a student, and public text naming an artist, a logo and
+an instruction. Seventeen Opus subagents stood in for the checker: the full prompt twice, and 15 copies each with
+one group of rules taken out, judged against a key written beforehand.
+
+- **The full prompt** gave the expected verdict on all 62 lines, both times, with no disagreement between the two.
+- **One group earned its place**: "Across a wall or membrane it goes through what the facts say it crosses by".
+  Without it, "H⁺ travels from Thylakoid lumen to Thylakoid membrane to Stroma" passed.
+- **The other 14 changed no verdict on the lines aimed at them, nor on any other**: figures of speech and
+  attitude; one case never supporting another (the turbine couplet was failed and "NADPH piles up for a while"
+  passed without it); fitness for a classroom; the list of what makes a line UNSUPPORTED; the study guide as never
+  a source; corrected facts; a lyric's leniency; appeals; the Versailles example; the tag and public-text lists;
+  unmarked "Something travels"; and both rules on how to write `corrected`, whose corrections kept a couplet's
+  lines and rhyme word, a key line's arrows and a table row's cells without them. About 1,000 of the prompt's
+  2,600 words.
+
+What it does not show: the lines were clear-cut, where a rule matters least; it was one run of each copy, on one
+payload of 62 lines where a real one has 130; and it was Opus alone, while a topic on Muse Wonder or Muse Spark
+is fact-checked by that model with the same prompt. Nothing was taken out on this round alone.
+
+The schema's `source` still said "the fact id or a verbatim study-guide quote", left from before the study guide
+became context only; it now says what `cites()` takes.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
