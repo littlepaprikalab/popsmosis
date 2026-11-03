@@ -402,3 +402,15 @@ def test_logged_ask_makes_no_call_once_the_topic_is_past_its_ceiling(tmp_path, m
     with pytest.raises(ledger.OverCeiling):
         ask("brain", "p", label="factcheck round 3")
     assert asked == ["factcheck round 1", "factcheck round 2"]
+
+
+def test_the_picture_checker_is_a_line_of_its_own_under_the_art_step(tmp_path):
+    # The bill says what checked the pictures, apart from what painted them (the owner, Nov 3).
+    with ledger.at_step("art"):
+        ledger.log(tmp_path, [call("art overview", model="muse-image-1.0", cost=0.01, role="meta"),
+                              call("art check overview", cost=0.05, role="checker"),
+                              call("art rewrite overview", cost=0.02, role="brain"),
+                              call("art check overview try 2", cost=0.05, role="checker")])
+    art = ledger.breakdown(tmp_path, "videos")["steps"][0]
+    assert [(m["model"], m["calls"], m.get("task")) for m in art["models"]] == [
+        ("muse-image-1.0", 1, None), ("claude-opus-5-5", 2, "check"), ("claude-opus-5-5", 1, None)]

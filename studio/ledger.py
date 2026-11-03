@@ -364,18 +364,22 @@ def version(tool: str) -> str | None:
 
 def _models(rows: list[dict]) -> list[dict]:
     """The calls grouped by the model that answered, in the order each model first appears. Calls the operator's
-    session answered (studio/session.py) are a line of their own, `via: "session"`, at $0 on the API key."""
-    out: dict[tuple[str, str], dict] = {}
+    session answered (studio/session.py) are a line of their own, `via: "session"`, at $0 on the API key. So are the
+    picture checker's (brain.py's "checker" role), `task: "check"`, a subline of the art step: the bill says what
+    checked the pictures, apart from what painted them or wrote their words (the owner, Nov 3)."""
+    out: dict[tuple[str, str, str], dict] = {}
     for row in rows:
         via = "session" if row.get("via") == "session" else ""
-        m = out.setdefault((row.get("model") or "unknown", via), {"calls": 0, "costUsd": 0.0, "credits": None})
+        task = "check" if row.get("role") == "checker" else ""
+        m = out.setdefault((row.get("model") or "unknown", via, task), {"calls": 0, "costUsd": 0.0, "credits": None})
         m["calls"] += 1
         if m["costUsd"] is not None:
             m["costUsd"] = None if row.get("cost_usd") is None else m["costUsd"] + row["cost_usd"]
         if row.get("credits") is not None:
             m["credits"] = (m["credits"] or 0) + row["credits"]
     return [{"model": name, "calls": m["calls"], "costUsd": None if m["costUsd"] is None else round(m["costUsd"], 6),
-             "credits": m["credits"], **({"via": via} if via else {})} for (name, via), m in out.items()]
+             "credits": m["credits"], **({"via": via} if via else {}), **({"task": task} if task else {})}
+            for (name, via, task), m in out.items()]
 
 
 def _part_of(run: dict) -> str:
