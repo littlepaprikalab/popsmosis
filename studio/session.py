@@ -222,7 +222,7 @@ def _write_call(job: Path, base: Path, name: str, role: str, label: str, prompt:
 def _stands_for(role: str) -> str:
     """The model the call was meant for, as the request names it for the subagent."""
     try:
-        if role in ("judge", "drawer") or brain.provider() == "claude":
+        if role in brain.CLAUDE_ONLY or brain.provider() == "claude":
             return brain.claude_brain()[0] if role == "brain" else brain.CLAUDE[role]["model"]
         return brain.META[role]["model"] if role in brain.META else brain.CLAUDE[role]["model"]
     except (brain.BrainError, KeyError):

@@ -62,8 +62,8 @@ request right 8 times in 12 where the earlier prompt, with hex codes, a list of 
 biology style for every subject, was right once in 6; on Oct 31 the pictures came back better
 again without the style line every prompt ended in (a flat dark slate blue background, no text).
 The picture labels its own parts, and the video draws no labels over it, only over a drawing.
-The helper looks at each picture for a label that is wrong, for a structure missing or out of
-place, and for anything else wrong, told what kind of scene it is. A picture with a structure missing or out of
+The checker (Claude Opus, whatever the brain: brain.py) looks at each picture for a label that is wrong, for a
+structure missing or out of place, and for anything else wrong, told what kind of scene it is. A picture with a structure missing or out of
 place, or anything else wrong, can be asked for again, up to MAX_PAINTS pictures in all. The writer's role looks at
 every first picture with what the check found (rewrite()), and keeps it or writes the scene's words again for the
 next try; only a rewrite is painted again. When that call fails, a picture the check found a problem in is asked
@@ -698,7 +698,7 @@ def look(job: Path, bundle: Bundle, scene: Scene, ask, label: str, path: Path | 
     brain's review of its notes, the owner's choice on Nov 2: too many layers."""
     with tempfile.TemporaryDirectory(prefix="popsmosis-check-") as tmp:
         small = _shrunk(path or job / media.art_path(scene.id), Path(tmp))
-        answer = PictureCheck(**ask("helper", check_prompt(bundle, scene), PictureCheck, [small], system=CHECK_PROMPT,
+        answer = PictureCheck(**ask("checker", check_prompt(bundle, scene), PictureCheck, [small], system=CHECK_PROMPT,
                                     label=label))
     facts = {f.id for f in bundle.facts}
     notes = [n for n in answer.notes if n.fact.strip() in facts and n.text.strip()]
