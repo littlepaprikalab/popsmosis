@@ -11,6 +11,7 @@ const FINDINGS: { key: keyof ArtFindings; label: string }[] = [
   { key: 'unnamed', label: 'unnamed thing' },
   { key: 'text', label: 'writing in it' },
   { key: 'wrong', label: 'wrong' },
+  { key: 'unfounded', label: 'note dropped (names no fact)' },
 ];
 
 const VERDICT_COLORS: Record<string, string> = {

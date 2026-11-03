@@ -644,6 +644,9 @@ class ArtCheck(Strict):
     # The problems that would teach something false, as a sentence each for the student: the video shows
     # those of the picture it uses beside it (notices). [] in a check made before.
     notes: list[str] = Field(default_factory=list)
+    # Notes the check wrote that name no fact of the lesson (look() drops them, and the video never shows them):
+    # kept here for the admin's review, so a dropped correction is seen, not lost. [] in a check made before Nov 3.
+    unfounded: list[str] = Field(default_factory=list)
 
 
 class LabelFlag(Strict):
@@ -705,7 +708,8 @@ def look(job: Path, bundle: Bundle, scene: Scene, ask, label: str, path: Path | 
               for n in notes if n.note.strip()]
     check = ArtCheck(labels=[f"'{f.text}': {f.note}" if f.note.strip() else f.text for f in answer.labels],
                      misplaced=answer.misplaced,
-                     wrong=answer.wrong, notes=[n.text for n in notes])
+                     wrong=answer.wrong, notes=[n.text for n in notes],
+                     unfounded=[f"{n.fact}: {n.text}" for n in answer.notes if n not in notes and n.text.strip()])
     return check, flags, pinned
 
 

@@ -289,6 +289,7 @@ export interface ArtFindings {
   unnamed: string[]; // a small round thing that is no listed structure
   wrong: string[]; // anything else wrong for the scene
   notes: string[]; // what would teach something false, written for the student
+  unfounded: string[]; // a note that names no fact of the lesson: dropped from the video, shown here
 }
 
 /** One scene's picture, as the art checker saw it. */

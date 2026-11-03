@@ -293,6 +293,9 @@ def test_a_note_that_names_no_fact_of_the_lesson_is_never_shown(job, monkeypatch
     helper = FakeHelper(checks={"synthase": [{"misplaced": ["head in the lumen"], "notes": [right, unfounded]}]})
     art.run(job, helper)
     assert art.notices(job, checks.load(job / "bundle.json")) == {"synthase": [right]}
+    # Dropped from the video, but kept in the record for the admin's review (Nov 3).
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["tries"][0]["unfounded"] == ["f9: The carriers belong on the capillary's side."]
 
 
 def test_a_stage_painted_afresh_and_declined_is_a_declined_try_not_a_failed_step(job, monkeypatch):
