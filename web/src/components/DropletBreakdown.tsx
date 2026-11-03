@@ -189,50 +189,83 @@ function StepName({ row, short = false }: { row: Row; short?: boolean }) {
 
 // --- from the request -----------------------------------------------------------------------
 
-/** A line under the bill's total: how long after the request a milestone came, by the clock. */
-interface Milestone {
+/** A stretch of the time from the request: a wait, the studio at work, or both when the bill cannot tell them apart. */
+interface Stretch {
   label: string;
   seconds: number;
-  end: boolean; // the droplet done: its videos READY, or its lesson posted when it has none
+  aside: string | null; // after the label, lighter: when the lesson was posted
+}
+
+/** The time from the request, under the bill's work: the stretches it was spent in, and the line they add up to. */
+interface Timeline {
+  stretches: Stretch[]; // none when there would be one: the line under them says it
+  line: { label: string; seconds: number; end: boolean }; // end: the droplet done, its videos READY or its lesson posted when it has none
+}
+
+// How far a part's work may run past its stretch of the clock and still be set against it: the database's clock
+// stamps the request and the lesson, the API's the READY, and the studio's times the work.
+const CLOCKS_APART = 60;
+
+/**
+ * Each stretch's time as the bill shows it, from the points on the clock where they end. While the end reads in
+ * minutes, each point is first rounded to the tenth of a minute the bill shows it to, so the stretches add up to the
+ * line under them as shown, not a tenth off.
+ */
+function stretchSeconds(points: number[]): number[] {
+  const end = points[points.length - 1];
+  const shown = end >= 60 && end < 90 * 60 ? (s: number) => Math.round(Number((s / 60).toFixed(1)) * 10) * 6 : (s: number) => s;
+  return points.map((p, i) => shown(p) - (i > 0 ? shown(points[i - 1]) : 0));
 }
 
 /**
- * The time from the request, for the lines under the total: to the lesson, and end to end once the droplet is done.
- * A droplet without videos is done with its lesson. While it is still being made, or its videos failed, only the
- * lesson's time is known.
+ * The time from the request, split where the bill allows into the waits and the studio's work: up to the lesson,
+ * the wait for the studio to start and the lesson's writing; after it, the wait for the videos (the hand-off, and the
+ * gap before a retry) and their making. A stretch whose part has no time on the bill (a READY sent without its bill:
+ * too big, unreadable, or by hand; an API older than the parts' times) stays whole, as its work would otherwise read
+ * as waiting. A droplet without videos is done with its lesson; while its videos are made, or when they failed, the
+ * time runs to the lesson only.
  */
-function milestonesOf(endToEnd: EndToEnd | null | undefined, video: Video | null, making: boolean): Milestone[] {
-  if (!endToEnd) return [];
-  if (endToEnd.videos !== null) {
-    return [{ label: 'Request to lesson', seconds: endToEnd.lesson, end: false },
-      { label: 'End to end', seconds: endToEnd.videos, end: true }];
+function timelineOf(endToEnd: EndToEnd | null | undefined, bill: Breakdown | null, video: Video | null, making: boolean): Timeline | null {
+  if (!endToEnd) return null;
+  const points: { at: number; label: string }[] = [];
+  const split = (from: number, to: number, work: number | null | undefined, wait: string, working: string, whole: string) => {
+    const start = work === null || work === undefined ? null : to - work;
+    if (start === null || start < from - CLOCKS_APART) points.push({ at: to, label: whole });
+    else points.push({ at: Math.max(from, start), label: wait }, { at: to, label: working });
+  };
+  const { lesson, videos } = endToEnd;
+  split(0, lesson, bill?.partSeconds?.lesson, 'Waiting for the studio to start', 'Writing the lesson', 'Request to lesson');
+  if (videos !== null) {
+    split(lesson, videos, bill?.partSeconds?.videos, 'Waiting between the lesson and the videos', 'Making the videos', 'Lesson to videos');
   }
-  if (!video && !making) return [{ label: 'End to end', seconds: endToEnd.lesson, end: true }];
-  return [{ label: 'Request to lesson', seconds: endToEnd.lesson, end: false }];
+  const seconds = stretchSeconds(points.map((p) => p.at));
+  const stretches = points
+    .map((p, i) => ({
+      label: p.label,
+      seconds: seconds[i],
+      aside: videos !== null && p.label === 'Writing the lesson' ? `posted at ${duration(lesson)}` : null,
+    }))
+    .filter((s) => s.seconds > 0);
+  const done = videos !== null || (!video && !making);
+  return {
+    stretches: stretches.length > 1 ? stretches : [],
+    line: { label: done ? 'End to end' : 'Request to lesson', seconds: videos ?? lesson, end: done },
+  };
 }
 
-/**
- * What the time from the request runs to, and what it counts besides the studio's own: the waits. The wait is said
- * only when the bill has every part up to the end: the videos' bill is left out of a READY sent without it (too
- * big, unreadable, or by hand), and their work would then read as waiting.
- */
-function endToEndNote(end: Milestone | undefined, bill: Breakdown | null, videos: boolean): string {
-  if (!end) return 'Request to lesson: from the moment it was asked, by the clock, the wait for the studio to start included.';
-  const parts = new Set(bill?.steps.map((s) => s.part));
-  const whole = parts.has('lesson') && (!videos || parts.has('videos'));
-  const studio = whole ? bill?.seconds ?? null : null;
-  const wait = studio === null ? null : end.seconds - studio;
-  return `End to end: from the moment it was asked to the moment ${videos ? 'its videos were ready' : 'its lesson was posted'}, by the clock`
-    + (wait !== null && wait >= 1
-      ? `: the studio’s ${duration(studio)}, and ${duration(wait)} waiting ${videos ? 'for the studio to start and between the lesson and its videos' : 'for the studio to start'}.`
-      : '.');
+// Over the stretches: what sets them apart from the steps' times above.
+const CLOCK = 'From the request, by the clock';
+
+function StretchName({ stretch }: { stretch: Stretch }) {
+  return <>{stretch.label}{stretch.aside && <span style={{ color: 'var(--text-muted)' }}> ({stretch.aside})</span>}</>;
 }
 
 /**
  * How the droplet was made, as a bill of materials: each step's line, the models that ran it
  * with how many calls and what they cost, the tools it ran with their versions, who made each,
- * how long it took, and the totals; under them, how long it took from the request, waits and all (`endToEnd`), since
- * the bill's own time is the studio's steps alone, the diagrams and the audio side by side. Folded until opened,
+ * how long it took, and the studio's work in all; under it, the time from the request (`endToEnd`), split into the
+ * waits and the work so that it adds up, since the bill's own time is the studio's steps alone, the diagrams and the
+ * audio side by side. Folded until opened,
  * and only built once opened: a page of cards would otherwise carry every bill's rows, twice.
  *
  * With `progress`, the droplet is still being made, and the bill is how far it has got: every
@@ -265,17 +298,17 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
   const totalSince = progress && progress.running.length > 0 ? progress.since : undefined;
   const totalSeconds = progress?.seconds ?? bill?.seconds ?? null;
   const totalTime: ReactNode = totalSince !== undefined ? <Elapsed base={0} since={totalSince} /> : duration(totalSeconds);
-  const milestones = milestonesOf(endToEnd, video, making);
-  const end = milestones.find((m) => m.end);
+  const timeline = timelineOf(endToEnd, bill, video, making);
+  const end = timeline?.line.end ? timeline.line : undefined;
   const notes = [
-    milestones.length > 0 && endToEndNote(end, bill, !!video),
     making && rows.some((r) => r.status === 'running')
       && 'A step running now counts its time up, the total with it, and shows what it has spent so far.',
     bill && bill.seconds !== null && stepSeconds > bill.seconds + 1
-      && 'The times add up to more than the total: the diagrams and the audio are made side by side.',
+      && `The steps’ times add up to more than ${making ? 'the time so far' : 'the studio’s work'}: the diagrams and the audio are made at the same time.`,
     steps.some((s) => s.tries > 1) && 'A step tried more than once counts every try, in time and in cost.',
-    steps.some((s) => s.models.some((m) => m.costUsd === 0)) && 'free: run on the studio’s own machine.',
-    steps.some((s) => s.tools?.some((t) => t.version)) && 'Versions: as installed on the studio’s machine that made the videos.',
+    steps.some((s) => s.models.some((m) => m.costUsd === 0)) && '“free”: the model runs on the studio’s own machine, so nothing is billed.',
+    steps.some((s) => s.tools?.some((t) => t.version))
+      && 'The lighter number after a tool’s name is its version, as installed on the machine that made the videos.',
     bill && bill.credits !== null && 'cr: credits on the ElevenLabs plan, which bills by credit.',
     bill && bill.unpriced > 0 && 'n/a: the provider did not say what it charged.',
     // An API older than the progress reports sends the videos' lines only with READY.
@@ -321,7 +354,7 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
         <span className="text-[10px] underline underline-offset-2 group-hover/summary:text-[var(--text-hover)] hidden group-open:inline">hide</span>
       </summary>
       {open && <div className="mt-2 rounded-md p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-        <PhoneBill rows={rows} bill={bill} making={making} time={totalTime} milestones={milestones} />
+        <PhoneBill rows={rows} bill={bill} making={making} time={totalTime} timeline={timeline} />
         <table className="w-full border-collapse hidden sm:table" style={{ color: 'var(--text-secondary)' }}>
           <thead>
             <tr className="text-[9px] uppercase tracking-wider text-left" style={{ color: 'var(--text-muted)', borderBottom: '1px dashed var(--border)' }}>
@@ -367,18 +400,27 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
           </tbody>
           <tfoot>
             <tr className="font-bold" style={{ borderTop: '1px dashed var(--border)', color: 'var(--text-primary)' }}>
-              <td className={cell} colSpan={making ? 6 : 5}>{making ? 'So far' : 'Total'}</td>
+              <td className={cell} colSpan={making ? 6 : 5}>{making ? 'So far' : 'Studio’s work'}</td>
               <td className={num}>{totalTime}</td>
               <td className={`${num} !pr-0`}>{cost}</td>
             </tr>
-            {milestones.map((m) => (
-              <tr key={m.label} data-testid="breakdown-milestone" className={m.end ? 'font-bold' : undefined}
-                style={{ color: m.end ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                <td className={cell} colSpan={making ? 6 : 5}>{m.label}</td>
-                <td className={num}>{duration(m.seconds)}</td>
+            {timeline && <>
+              <tr data-testid="breakdown-clock" className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <td className={`${cell} !pt-3 font-semibold`} colSpan={making ? 8 : 7}>{CLOCK}</td>
+              </tr>
+              {timeline.stretches.map((s) => (
+                <tr key={s.label} data-testid="breakdown-stretch" style={{ color: 'var(--text-secondary)' }}>
+                  <td className={`${cell} pl-3`} colSpan={making ? 6 : 5}><StretchName stretch={s} /></td>
+                  <td className={num}>{duration(s.seconds)}</td>
+                  <td className={`${num} !pr-0`} />
+                </tr>
+              ))}
+              <tr data-testid="breakdown-milestone" className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                <td className={cell} colSpan={making ? 6 : 5}>{timeline.line.label}</td>
+                <td className={num}>{duration(timeline.line.seconds)}</td>
                 <td className={`${num} !pr-0`} />
               </tr>
-            ))}
+            </>}
           </tfoot>
         </table>
         {notes.length > 0 && (
@@ -392,8 +434,8 @@ export function DropletBreakdown({ breakdown, video, progress, endToEnd, default
 }
 
 /** The same bill on a phone, where seven columns do not fit: each step on a line with its time, its models and tools under it. */
-function PhoneBill({ rows, bill, making, time, milestones }: {
-  rows: Row[]; bill: Breakdown | null; making: boolean; time: ReactNode; milestones: Milestone[];
+function PhoneBill({ rows, bill, making, time, timeline }: {
+  rows: Row[]; bill: Breakdown | null; making: boolean; time: ReactNode; timeline: Timeline | null;
 }) {
   return (
     <div className="sm:hidden" style={{ color: 'var(--text-secondary)' }}>
@@ -424,16 +466,22 @@ function PhoneBill({ rows, bill, making, time, milestones }: {
         ))}
       </ol>
       <div className="flex gap-2 pt-1 font-bold" style={{ borderTop: '1px dashed var(--border)', color: 'var(--text-primary)' }}>
-        <span>{making ? 'So far' : 'Total'}</span>
+        <span>{making ? 'So far' : 'Studio’s work'}</span>
         <span className="ml-auto text-right tabular-nums">{time} · {bill ? totalCost(bill) : '$0'}</span>
       </div>
-      {milestones.map((m) => (
-        <div key={m.label} className={`flex gap-2 pt-1 ${m.end ? 'font-bold' : ''}`} data-testid="breakdown-milestone-phone"
-          style={{ color: m.end ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-          <span>{m.label}</span>
-          <span className="ml-auto text-right tabular-nums">{duration(m.seconds)}</span>
+      {timeline && <>
+        <div className="pt-2 text-[9px] uppercase tracking-wider font-semibold" style={{ color: 'var(--text-muted)' }}>{CLOCK}</div>
+        {timeline.stretches.map((s) => (
+          <div key={s.label} className="flex gap-2 pl-3" data-testid="breakdown-stretch-phone">
+            <span className="min-w-0"><StretchName stretch={s} /></span>
+            <span className="ml-auto text-right tabular-nums whitespace-nowrap">{duration(s.seconds)}</span>
+          </div>
+        ))}
+        <div className="flex gap-2 pt-1 font-bold" data-testid="breakdown-milestone-phone" style={{ color: 'var(--text-primary)' }}>
+          <span>{timeline.line.label}</span>
+          <span className="ml-auto text-right tabular-nums">{duration(timeline.line.seconds)}</span>
         </div>
-      ))}
+      </>}
     </div>
   );
 }
