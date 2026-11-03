@@ -568,28 +568,37 @@ def claude_texts(message) -> list[str]:
 
 
 # --- Meta ---------------------------------------------------------------------
-# First run live on Oct 28 (muse-spark-1.3). Muse takes OpenAI-style chat completions. No
-# effort is sent: the effort on /admin/studio is Claude's, and Muse keeps its own default.
+# First run live on Oct 28 (muse-spark-1.3). No effort is sent: the effort on /admin/studio is Claude's, and Muse
+# keeps its own default (high, as its answers say).
+#
+# Each call runs in the background on Meta's Responses API, and is polled for its answer (Nov 2). Muse reasons in
+# silence and sends its answer only at the end, streamed or not, so a call it thinks long about holds a connection
+# with nothing on it: Muse Wonder's lungs bundle, asked on chat completions, came back "Connection error." after 15
+# minutes, about what three tries cut at 5 minutes each take (the SDK tries twice more by itself), each perhaps
+# billed with no answer. Polled, no connection stays open while it thinks.
+META_POLL_S = 3.0  # between looks at a call that is not done
+META_WAIT_S = 3600.0  # how long a call may take before it is cancelled
+META_POLL_FAILURES = 5  # looks in a row that may fail (the call runs on regardless) before the call is given up
+META_RUNNING = ("queued", "in_progress")
+_sleep = time.sleep  # tests stand in
 
 
 def meta_request(
     role: str, prompt: str, schema: type[BaseModel] | None, images: Sequence[str | Path], system: str | None
 ) -> dict:
-    """The keyword arguments for client.chat.completions.create()."""
+    """The keyword arguments for client.responses.create(): a call run in the background."""
     content: list[dict] = [
-        {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{data}"}}
+        {"type": "input_image", "image_url": f"data:{media_type};base64,{data}"}
         for media_type, data in map(_image, images)
     ]
-    content.append({"type": "text", "text": prompt})
-    messages = [{"role": "system", "content": system}] if system else []
-    messages.append({"role": "user", "content": content})
+    content.append({"type": "input_text", "text": prompt})
     model = brain_model() if role == "brain" else META[role]["model"]
-    request = {"model": model, "messages": messages}
+    request = {"model": model, "input": [{"role": "user", "content": content}], "background": True}
+    if system:
+        request["instructions"] = system
     if schema is not None:
-        request["response_format"] = {
-            "type": "json_schema",
-            "json_schema": {"name": schema.__name__, "schema": strict_schema(schema), "strict": True},
-        }
+        request["text"] = {"format": {"type": "json_schema", "name": schema.__name__,
+                                      "schema": strict_schema(schema), "strict": True}}
     return request
 
 
@@ -599,24 +608,59 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
     request = meta_request(role, prompt, schema, images, system)
     if "meta" not in _clients:
         _clients["meta"] = openai.OpenAI(api_key=meta_key(), base_url=META_BASE_URL)
+    client = _clients["meta"]
     started = time.monotonic()
     try:
-        response = _clients["meta"].chat.completions.create(**request)
+        response = client.responses.create(**request)
     except openai.APIError as e:
         raise BrainError(f"{request['model']}: {e}") from e
+    failures = 0
+    while getattr(response, "status", None) in META_RUNNING:
+        if time.monotonic() - started > META_WAIT_S:
+            with contextlib.suppress(openai.APIError):
+                client.responses.cancel(response.id)
+            raise BrainError(f"{request['model']}: no answer after {META_WAIT_S / 60:.0f} minutes, so it was cancelled")
+        _sleep(META_POLL_S)
+        try:
+            response = client.responses.retrieve(response.id)
+            failures = 0
+        except openai.APIError as e:
+            failures += 1
+            if failures >= META_POLL_FAILURES:
+                raise BrainError(f"{request['model']}: lost the call {response.id} after {failures} looks: {e}") from e
     seconds = time.monotonic() - started
-    choice = response.choices[0]
-    model = response.model or request["model"]
-    usage = response.usage
-    input_tokens = usage.prompt_tokens if usage else 0
-    output_tokens = usage.completion_tokens if usage else 0
+    model = getattr(response, "model", None) or request["model"]
+    usage = getattr(response, "usage", None)
+    input_tokens = (getattr(usage, "input_tokens", 0) or 0) if usage else 0
+    output_tokens = (getattr(usage, "output_tokens", 0) or 0) if usage else 0
     # Priced as answered, or as asked if Meta names the model some other way (a dated id).
     price = cost(model, input_tokens, output_tokens)
     if price is None:
         price = cost(request["model"], input_tokens, output_tokens)
-    _record(Call(label, role, model, input_tokens, output_tokens, price, round(seconds, 1), choice.finish_reason or ""))
-    if choice.message.refusal or choice.finish_reason == "content_filter":
-        raise Refused(model, explanation=choice.message.refusal)
-    if choice.finish_reason == "length":
+    status = getattr(response, "status", None) or ""
+    incomplete = getattr(getattr(response, "incomplete_details", None), "reason", None)
+    _record(Call(label, role, model, input_tokens, output_tokens, price, round(seconds, 1), incomplete or status))
+    text, refusal = meta_output(response)
+    if refusal is not None or incomplete == "content_filter":
+        raise Refused(model, explanation=refusal)
+    if incomplete == "max_output_tokens":
         raise Truncated(f"{model} hit its output limit ({output_tokens} output tokens)")
-    return [choice.message.content or ""]
+    if status != "completed":
+        error = getattr(response, "error", None)
+        raise BrainError(f"{model} did not finish: {status}" + (f" ({incomplete})" if incomplete else "")
+                         + (f": {getattr(error, 'message', error)}" if error else ""))
+    return [text]
+
+
+def meta_output(response) -> tuple[str, str | None]:
+    """A Responses API answer's text (every output_text part of its messages, in order) and its refusal, if any."""
+    texts, refusal = [], None
+    for item in getattr(response, "output", None) or []:
+        if getattr(item, "type", None) != "message":
+            continue
+        for part in getattr(item, "content", None) or []:
+            if getattr(part, "type", None) == "output_text":
+                texts.append(part.text or "")
+            elif getattr(part, "type", None) == "refusal":
+                refusal = getattr(part, "refusal", None) or ""
+    return "".join(texts), refusal
