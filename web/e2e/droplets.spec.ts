@@ -494,12 +494,13 @@ test.describe('videos on /learn', () => {
   test('the time end to end reads right whatever the API sends: no videos bill, a long wait, no videos, failed ones, older APIs', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     // The ATP droplet as the API sends it, then changed as each case needs before the page reads it.
-    type Card = { content: string; answer: Record<string, unknown> & { breakdown: { steps: { part: string }[]; partSeconds?: unknown } } | null };
-    let change: (answer: NonNullable<Card['answer']>) => void = () => {};
+    type Card = { content: string; progress?: unknown;
+      answer: Record<string, unknown> & { breakdown: { steps: { step: string; part: string }[]; partSeconds?: unknown } } | null };
+    let change: (answer: NonNullable<Card['answer']>, card: Card) => void = () => {};
     await page.route('**/api/questions?*', async (route) => {
       const response = await route.fetch();
       const body = await response.json() as { data: Card[] };
-      for (const q of body.data) if (q.content.includes('how do cells actually make ATP') && q.answer) change(q.answer);
+      for (const q of body.data) if (q.content.includes('how do cells actually make ATP') && q.answer) change(q.answer, q);
       await route.fulfill({ response, json: body });
     });
     const lessonOnly = (b: NonNullable<Card['answer']>['breakdown']) => ({
@@ -557,6 +558,29 @@ test.describe('videos on /learn', () => {
     await expect(bill.getByTestId('breakdown-total')).toHaveText('10.9 min · $0.80 + 3,214 cr');
     await expect(await opened(bill)).toHaveText([/^Waiting for the studio to start\s*2\.9 min$/, /^Making the lesson \(steps 01–03\)\s*4\.6 min$/,
       /^Request to lesson\s*7\.5 min$/]);
+
+    // Videos being made: the bill so far, with the render running and the upload still to come. The lesson's work
+    // names its steps by their numbers among those rows, on a phone too.
+    change = (a, card) => {
+      a.video = { ...(a.video as object), status: 'RENDERING' };
+      a.endToEnd = { lesson: 450, videos: null };
+      card.progress = {
+        running: [{ step: 'render', startedAt: new Date().toISOString(), seconds: 30 }], failed: [], videos: true, seconds: 600,
+        breakdown: { ...a.breakdown, steps: a.breakdown.steps.filter((s) => !['render', 'upload'].includes(s.step)) },
+      };
+    };
+    bill = await billOf();
+    const making = [/^Waiting for the studio to start\s*2\.9 min$/, /^Making the lesson \(steps 01–03\)\s*4\.6 min$/];
+    await expect(await opened(bill)).toHaveText([...making, /^Request to lesson\s*7\.5 min$/]);
+    const rows = bill.locator('table').getByTestId('breakdown-step');
+    await expect(rows).toHaveCount(10);
+    await expect(rows.nth(2)).toContainText(/03\s*Fact-check/);
+    await expect(rows.nth(3)).toContainText(/04\s*Draw the diagrams/);
+    await expect(rows.nth(8)).toHaveAttribute('data-status', 'running');
+    await expect(rows.nth(9)).toHaveAttribute('data-status', 'waiting');
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expect(bill.getByTestId('breakdown-stretch-phone')).toHaveText(making);
+    await page.setViewportSize({ width: 1280, height: 720 });
 
     // An API older than the parts' times: no waits it cannot tell from the work, but still pieces that add up.
     change = (a) => { delete a.breakdown.partSeconds; };

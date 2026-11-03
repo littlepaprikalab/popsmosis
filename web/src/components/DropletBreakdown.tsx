@@ -219,10 +219,9 @@ const toTenth = (s: number) => Math.round(Number((s / 60).toFixed(1)) * 10) * 6;
 
 type Part = BreakdownStep['part'];
 
-/** The part a step on the bill belongs to; one still to come, by its name. */
+/** The part a step on the bill belongs to, as the API says; one still to come, by its name. */
 function partOf(row: Row): Part | null {
-  if (row.bill) return row.bill.part;
-  return LESSON_STEPS.includes(row.step) ? 'lesson' : VIDEO_STEPS.includes(row.step) ? 'videos' : null;
+  return row.bill?.part ?? (LESSON_STEPS.includes(row.step) ? 'lesson' : VIDEO_STEPS.includes(row.step) ? 'videos' : null);
 }
 
 /**
