@@ -206,50 +206,57 @@ interface Timeline {
 // stamps the request and the lesson, the API's the READY, and the studio's times the work.
 const CLOCKS_APART = 60;
 
-/**
- * Each stretch's time as the bill shows it, from the points on the clock where they end. While the end reads in
- * minutes, each point is first rounded to the tenth of a minute the bill shows it to, so the stretches add up to the
- * line under them as shown, not a tenth off.
- */
-function stretchSeconds(points: number[]): number[] {
-  const end = points[points.length - 1];
-  const shown = end >= 60 && end < 90 * 60 ? (s: number) => Math.round(Number((s / 60).toFixed(1)) * 10) * 6 : (s: number) => s;
-  return points.map((p, i) => shown(p) - (i > 0 ? shown(points[i - 1]) : 0));
-}
+/** A time as the bill shows it while it reads in minutes: to the tenth of a minute, in seconds. */
+const toTenth = (s: number) => Math.round(Number((s / 60).toFixed(1)) * 10) * 6;
 
 /**
  * The time from the request, split where the bill allows into the waits and the studio's work: up to the lesson,
  * the wait for the studio to start and the lesson's writing; after it, the wait for the videos (the hand-off, and the
- * gap before a retry) and their making. A stretch whose part has no time on the bill (a READY sent without its bill:
- * too big, unreadable, or by hand; an API older than the parts' times) stays whole, as its work would otherwise read
- * as waiting. A droplet without videos is done with its lesson; while its videos are made, or when they failed, the
- * time runs to the lesson only.
+ * gap before a retry) and their making. The studio starts the videos only once the lesson is posted, so each part's
+ * work fits in its stretch. One with no time on the bill (a READY sent without its bill: too big, unreadable, or by
+ * hand; an API older than `partSeconds`), or more than its stretch by more than the clocks can be apart, leaves the
+ * stretch whole rather than count its work as waiting. A droplet without videos is done with its lesson; while its
+ * videos are made, or when they failed, the time runs to the lesson only.
+ *
+ * While the end reads in minutes, every time is rounded to the tenth the bill shows before it is split, so the
+ * stretches add up to the end as shown, and the lesson's and the videos' work to the studio's work, not a tenth off.
  */
 function timelineOf(endToEnd: EndToEnd | null | undefined, bill: Breakdown | null, video: Video | null, making: boolean): Timeline | null {
   if (!endToEnd) return null;
-  const points: { at: number; label: string }[] = [];
-  const split = (from: number, to: number, work: number | null | undefined, wait: string, working: string, whole: string) => {
-    const start = work === null || work === undefined ? null : to - work;
-    if (start === null || start < from - CLOCKS_APART) points.push({ at: to, label: whole });
-    else points.push({ at: Math.max(from, start), label: wait }, { at: to, label: working });
-  };
   const { lesson, videos } = endToEnd;
-  split(0, lesson, bill?.partSeconds?.lesson, 'Waiting for the studio to start', 'Writing the lesson', 'Request to lesson');
-  if (videos !== null) {
-    split(lesson, videos, bill?.partSeconds?.videos, 'Waiting between the lesson and the videos', 'Making the videos', 'Lesson to videos');
+  const end = videos ?? lesson;
+  const shown = end >= 60 && end < 90 * 60 ? toTenth : (s: number) => s;
+  const parts = [
+    { length: lesson, work: bill?.partSeconds?.lesson ?? null,
+      wait: 'Waiting for the studio to start', working: 'Writing the lesson', whole: 'Request to lesson' },
+    ...(videos === null ? [] : [{ length: videos - lesson, work: bill?.partSeconds?.videos ?? null,
+      wait: 'Waiting between the lesson and the videos', working: 'Making the videos', whole: 'Lesson to videos' }]),
+  ];
+  const fits = parts.map((p) => p.work !== null && p.work <= p.length + CLOCKS_APART);
+  const lengths = videos === null ? [shown(lesson)] : [shown(lesson), shown(videos) - shown(lesson)];
+  // Each part's work as shown, never more than its stretch.
+  const work = parts.map((p, i) => (fits[i] ? Math.min(shown(p.work!), lengths[i]) : 0));
+  if (fits.length === 2 && fits[0] && fits[1] && bill?.seconds != null) {
+    // Both parts split: the lesson's work as near its own as the two stretches allow, and the videos' the rest of
+    // the studio's work as shown, so the two add up to it.
+    const total = shown(bill.seconds);
+    const low = Math.max(0, total - lengths[1]);
+    const high = Math.min(lengths[0], total);
+    if (low <= high) {
+      work[0] = Math.min(Math.max(shown(parts[0].work!), low), high);
+      work[1] = total - work[0];
+    }
   }
-  const seconds = stretchSeconds(points.map((p) => p.at));
-  const stretches = points
-    .map((p, i) => ({
-      label: p.label,
-      seconds: seconds[i],
-      aside: videos !== null && p.label === 'Writing the lesson' ? `posted at ${duration(lesson)}` : null,
-    }))
-    .filter((s) => s.seconds > 0);
+  const stretches = parts
+    .flatMap((p, i): Stretch[] => (fits[i]
+      ? [{ label: p.wait, seconds: lengths[i] - work[i], aside: null },
+        { label: p.working, seconds: work[i], aside: i === 0 && videos !== null ? `posted at ${duration(lesson)}` : null }]
+      : [{ label: p.whole, seconds: lengths[i], aside: null }]))
+    .filter((st) => st.seconds > 0);
   const done = videos !== null || (!video && !making);
   return {
     stretches: stretches.length > 1 ? stretches : [],
-    line: { label: done ? 'End to end' : 'Request to lesson', seconds: videos ?? lesson, end: done },
+    line: { label: done ? 'End to end' : 'Request to lesson', seconds: end, end: done },
   };
 }
 

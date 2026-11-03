@@ -557,11 +557,13 @@ FROM THE REQUEST, BY THE CLOCK
 End to end                                         15.2 min
 ```
 
-The wait between the lesson and the videos counts the hand-off and the gap before a retry. While the end reads in
-minutes, each stretch is rounded where it ends, so the stretches add up to the end as shown, not a tenth off. A part
-with no time on the bill (a READY sent without the videos' bill, an API older than `partSeconds`), or with more than
-its stretch of the clock by over a minute, leaves its stretch whole ("Request to lesson", "Lesson to videos") rather
-than count its work as waiting. A droplet is done end to end with its videos, or with its lesson when it has none;
+The wait between the lesson and the videos counts the hand-off and the gap before a retry, and a failed try's work
+on another machine, whose runs are not on this bill. While the end reads in minutes, every time is rounded to the
+tenth the bill shows before it is split, so the stretches add up to the end as shown and the two work stretches to
+the studio's work, not a tenth off (the work can only outrun the end by the clocks being apart; then the end wins).
+A part with no time on the bill (a READY sent without the videos' bill, which clears their bill so far; an API older
+than `partSeconds`), or with more than its stretch of the clock by over a minute, leaves its stretch whole ("Request
+to lesson", "Lesson to videos") rather than count its work as waiting. A droplet is done end to end with its videos, or with its lesson when it has none;
 until then, and when its videos failed, the time runs to "Request to lesson". The folded line leads with the end to
 end ("15.2 min end to end · 10.9 min of work · $0.80"). A night in the queue reads in hours, a weekend in days. Nothing is stored for it, and the cards' queries already read the three times, so it costs no query
 and about 40 bytes a card. The reply queue's `answer` does not carry it.
