@@ -2054,6 +2054,14 @@ def test_a_pointed_hop_is_drawn_straight_from_its_tail_to_its_head_and_the_gate_
     # The gate checks a pointed arrow as any other: one leaving the picture is left out.
     assert Renderer(job, timeline, arrows=pointed((820, 700), (880, -40))).left_out == [
         {"scene": "overview", "path": FLOW, "carries": "H⁺", "why": "leaves the picture"}]
+    # But not by the boxes: a part painted in many places has the box of the copy SAM found (Nov 2, the kidney's
+    # blood vessels), and the arrows step looks at a pointed arrow as drawn.
+    far = (20, 20)
+    stops = [Renderer(job, timeline).locations.scene("overview").get(name).box for name in FLOW]
+    assert not any(b.x0 - renderer_module.ARROW_REACH <= far[0] <= b.x1 + renderer_module.ARROW_REACH
+                   and b.y0 - renderer_module.ARROW_REACH <= far[1] <= b.y1 + renderer_module.ARROW_REACH
+                   for b in stops)
+    assert Renderer(job, timeline, arrows=pointed(far, (880, 520))).left_out == []
 
 
 def test_a_hop_the_arrows_step_left_out_is_never_drawn_and_says_why(job, monkeypatch):

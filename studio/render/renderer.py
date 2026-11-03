@@ -2752,15 +2752,20 @@ class Renderer:
         stops = [loc for name in flow.path if (loc := located.get(name)) is not None]
         if len(stops) < 2:
             return ""
+        # A pointed arrow's ends and way are the helper's, read off the painting and looked at in a still
+        # (studio/steps/arrows.py), not guessed from the boxes: the way guessed failed two right ones on Nov 1, a part
+        # to a wide strip of space beside it, and the box of a part painted in many places is only the copy SAM found
+        # (Nov 2: the kidney's secretion arrow, pointed at the vessel beside the tubule, was 583 px from the box of
+        # "Blood vessels", the vessels by their label).
+        if self._pointed(scene_id, flow):
+            return ""
         first, last = stops[0], stops[-1]
         for end, loc, what in ((line[0], first, "starts"), (line[-1], last, "ends")):
             b = loc.box
             if not (b.x0 - ARROW_REACH <= end[0] <= b.x1 + ARROW_REACH
                     and b.y0 - ARROW_REACH <= end[1] <= b.y1 + ARROW_REACH):
                 return f"{what} away from {loc.name}"
-        # A pointed arrow's way is the helper's, read off the painting and looked at in a still (studio/steps/arrows.py):
-        # this guess from the boxes failed two right ones on Nov 1, a part to a wide strip of space beside it.
-        if first.name == last.name or self._pointed(scene_id, flow):
+        if first.name == last.name:
             return ""
 
         # The way it should go: from a part's middle, or from where it starts in a space (beside the part it goes to,
