@@ -2044,6 +2044,29 @@ What it does not show: it was Opus alone, while the Muse brains read the same br
 does not (Muse Spark needed three of the fact-check's back); the songs only, not the whole bundle; three topics,
 one run a cut.
 
+## Nov 3: the bundle call without the rules for writing the facts
+
+With a script, the bundle call's brief no longer carries how to write the facts, the core idea, the why chain, the
+key terms and the misconception (`bundle_step.with_script`): the script writer writes them, and `script.follow()`
+puts the script's back over whatever the bundle wrote. It keeps what they mean for the rest (the fact-check reads
+every line against the facts alone; the chorus sings the core idea; names outside `key_terms` stay out) and its own
+course and topic: 6,826 words where it read 7,617. Two clauses the code makes sure of went too ("name no colour" in a
+picture's words, ignored in 61 of 62 scenes, and the style's "shouted" and "group shouts").
+
+Tested in the session on full bundles, three topics (the pump, the French Revolution, the Moon's phases), the same
+script for both: one subagent writer with the brief as it was committed, one with the cut, the code checks on each,
+and an Opus judge reading the two droplets blind against the scorecard rubric.
+
+| | Rubric total, as it was / cut | Preferred | Errors the judge found | Checks left |
+|---|---|---|---|---|
+| The pump | 32 / 31 | as it was | 1 / 1 | 1 / 6 |
+| The French Revolution | 28 / 29 | cut | 1 / 1 | 4 / 6 |
+| The Moon's phases | 29 / 29 | cut | 1 / 0 | 6 / 2 |
+
+The same, 89 against 89. The judge on the French lesson with the cut: "the clearer first read ... it leaves out
+names the learner does not need". The checks left on either side are of the same kinds (long lyric lines, a name a
+scene does not draw, two parts painted alike), none about the facts or the essence. Shipped.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
