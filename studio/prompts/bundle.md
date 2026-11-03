@@ -376,7 +376,7 @@ explanation left to the narration.
 - `music.negative_styles`: short things to avoid, a list, such as what the learner said
   they did not want; [] for none.
 - `lyrics`: every line as sung, in order, section by section, so the chorus appears three
-  times. A line is 6 to 9 syllables, room to hold a note (rapped, up to about 14).
+  times.
 
 ### How it sounds
 

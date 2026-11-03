@@ -614,11 +614,13 @@ def syllables(line: str) -> int:
     return count
 
 
-# A sung line is 6 to 9 syllables, so the singer has room to hold a note: round 17's lines of 12 and 13 came back
-# at 5 to 6 syllables a second, the speed of speech, sung or rapped. A rapped line, when the learner asks for rap,
-# can carry more. A line one over is let through: a singer takes one extra in stride, and the rough count is often
-# one high itself. Only a line LYRIC_SLACK + 1 or more over is too full to sing (the owner, Oct 31).
-LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 10, 14
+# How long a line may run before it is recorded as too full to sing. Until Nov 3 the brief held a sung line to 6 to
+# 9 syllables, after round 17's lines of 12 and 13 came back at 5 to 6 syllables a second, the speed of speech. On
+# Nov 3 the owner heard two French Revolution songs by Lyria, one written to that rule and one with no count at all
+# (its sung lines median 9, up to 14; its rapped lines shorter and evener, median 11 against 14), and preferred the
+# one with no count. The brief now gives none; these record only lines past what that writer wrote. A line one over
+# is let through: the rough count is often one high itself (the owner, Oct 31).
+LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 13, 14
 LYRIC_SLACK = 1
 RAPPED = re.compile(r"\brap(?:ped|ping|s)?\b", re.I)
 # A style that raps one section says which (a learner's own; every style the studio picks raps both verses, Nov 2):

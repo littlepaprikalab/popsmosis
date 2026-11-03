@@ -44,8 +44,7 @@ true rewrite in `lines`: it is sung if the appeal is lost.
   answers, a line sung again with one word changed. Things the listener can picture and
   verbs that move beat abstract words.
 - **The same shape and sound.** As many lines as it had, each within about two syllables of
-  the line it replaces: 5 to 8 syllables, never over 9 unless the line was, at most 12
-  words. Keep each line's last word when a true line can end on it, since it rhymes with
+  the line it replaces. Keep each line's last word when a true line can end on it, since it rhymes with
   the song around it; otherwise rhyme with its partner on a plain word (a near rhyme is
   fine), never bending the grammar to reach it. Keep the small words that carry the rhythm
   ("so", "now", "then", "that's") and the section's voice: sung, plain everyday words, "you"
