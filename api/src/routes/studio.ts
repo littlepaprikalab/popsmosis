@@ -12,7 +12,7 @@ import { claimMinutes, questionMaxRuns } from '../lib/claim.js';
 import { videoStaleMinutes } from '../lib/droplet.js';
 import { commentsPerUserPerHour } from '../lib/engagement.js';
 import { lessonHoldMinutes } from '../lib/progress.js';
-import { debounceMs, fireBetaHeader } from '../lib/routine.js';
+import { debounceMs, everyTopicFires, fireBetaHeader } from '../lib/routine.js';
 import { usageLimits } from '../lib/usage.js';
 import { videoMaxAttempts } from '../lib/video-claim.js';
 
@@ -37,6 +37,7 @@ const IN_FORCE: Record<ApiKnob, () => KnobValue> = {
   LESSON_HOLD_MINUTES: lessonHoldMinutes,
   VIDEO_MAX_ATTEMPTS: videoMaxAttempts,
   POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS: () => debounceMs() / 1000,
+  POPSMOSIS_ROUTINE_EVERY_TOPIC: () => (everyTopicFires() ? 'on' : 'off'),
   POPSMOSIS_ROUTINE_BETA: fireBetaHeader,
 };
 

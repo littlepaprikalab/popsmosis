@@ -4,7 +4,7 @@ It serves the agent endpoints the studio and the operator call, with the rules t
 (api/src/routes/questions.ts, api/src/routes/videos.ts, api/src/routes/answers.ts):
 
     the topic queue and its lease (QUESTION_CLAIM_MINUTES), the claim and its renewal, the runs a topic is
-    started on (a claim with newRun counts one; QUESTION_MAX_RUNS, then it is given up), a topic given up,
+    started on (a claim with a new runId counts one; QUESTION_MAX_RUNS, then it is given up), a topic given up,
     the one answer per topic (409 with answerId when it is this agent's own), the videos' claim and its
     attempts (VIDEO_MAX_ATTEMPTS), a render gone quiet (VIDEO_STALE_MINUTES) or videos never claimed handed
     on by the videos queue, a render quiet on its last attempt marked FAILED, the videos given up, READY, and a
@@ -154,11 +154,14 @@ class State:
             if not q:
                 return 404, _error("NOT_FOUND", "Question not found")
             if q["status"] == "PENDING" and (q["claimedBy"] == self.agent or self._lease_free(q)):
-                if (body or {}).get("newRun"):
+                run_id = (body or {}).get("runId")
+                if run_id and run_id != q.get("lastRunId"):  # a new run: counted once, however often it claims
                     if q["runs"] >= self.max_runs:
+                        if not self._lease_free(q):
+                            return 409, _error("CONFLICT", "Another run holds the claim on this question")
                         self._runs_used(q)
                         return 409, _error("CONFLICT", "Question was marked failed")
-                    q["runs"] += 1
+                    q["runs"], q["lastRunId"] = q["runs"] + 1, run_id
                     self.events.append(f"topic {q['id']}: run {q['runs']} of {self.max_runs}")
                 q["claimedAt"], q["claimedBy"] = now, self.agent
                 return 200, self._question_out(q)

@@ -220,7 +220,7 @@ export function serializeReplyForAgent(r: ReplyRow) {
 
 /**
  * A question as the teacher reads it (the queues, the claim): the request and its files, never who asked. With the
- * runs started on it (after a claim with newRun, that one included) and the most there may be (lib/claim.ts): while
+ * runs started on it (the claiming run's included) and the most there may be (lib/claim.ts): while
  * runs is below maxRuns a later sweep starts it again, so a run that fails for an outage can leave it to that one.
  */
 export function serializeQuestionForAgent(q: QuestionRow, now = new Date()) {

@@ -46,9 +46,9 @@ class FakeApi:
         self._call("studio_settings")
         return self.studio
 
-    def claim(self, question_id, new_run=False):
+    def claim(self, question_id, run_id=None):
         self._call("claim", question_id)
-        self.new_runs = getattr(self, "new_runs", 0) + bool(new_run)
+        self.run_ids = getattr(self, "run_ids", []) + [run_id]  # each claim's run id, as sent
         return {**self.question, **({"studio": self.studio} if self.studio else {})}
 
     def report_progress(self, question_id, progress):
@@ -699,7 +699,7 @@ def test_a_default_changed_after_the_check_to_one_that_cannot_run_stops_rather_t
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
     monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
     api = FakeApi(studio={"brain": {"default": "claude"}})
-    api.claim = lambda question_id, new_run=False: {**QUESTION, "studio": {"brain": {"default": "muse-spark"}}}  # changed meanwhile
+    api.claim = lambda question_id, run_id=None: {**QUESTION, "studio": {"brain": {"default": "muse-spark"}}}  # changed meanwhile
     result, step, reason = operator_run.run("q1", api=api)
     assert (result, step, reason) == ("STOPPED", "request", "the studio's settings are wrong: Muse Spark 1.3 needs MODEL_API_KEY")
 
@@ -816,8 +816,12 @@ def test_the_command_line_hands_the_note_to_the_run(monkeypatch):
         question=question, note=note, session=session_answers) or ("DONE", "post", "lesson posted as answer ans1"))
     assert main(["run", "q1", "--note", "keep labels out of the image prompts"]) == 0
     assert got == {"question": "q1", "note": "keep labels out of the image prompts", "session": False}
-    # The detached run of `run --background` is told an operator waits on it (studio/session.py).
-    assert main(["run", "q1", "--session"]) == 0 and got["session"] is True
+    # The detached run of `run --background` is told an operator waits on it (studio/session.py), and ends as soon as
+    # its outcome is written (os._exit, stood in for here).
+    import studio.__main__ as cli
+
+    monkeypatch.setattr(cli, "detached_end", lambda code, detached: got.update(detached=detached) or code)
+    assert main(["run", "q1", "--session"]) == 0 and got["session"] is True and got["detached"] is True
 
 
 def test_each_step_keeps_the_line_it_ended_on_and_a_failed_one_its_reason(jobs_root):

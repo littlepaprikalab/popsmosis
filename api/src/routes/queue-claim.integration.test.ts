@@ -7,10 +7,11 @@
  * other. The failure it prevents is silent — nothing errors, two runs just each
  * write an answer for the same question and one is discarded.
  *
- * Also the count of runs: a claim with newRun is one, and a topic whose runs are
- * used up is given up instead of started again (lib/claim.ts).
+ * Also the count of runs: a claim with a run id the topic has not seen last is one,
+ * and a topic whose runs are used up is given up instead of started again
+ * (lib/claim.ts).
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
 const RUN = process.env.INTEGRATION === '1';
@@ -129,35 +130,54 @@ d('question queue claim lease', () => {
     expect(await queuesHaveWork()).toBe(true);    // the run died; it is work again
   });
 
-  it('counts a run when a machine starts on the topic: not the hand-out, nor a renewal', async () => {
+  it('counts each run once, by its id: not the hand-out, a renewal, or a retry after a lost reply', async () => {
     const [first] = (await queue(agentA, 1)).json().data;
     expect(first).toMatchObject({ runs: 0, maxRuns: 3 }); // handed out, not yet tried
-    expect((await claim(first.id, agentA, { newRun: 'yes' })).statusCode).toBe(400);
-    expect((await claim(first.id, agentA, { newRun: true })).json()).toMatchObject({ id: first.id, runs: 1, maxRuns: 3 });
-    // The studio claims before every step and every 5 minutes: a renewal, not a run.
-    for (const payload of [{}, { newRun: false }, undefined]) {
+    for (const runId of ['short', 'has spaces in it', 'x'.repeat(65), 42]) {
+      expect((await claim(first.id, agentA, { runId })).statusCode).toBe(400);
+    }
+    expect((await claim(first.id, agentA, { runId: 'run-one-a1' })).json()).toMatchObject({ id: first.id, runs: 1, maxRuns: 3 });
+    // The studio claims with its run's id before every step and every 5 minutes; a claim with no id is a renewal too.
+    for (const payload of [{ runId: 'run-one-a1' }, { runId: 'run-one-a1' }, {}, undefined]) {
       expect((await claim(first.id, agentA, payload)).json()).toMatchObject({ id: first.id, runs: 1, maxRuns: 3 });
     }
 
-    // Its machine goes away: the lease lapses and the next sweep's machine starts it over, as its second run.
+    // Its machine goes away; the next sweep's run starts it over. The claim counts it and is committed, but the
+    // reply never reaches the studio, which tries again with the same id: one run, not two.
     await lapse(first.id);
     expect((await queue(agentB, 1)).json().data[0]).toMatchObject({ id: first.id, runs: 1 });
-    expect((await claim(first.id, agentB, { newRun: true })).json()).toMatchObject({ runs: 2 });
-    // Another agent's new run is turned away while B holds it, and counts nothing.
-    expect((await claim(first.id, agentA, { newRun: true })).json().error.message).toMatch(/Another agent/);
+    const lookup = vi.spyOn(prisma.question, 'findUnique').mockRejectedValueOnce(new Error('the connection was reset'));
+    expect((await claim(first.id, agentB, { runId: 'run-two-b2' })).statusCode).toBe(500);
+    lookup.mockRestore();
+    expect((await prisma.question.findUniqueOrThrow({ where: { id: first.id } })).runs).toBe(2);
+    expect((await claim(first.id, agentB, { runId: 'run-two-b2' })).json()).toMatchObject({ runs: 2 });
+
+    // Another agent's run is turned away while B holds the lease, and counts nothing.
+    expect((await claim(first.id, agentA, { runId: 'run-three-c3' })).json().error.message).toMatch(/Another agent/);
     expect((await prisma.question.findUniqueOrThrow({ where: { id: first.id } })).runs).toBe(2);
   });
 
-  it('gives a topic up when a new run would pass the most, with a 409 that stops it', async () => {
+  it('turns a new run away at the most while the last run holds the lease, and gives the topic up once it lapses', async () => {
     const [topic] = (await queue(agentA, 1)).json().data;
-    for (const runs of [1, 2, 3]) {
-      if (runs > 1) await lapse(topic.id);
-      expect((await claim(topic.id, agentA, { newRun: true })).json()).toMatchObject({ runs });
+    for (const [i, runId] of ['run-one-a1', 'run-two-b2', 'run-three-c3'].entries()) {
+      if (i > 0) await lapse(topic.id);
+      expect((await claim(topic.id, agentA, { runId })).json()).toMatchObject({ runs: i + 1 });
     }
-    expect((await claim(topic.id, agentA)).statusCode).toBe(200); // the last run renews its lease as any run does
-    await prisma.question.update({ where: { id: topic.id }, data: { progress: { running: [], failed: ['bundle'] } } });
+    // The last run renews its lease at the most as any run does.
+    expect((await claim(topic.id, agentA, { runId: 'run-three-c3' })).json()).toMatchObject({ runs: 3 });
 
-    const fourth = await claim(topic.id, agentA, { newRun: true });
+    // A fourth machine starts on it while the third is alive (one agent key runs every routine): turned away, and
+    // the third carries on.
+    const alive = await claim(topic.id, agentA, { runId: 'run-four-d4' });
+    expect(alive.statusCode).toBe(409);
+    expect(alive.json().error.message).toBe('Another run holds the claim on this question');
+    expect(await prisma.question.findUniqueOrThrow({ where: { id: topic.id } })).toMatchObject({ status: 'PENDING', runs: 3 });
+    expect((await claim(topic.id, agentA, { runId: 'run-three-c3' })).statusCode).toBe(200);
+
+    // The third's machine goes away too: the next run's claim gives the topic up.
+    await prisma.question.update({ where: { id: topic.id }, data: { progress: { running: [], failed: ['bundle'] } } });
+    await lapse(topic.id);
+    const fourth = await claim(topic.id, agentA, { runId: 'run-four-d4' });
     expect(fourth.statusCode).toBe(409);
     expect(fourth.json().error.message).toBe('Question was marked failed');
     expect(await prisma.question.findUniqueOrThrow({ where: { id: topic.id } })).toMatchObject({
@@ -188,7 +208,7 @@ d('question queue claim lease', () => {
   it('takes the most runs from QUESTION_MAX_RUNS', async () => {
     process.env.QUESTION_MAX_RUNS = '1';
     const [topic] = (await queue(agentA, 1)).json().data;
-    expect((await claim(topic.id, agentA, { newRun: true })).json()).toMatchObject({ runs: 1, maxRuns: 1 });
+    expect((await claim(topic.id, agentA, { runId: 'run-one-a1' })).json()).toMatchObject({ runs: 1, maxRuns: 1 });
     await lapse(topic.id);
     expect(ids(await queue(agentA, 6))).not.toContain(topic.id);
     expect((await prisma.question.findUniqueOrThrow({ where: { id: topic.id } })).failedReason)

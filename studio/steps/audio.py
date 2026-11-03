@@ -101,6 +101,9 @@ Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
 # Why the audio failed when its provider did not answer, timed out, was busy or failed on its side, after the tries
 # here: a later try may well find it back (studio/retry.py), unlike a refusal of what was asked.
 OUTAGE = "the audio provider failed"
+# A request the provider took too long to answer: not sent again in the run (it may still be made, and charged for), but
+# a later sweep, on another machine, may get past it (studio/retry.py).
+TOOK_TOO_LONG = "the provider took too long"
 
 
 def _code(status: int) -> str | None:
@@ -133,7 +136,7 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tu
         return e.code, dict(e.headers), e.read()
     except TimeoutError as e:
         # Not retried: the server may still be making, and charging for, what was asked.
-        raise media.StepFailed(f"{host} took over {TIMEOUT_S}s to answer", code=OUTAGE) from e
+        raise media.StepFailed(f"{host} took over {TIMEOUT_S}s to answer", code=TOOK_TOO_LONG) from e
     except (urllib.error.URLError, OSError) as e:
         raise NoAnswer(f"{host} did not answer: {getattr(e, 'reason', e)}") from e
 

@@ -29,6 +29,9 @@ export const ANSWER_MAX_LENGTH = 5000;
 const RUNS_USED_REASON = Prisma.sql`CASE WHEN runs = 1 THEN 'given up after 1 run, which ended before the lesson was posted.'
   ELSE format('given up after %s runs, each of which ended before the lesson was posted.', runs) END`;
 
+// A run's own id, which the studio makes up as it starts on a topic on a machine (POST /api/questions/:id/claim).
+const RUN_ID = /^[A-Za-z0-9_-]{8,64}$/;
+
 export default async function questionRoutes(app: FastifyInstance) {
   // GET /api/questions/status — cheap "anything new?" probe for polling.
   // Considers questions, answers, and replies so a page refreshes for any of them.
@@ -303,34 +306,43 @@ export default async function questionRoutes(app: FastifyInstance) {
   app.delete('/api/questions/:id', { preHandler: [requireUser] }, deleteQuestion(false));
   app.delete('/api/questions/:id/everything', { preHandler: [requireUser] }, deleteQuestion(true));
 
-  // POST /api/questions/:id/claim — agent: { newRun? }: take, or renew, the lease on one
+  // POST /api/questions/:id/claim — agent: { runId? }: take, or renew, the lease on one
   // question, and get it back with its attachments. The studio calls it before
   // each step that writes the lesson and every 5 minutes while one runs, so a
   // long bundle or a retried step keeps the question out of an overlapping run's queue. The lease is the
   // queue's own (lib/claim.ts): the same agent may always renew it, another
-  // agent only once it has lapsed. With newRun, a machine starts on the topic: one more of its runs, or, with
-  // its runs used up, the topic is given up and the claim refused, so that machine stops.
+  // agent only once it has lapsed. `runId` names the run on the machine that sends it, on every claim of that
+  // run: the first claim with an id the topic has not seen last starts one more of its runs (lib/claim.ts), and
+  // a claim with the same id again (a renewal, or a retry after a lost reply) counts nothing.
   app.post('/api/questions/:id/claim', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const agentId = request.agent!.id;
-    const { newRun } = (request.body ?? {}) as { newRun?: unknown };
-    if (newRun !== undefined && typeof newRun !== 'boolean') return sendError(reply, 'VALIDATION_ERROR', 'newRun must be true or false');
+    const { runId } = (request.body ?? {}) as { runId?: unknown };
+    if (runId !== undefined && (typeof runId !== 'string' || !RUN_ID.test(runId))) {
+      return sendError(reply, 'VALIDATION_ERROR', 'runId must be 8 to 64 letters, digits, hyphens or underscores');
+    }
     const maxRuns = questionMaxRuns();
-    // Free, lapsed, or already this agent's.
-    const claimable = Prisma.sql`status = 'PENDING'
-      AND ("claimedAt" IS NULL OR "claimedById" = ${agentId} OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))`;
+    const lapsed = Prisma.sql`"claimedAt" < now() - make_interval(mins => ${claimMinutes()})`;
+    // A new run counts in the same statement that leases the topic to it, and only while it has a run left.
+    const countRun = runId === undefined ? Prisma.empty : Prisma.sql`,
+      runs = CASE WHEN "lastRunId" = ${runId} THEN runs ELSE runs + 1 END, "lastRunId" = ${runId}`;
+    const runLeft = runId === undefined ? Prisma.empty : Prisma.sql`AND ("lastRunId" = ${runId} OR runs < ${maxRuns})`;
     const claimed = await prisma.$queryRaw<{ id: string }[]>`
       UPDATE questions
-      SET "claimedAt" = now(), "claimedById" = ${agentId} ${newRun ? Prisma.sql`, runs = runs + 1` : Prisma.empty}
-      WHERE id = ${id} AND ${claimable} ${newRun ? Prisma.sql`AND runs < ${maxRuns}` : Prisma.empty}
+      SET "claimedAt" = now(), "claimedById" = ${agentId} ${countRun}
+      WHERE id = ${id} AND status = 'PENDING'
+        AND ("claimedAt" IS NULL OR "claimedById" = ${agentId} OR ${lapsed})
+        ${runLeft}
       RETURNING id
     `;
-    if (claimed.length === 0 && newRun) {
-      // Every machine started on it went away before its lesson was posted: give it up rather than pay for it
-      // again, as the queue's sweep does.
+    if (claimed.length === 0 && runId !== undefined) {
+      // A new run with none left. Once the last run's lease has lapsed, every machine started on the topic went away
+      // before its lesson was posted: give it up rather than pay for it again, as the queue's sweep does. While the
+      // last run still holds it, that run carries on and this one is turned away.
       await prisma.$executeRaw`
         UPDATE questions SET status = 'FAILED', progress = NULL, "failedReason" = ${RUNS_USED_REASON}
-        WHERE id = ${id} AND ${claimable} AND runs >= ${maxRuns}
+        WHERE id = ${id} AND status = 'PENDING' AND runs >= ${maxRuns}
+          AND "lastRunId" IS DISTINCT FROM ${runId} AND ("claimedAt" IS NULL OR ${lapsed})
       `;
     }
     await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
@@ -339,6 +351,9 @@ export default async function questionRoutes(app: FastifyInstance) {
     if (claimed.length === 0) {
       if (question.status === 'ANSWERED') return sendError(reply, 'CONFLICT', 'Question already has an answer');
       if (question.status === 'FAILED') return sendError(reply, 'CONFLICT', 'Question was marked failed');
+      if (runId !== undefined && question.runs >= maxRuns && question.lastRunId !== runId) {
+        return sendError(reply, 'CONFLICT', 'Another run holds the claim on this question');
+      }
       return sendError(reply, 'CONFLICT', 'Another agent holds the claim on this question');
     }
     // With the studio's settings (lib/studio-settings.ts), so an admin's change reaches the run.

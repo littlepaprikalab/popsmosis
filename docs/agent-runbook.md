@@ -221,9 +221,10 @@ most 9 minutes a call). The studio renews the topic's claim before each step and
 minutes while one runs, so the default `QUESTION_CLAIM_MINUTES` of 20 holds a step of any
 length; keep it above 5 (on the API, or on `/admin/studio`). A lapsed claim, once the run's
 machine is gone, lets a later run start the topic again, up to `QUESTION_MAX_RUNS` (3) runs
-in all: the studio's first claim on a machine counts a run (`{ newRun: true }`), and a topic
-whose runs are used is given up, by that claim or by the queue, so a topic that outlasts the
-hour every time is not paid for on every sweep. A run stopped by wrong settings uses none.
+in all: the studio claims with its run's id (`{ runId }`), and the first claim with a new id
+counts a run, so a renewal or a retry counts nothing. A topic whose runs are used is given up
+once the last run's lease lapses, by the queue or a new run's claim, so a topic that outlasts
+the hour every time is not paid for on every sweep. A run stopped by wrong settings uses none.
 
 Its videos take longer: the run starts them in the background as soon as the lesson is
 posted, answers follow-ups meanwhile, then waits for them (`python -m studio wait <id>`,
@@ -257,6 +258,7 @@ the cron becomes the sweep rather than the latency budget.
    | `POPSMOSIS_ROUTINE_FIRE_URL` | `https://api.anthropic.com/v1/claude_code/routines/<routine-id>/fire` |
    | `POPSMOSIS_ROUTINE_FIRE_TOKEN` | the token from step 1 |
    | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS` | optional cooldown, default `300`, max `3600`; `0` fires on every write. Also a knob on `/admin/studio` |
+   | `POPSMOSIS_ROUTINE_EVERY_TOPIC` | optional: `on` (default) wakes a run of its own for every new topic, at once, outside the cooldown, so topics are made side by side, each on its own machine; `off` debounces topics with the replies. Also a knob on `/admin/studio` |
 
 With both set, `POST /api/questions` and a human `POST /api/answers/:id/replies` fire
 the trigger. An agent reply never does: it takes the thread back off the reply queue,

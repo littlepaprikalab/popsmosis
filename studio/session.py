@@ -105,13 +105,24 @@ def root(job: Path) -> Path:
     return job / DIR
 
 
-def pending(job: Path) -> list[Path]:
-    """The calls waiting for the session: written, neither answered nor declined."""
+def pending(job: Path, mine: bool = False) -> list[Path]:
+    """The calls waiting for the session: written, neither answered nor declined. mine: only those this process
+    asked (the time limit pauses for them alone, so a call left by a run that ended pauses nothing)."""
     folder = root(job) / "pending"
     if not folder.is_dir():
         return []
-    return sorted(call for call in folder.iterdir()
-                  if not call.name.startswith(".") and (call / "request.json").is_file())
+    calls = sorted(call for call in folder.iterdir()
+                   if not call.name.startswith(".") and (call / "request.json").is_file())
+    if mine:
+        calls = [call for call in calls if _asker(call) == os.getpid()]
+    return calls
+
+
+def _asker(call: Path) -> int | None:
+    try:
+        return request(call).get("pid")
+    except (OSError, ValueError, AttributeError):
+        return None
 
 
 def request(call: Path) -> dict:
@@ -149,6 +160,7 @@ def ask(job: Path, why: BaseException, role: str, prompt: str, schema: type[Base
               f"waiting for the session to answer {base / 'pending' / name}", file=sys.stderr)
         while not answer.exists() and not declined.exists():
             if time.monotonic() - started > WAIT_S:
+                shutil.rmtree(base / "pending" / name, ignore_errors=True)  # no longer asked: `wait` says ASK no more
                 raise NoAnswer(f"{label}: the session did not answer in {WAIT_S / 60:.0f} min (after the API failed: {why})")
             time.sleep(POLL_S)
     if declined.exists():
@@ -195,7 +207,7 @@ def _write_call(job: Path, base: Path, name: str, role: str, label: str, prompt:
     if schema_json is not None:
         (tmp / "schema.json").write_text(json.dumps(schema_json, indent=1, ensure_ascii=False), encoding="utf-8")
     (tmp / "request.json").write_text(json.dumps({
-        "job": job.name, "name": name, "label": label, "role": role, "step": ledger.current_step(),
+        "job": job.name, "name": name, "label": label, "role": role, "step": ledger.current_step(), "pid": os.getpid(),
         "stands_for": _stands_for(role),
         "schema": f"{schema.__module__}:{schema.__qualname__}" if schema is not None else None,
         "images": len(images), "why": f"{type(why).__name__}: {str(why)[:300]}",

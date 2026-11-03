@@ -22,7 +22,7 @@ def jobs_root(tmp_path, monkeypatch):
 
 def test_what_an_outage_explains_is_tried_again_and_left_to_a_later_sweep():
     for code in ("the API did not answer", "the API answered 503", "the API answered 429", "the model call failed",
-                 "Gemini failed", "Meta's API failed", "the audio provider failed", "the session did not answer"):
+                 "Gemini failed", "Meta's API failed", "the audio provider failed"):
         assert retry.outage(code) and retry.deferrable(code), code
     for code in ("the API answered 400", "the fact-check failed", "the fact audit failed", "spend ceiling",
                  "the model declined", "the picture was declined", "a studio error", "step failed", "", None):
@@ -114,13 +114,18 @@ def test_fail_gives_up_at_once_what_no_later_try_would_get_past(jobs_root):
     assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
 
 
-def test_the_first_claim_on_a_machine_starts_a_run_and_its_retry_does_not(jobs_root):
+def test_every_claim_of_a_machines_run_carries_its_one_run_id_and_a_deferred_topic_a_new_one(jobs_root):
+    """The API counts a run once per id, so a claim sent again (its answer lost, the step tried again, the operator's
+    retry here) never counts a second run (the review of PR #116: one machine could use all 3)."""
     api = FakeApi(question={**QUESTION, "runs": 1, "maxRuns": 3})
     operator_run.run("q1", api=api, ask=Blips(9))
-    assert api.new_runs == 1  # the first claim only: the steps' own claims and the in-run tries count nothing
-    operator_run.run("q1", api=api, ask=FakeBrain())  # the operator's retry, on the same machine
-    assert api.new_runs == 1
+    operator_run.run("q1", api=api, ask=Blips(9))  # the operator's retry, on the same machine
+    ids = set(api.run_ids)
+    assert len(ids) == 1 and None not in ids and len(api.run_ids) > 3
     assert json.loads((jobs_root / "q1" / operator_run.LEASE).read_text()) == {"runs": 1, "maxRuns": 3}
+    assert operator_run.mark_failed("q1", api=api)[0] == "DEFERRED"
+    operator_run.run("q1", api=api, ask=FakeBrain())  # a later run here counts as a new one
+    assert api.run_ids[-1] not in ids
 
 
 def test_the_videos_try_an_outage_again_in_the_run_and_make_a_drifted_song_again(setup_videos):
@@ -186,7 +191,7 @@ def test_a_step_past_its_time_limit_ends_the_run_and_waiting_on_the_session_does
     # While a call waits for the session (studio/session.py), the clock stops.
     call = session.root(job) / "pending" / "bundle-0123"
     call.mkdir(parents=True)
-    (call / "request.json").write_text("{}")
+    (call / "request.json").write_text(json.dumps({"pid": __import__("os").getpid()}))  # this process's call
     ended.clear()
     start = time.monotonic()
     stop = retry.watch(job, lambda: {"bundle": start}, lambda step, why: ended.set())
@@ -236,3 +241,93 @@ def test_the_time_limit_is_the_steps_across_its_tries(setup_videos):
     time.sleep(0.01)
     record.begin("audio")  # the next try
     assert record.watched() == {"audio": first}
+
+
+def test_a_provider_that_took_too_long_is_left_to_a_later_sweep_not_asked_again_here():
+    """The audio step, Gemini and Muse do not send a request again that timed out (it may still be made and charged
+    for), so the run does not either; a later sweep may (the review of PR #116)."""
+    from studio import gemini, muse
+    from studio.steps import audio
+
+    assert audio.TOOK_TOO_LONG == "the provider took too long"
+    assert retry.waits("the provider took too long") == () and retry.deferrable("the provider took too long")
+    assert retry.waits("the session did not answer") == () and retry.deferrable("the session did not answer")
+    # A refusal of what was asked (a key refused, a model retired) is no outage either.
+    assert gemini._code(403) == "Gemini refused the request" and gemini._code(503) is None
+    assert muse._code(404) == "Meta's API refused the request" and muse._code(429) is None
+    for code in ("Gemini refused the request", "Meta's API refused the request"):
+        assert not retry.outage(code) and not retry.deferrable(code)
+    assert gemini.GeminiError("x", code=gemini._code(503)).code == "Gemini failed"
+
+
+def test_a_call_nobody_answered_leaves_no_folder_and_only_this_processs_calls_pause_the_limit(jobs_root, monkeypatch):
+    import os as os_
+
+    job = jobs_root / "q1"
+    job.mkdir()
+    monkeypatch.setattr(session, "WAIT_S", 0.1)
+    monkeypatch.setattr(session, "POLL_S", 0.02)
+    with pytest.raises(session.NoAnswer):
+        session.ask(job, brain.BrainError("down"), "brain", "{}", None, label="factcheck round 1")
+    assert session.pending(job) == []
+    left = session.root(job) / "pending" / "left-by-another"
+    left.mkdir(parents=True)
+    (left / "request.json").write_text(json.dumps({"label": "x", "role": "brain", "schema": None, "images": 0,
+                                                   "pid": os_.getpid() + 1}))
+    assert session.pending(job) == [left] and session.pending(job, mine=True) == []
+
+
+def test_a_run_recorded_by_the_time_limit_is_not_recorded_again_as_interrupted(jobs_root):
+    job = jobs_root / "q1"
+    job.mkdir()
+    current = {"started": "2026-11-03T03:00:00+0000", "part": "videos", "step": "render", "steps": []}
+    with (job / "runs.jsonl").open("a") as log:
+        log.write(json.dumps({**current, "result": "FAILED", "code": "timed out", "reason": "x"}) + "\n")
+    jobs.write(job / "run.current.json", current)  # written again in passing, after the time limit's record
+    operator_run.record_interrupted(job)
+    assert len(operator_run.read_jsonl(job / "runs.jsonl")) == 1 and not (job / "run.current.json").exists()
+
+
+def test_once_the_run_ends_itself_the_time_limit_leaves_it_be(jobs_root, monkeypatch):
+    job = jobs_root / "q1"
+    job.mkdir()
+    ended = []
+    monkeypatch.setattr(retry.os, "_exit", lambda code: ended.append(code))
+    retry.watch(job, lambda: {}, lambda step, why: None)()  # a new run in this process
+    with retry.finishing():
+        pass
+    retry.end_process(job, "render", "past its limit")  # too late: the run recorded itself
+    assert ended == [] and not (job / "runs.jsonl").exists()
+
+
+def test_waiting_for_the_machines_turn_at_its_cores_stops_the_clock(jobs_root, monkeypatch):
+    import fcntl
+
+    monkeypatch.setattr(retry, "TICK_S", 0.02)
+    monkeypatch.setenv("STUDIO_STEP_MINUTES", str(0.3 / 60))
+    job = jobs_root / "q1"
+    job.mkdir()
+    other = open(jobs_root / media.CPU_TURN, "a")  # another job's render holds the turn
+    fcntl.flock(other, fcntl.LOCK_EX)
+    ended = threading.Event()
+    start = time.monotonic()
+    stop = retry.watch(job, lambda: {"render": start}, lambda step, why: ended.set())
+    waiting = threading.Thread(target=lambda: media.cpu_turn(job).__enter__(), daemon=True)
+    waiting.start()
+    assert not ended.wait(1.0)  # three times the limit, all of it waiting for the turn
+    fcntl.flock(other, fcntl.LOCK_UN)
+    other.close()
+    assert ended.wait(5)  # its turn came, and the step ran on past the limit
+    stop()
+
+
+def test_the_videos_claim_is_renewed_while_a_step_runs(setup_videos, monkeypatch):
+    steps, api = setup_videos
+    job = posted()
+    jobs.write(job / videos.CLAIM, {"answerId": "ans1", "attempt": 1})
+    api.attempt = 1
+    monkeypatch.setattr(videos, "RENEW_S", 0.05)
+    with videos.renewing(api, job):
+        time.sleep(0.4)
+    renewals = [c for c in api.calls if c[0] == "claim_videos"]
+    assert len(renewals) >= 3 and all(c[2] == 1 for c in renewals)  # the attempt held, renewed

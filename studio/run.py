@@ -64,6 +64,7 @@ import sys
 import threading
 import time
 import traceback
+import uuid
 from pathlib import Path
 
 from studio import brain, checks, jobs, knobs, ledger, retry, review, session
@@ -79,7 +80,8 @@ STEPS = ledger.LESSON_STEPS  # ("request", "bundle", "audit", "factcheck", "post
 DONE, FAILED, STOPPED = "DONE", "FAILED", "STOPPED"
 DEFERRED = "DEFERRED"  # `fail` left the topic, or its videos, to a later sweep (studio/retry.py)
 EXIT_CODES = {DONE: 0, FAILED: 1, STOPPED: 3, DEFERRED: 0}
-LEASE = "lease.json"  # {runs, maxRuns}: how many runs the API has handed this topic out for, and how many it allows
+LEASE = "lease.json"  # {runs, maxRuns}: how many runs the API has counted for this topic, and how many it allows
+RUN_ID = "run.id"  # this machine's run of the topic, sent on its every claim: the API counts it once
 # A lesson the fact audit or the fact-check refused is set aside (bundle.rejected-<n>.json), so the retry writes a
 # new one rather than checking the same one again.
 REJECTED = ("the fact audit failed", "the fact-check failed")
@@ -200,6 +202,10 @@ def record_interrupted(job: Path) -> None:
         current.unlink(missing_ok=True)
         return
     step = record.get("step", "run")
+    last = read_jsonl(job / "runs.jsonl")[-1:] if (job / "runs.jsonl").exists() else []
+    if last and last[0].get("started") == record.get("started") and last[0].get("part") == record.get("part"):
+        current.unlink(missing_ok=True)  # recorded already (the time limit ended it), then written again in passing
+        return
     record.update(result=FAILED, step=step, code="interrupted",
                   reason=f"{step} was interrupted: the run stopped before the step finished (a time limit or a kill)")
     record.setdefault("steps", []).append({"step": step, "seconds": None, "result": FAILED})
@@ -402,14 +408,15 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     if result == FAILED and code in REJECTED:
         set_aside(job)
     reason = one_line(reason)
-    if done_steps:  # a run with nothing left to do is not one the record should count
-        record = {"started": started, "seconds": round(time.monotonic() - clock, 1), "result": result, "step": step,
-                  "reason": reason, "steps": done_steps, **({"code": code} if code else {})}
-        if note:
-            record["note"] = note
-        with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
-            log.write(json.dumps(record, ensure_ascii=False) + "\n")
-    (job / "run.current.json").unlink(missing_ok=True)
+    with retry.finishing():  # the time limit no longer ends the run: it is recorded once
+        if done_steps:  # a run with nothing left to do is not one the record should count
+            record = {"started": started, "seconds": round(time.monotonic() - clock, 1), "result": result, "step": step,
+                      "reason": reason, "steps": done_steps, **({"code": code} if code else {})}
+            if note:
+                record["note"] = note
+            with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
+                log.write(json.dumps(record, ensure_ascii=False) + "\n")
+        (job / "run.current.json").unlink(missing_ok=True)
     return result, step, reason
 
 
@@ -417,10 +424,9 @@ def claim(api: Api, question_id: str, job: Path | None = None) -> dict:
     """Take or renew the topic's lease; keep with the job how many runs the API has handed it out for and allows
     (LEASE), which `fail` reads before it gives the topic up."""
     try:
-        # The first claim of the topic on this machine starts a run, which the API counts; the operator's retry
-        # here, the claim before each later step and the renewals do not.
-        question = api.claim(question_id, new_run=True) if job is not None and not (job / LEASE).exists() \
-            else api.claim(question_id)
+        # Every claim of this machine's run carries its id, so the API counts the run once, whatever is sent again
+        # (a claim whose answer was lost, the operator's retry here).
+        question = api.claim(question_id, run_id=run_id(job)) if job is not None else api.claim(question_id)
     except ApiError as e:
         result, reason = api_outcome(e)
         raise (Stop if result == STOPPED else StepFailed)(f"claim: {reason}") from e
@@ -429,6 +435,20 @@ def claim(api: Api, question_id: str, job: Path | None = None) -> dict:
         if _read_json(job / LEASE) != lease:
             jobs.write(job / LEASE, lease)
     return question
+
+
+def run_id(job: Path) -> str:
+    """This machine's run of the topic (RUN_ID), made on its first claim."""
+    path = job / RUN_ID
+    try:
+        found = path.read_text(encoding="utf-8").strip()
+        if ID_RE.fullmatch(found) and len(found) >= 8:
+            return found
+    except OSError:
+        pass
+    made = uuid.uuid4().hex
+    path.write_text(made + "\n", encoding="utf-8")
+    return made
 
 
 def _read_json(path: Path) -> dict:
@@ -785,6 +805,7 @@ def mark_failed(question_id: str, api: Api | None = None) -> tuple[str, str]:
         # hands the topic out again, and the API gives it up itself once its runs are used (QUESTION_MAX_RUNS).
         # A later run here, on a machine that outlives the heartbeat, counts as a new one too.
         (job / LEASE).unlink(missing_ok=True)
+        (job / RUN_ID).unlink(missing_ok=True)
         return DEFERRED, (f"not given up: {runs[-1]['step']} failed ({runs[-1]['code']}), which a later try may get "
                           f"past, and the topic has {left} run(s) left; a later sweep takes it up again")
     reason = f"{runs[-1]['step']} failed: {runs[-1]['reason']}"

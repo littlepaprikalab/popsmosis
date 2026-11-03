@@ -11,14 +11,16 @@ Three things, each keyed on the fixed code a failure carries (studio/run.py, fai
                     otherwise it leaves them to a later sweep, on another machine, and says DEFERRED.
     a step's time   No step may run past STEP_MINUTES (watch(), in the run's own process): one that does is ended
                     and recorded as failed, "timed out", so the operator gets an outcome within its hour and a hang is
-                    retried like any other failure. Time the run spends waiting for the operator's session to answer
-                    (studio/session.py) does not count.
+                    retried like any other failure. The limit is the step's, its tries and the waits between them
+                    together. Time the run spends waiting for the operator's session to answer (studio/session.py),
+                    or for this machine's turn at its cores (media.cpu_turn()), does not count.
 
 STUDIO_RETRY_SCALE multiplies every wait and STUDIO_STEP_MINUTES sets the limit, for the simulation (tools/sim).
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import signal
@@ -28,20 +30,34 @@ import time
 from pathlib import Path
 from typing import Callable
 
-from studio import knobs, session
+from studio import knobs, media, session
 
 # Failures an outage explains: tried again in the run, after a wait, and left to a later sweep when the run fails.
 OUTAGE = {
-    "the API did not answer", "the API failed", "the model call failed", "the session did not answer",
+    "the API did not answer", "the API failed", "the model call failed",
     "Gemini failed", "Meta's API failed", "the audio provider failed",
 }
 # Made again at once, once: what the step deletes when it fails, so a second try makes it afresh.
 AGAIN = {"the song did not sing its lyrics", "the narration did not read its lines"}
-# What a later sweep, on another machine, may still get past: besides those, a run that was cut off or timed out.
-DEFERRABLE = OUTAGE | AGAIN | {"interrupted", "timed out", "the background run ended without an outcome"}
+# What a later sweep, on another machine, may still get past: besides those, a run that was cut off or timed out, a
+# provider that took too long (not asked again here: it may still be making, and charging for, what was asked), and a
+# session that did not answer (its operator may be gone).
+DEFERRABLE = OUTAGE | AGAIN | {"interrupted", "timed out", "the background run ended without an outcome",
+                               "the provider took too long", "the session did not answer"}
 WAITS_S = (30.0, 120.0, 300.0)  # before the second, third and fourth try of a step an outage failed
 STEP_MINUTES = 40.0  # well under the operator's hour of RUNNING (docs/popsmosis-agent-skill.md)
 TICK_S = 5.0
+_ending = threading.Lock()  # the run's own end, or the time limit's: whichever takes it first records the run
+_over = False  # the run's own end has begun
+
+
+@contextlib.contextmanager
+def finishing():
+    """The run's own end: once it has begun, the time limit leaves the run be, so it is recorded once."""
+    global _over
+    with _ending:
+        _over = True
+        yield
 
 
 def outage(code: str | None) -> bool:
@@ -90,6 +106,8 @@ def watch(job: Path, running: Callable[[], dict[str, float]], end: Callable[[str
     """Watch the steps running in this process (running(): step -> the time.monotonic() it started), and when one
     has run past step_minutes(), not counting the time calls of it waited for the session, call end(step, reason),
     which records the run and ends the process. Returns the function that stops the watch."""
+    global _over
+    _over = False  # a new run in this process
     limit = step_minutes() * 60
     stop = threading.Event()
     if not limit:
@@ -98,7 +116,8 @@ def watch(job: Path, running: Callable[[], dict[str, float]], end: Callable[[str
 
     def loop() -> None:
         while not stop.wait(TICK_S * min(1.0, _scale() or 1.0)):
-            now, asking = time.monotonic(), bool(session.pending(job))
+            # Waiting on the session, or for this machine's turn at its cores (media.cpu_turn()), is not running.
+            now, asking = time.monotonic(), bool(session.pending(job, mine=True)) or media.waiting_for_cpu()
             for step, since in list(running().items()):
                 key = (step, since)
                 if asking:
@@ -115,6 +134,10 @@ def watch(job: Path, running: Callable[[], dict[str, float]], end: Callable[[str
 def end_process(job: Path, step: str, reason: str) -> None:
     """Record the run in run.current.json as failed at this step, "timed out", print its outcome line (the outcome
     `wait` reads of a lesson run with --background), and end the process with every one it started."""
+    _ending.acquire()  # never let go when the run is ended here: the process ends with it held
+    if _over:
+        _ending.release()
+        return
     current = job / "run.current.json"
     try:
         record = json.loads(current.read_text(encoding="utf-8"))

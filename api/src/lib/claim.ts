@@ -34,10 +34,12 @@ export function claimMinutes(): number {
 
 // How many runs may start on one topic. A run whose machine goes away before it posts the lesson (it outlasted the
 // routine's hour, or died) lets the lease lapse, and the queue would hand the topic to the next run, which starts it
-// over and pays for it again, for ever. The studio's first claim on a machine says it starts a run ({ newRun: true }),
-// which counts it (the question's `runs`); once a topic has had this many, that claim and the queue give it up. Not
-// the hand-out: a run that stops before it tries the topic (its settings are wrong) uses none. Nor the claims that
-// renew a lease, before each step and every 5 minutes.
+// over and pays for it again, for ever. The studio sends its run's id with every claim of the run; the first claim
+// with an id the topic has not seen last counts one more run (the question's `runs` and `lastRunId`), and a renewal
+// or a retry with the same id counts nothing, even when the reply to the first was lost. Not the hand-out: a run
+// that stops before it tries the topic (its settings are wrong) uses none. Once a topic has had this many, a new
+// run's claim is turned away while the last run still holds the lease, and gives the topic up once that lease has
+// lapsed, as the queue does.
 const DEFAULT_MAX_RUNS = 3;
 
 export function questionMaxRuns(): number {

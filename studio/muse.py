@@ -63,6 +63,12 @@ class MuseError(media.StepFailed):
     code = "Meta's API failed"
 
 
+def _code(status: int) -> str | None:
+    """A refusal of what was asked (a key refused, a model retired) for a status no wait fixes; None, MuseError's
+    own code, for one a later try may not meet (busy, the server's fault): what studio/retry.py tries again."""
+    return None if status in (0, 408, 429) or status >= 500 else "Meta's API refused the request"
+
+
 class Declined(MuseError):
     """Muse Image would not make this picture (its content policy)."""
 
@@ -90,7 +96,8 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tu
         return e.code, dict(e.headers), e.read()
     except TimeoutError as e:
         # Not retried: Meta may still be making, and billing, what was asked.
-        raise MuseError(f"Meta's API took over {TIMEOUT_S}s to answer") from e
+        # Not sent again in the run: Meta may still be making, and charging for, it (studio/retry.py).
+        raise MuseError(f"Meta's API took over {TIMEOUT_S}s to answer", code="the provider took too long") from e
     except (urllib.error.URLError, OSError) as e:
         raise NoAnswer(f"Meta's API did not answer: {getattr(e, 'reason', e)}") from e
 
@@ -124,7 +131,7 @@ def paint(job: Path, label: str, prompt: str, reference: Path | None = None) -> 
     if status == 400 and _error(answer).get("code") == "content_policy_violation":
         raise Declined(f"Muse Image declined the picture: {_message(answer)}")
     if status != 200:
-        raise MuseError(f"Muse Image refused the picture: {status} {_message(answer)}")
+        raise MuseError(f"Muse Image refused the picture: {status} {_message(answer)}", code=_code(status))
     try:
         data = json.loads(answer)
         picture = base64.b64decode(data["data"][0]["b64_json"], validate=True)
@@ -167,7 +174,7 @@ def segment(job: Path, label: str, art: Path, *, phrase: str | None = None, box:
         started = time.monotonic()
         status, answer = _post("/responses", body)
     if status != 200:
-        raise MuseError(f"SAM 3.1 refused the request: {status} {_message(answer)}")
+        raise MuseError(f"SAM 3.1 refused the request: {status} {_message(answer)}", code=_code(status))
     try:
         data = json.loads(answer)
     except ValueError as e:

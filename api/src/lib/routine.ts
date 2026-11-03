@@ -7,9 +7,15 @@
  * never fails because of it. A trigger endpoint that is down, slow, or
  * misconfigured costs the teacher its latency, not the user their question.
  *
- * Debounced per process. The first event fires immediately and opens a
- * cooldown; an event arriving inside that cooldown schedules one trailing fire
- * for when it ends. Both halves earn their keep: the leading fire serves the
+ * A new topic fires a run of its own, at once, every time (POPSMOSIS_ROUTINE_EVERY_TOPIC,
+ * on by default): a run makes one topic at a time, 20 minutes or more each, so a burst
+ * of topics debounced into one or two runs waited hours for their turn. Each fire is a
+ * cloud session of its own and spends one of the routine's metered runs; the API's
+ * limits on topics (TOPICS_PER_DAY, QUESTIONS_PER_USER_PER_DAY) bound how many.
+ *
+ * Replies, and topics while that knob is off, are debounced per process. The first
+ * event fires immediately and opens a cooldown; an event arriving inside that
+ * cooldown schedules one trailing fire for when it ends. Both halves earn their keep: the leading fire serves the
  * queue now, and the trailing one covers a write that landed after the run it
  * woke had already drained the queue. Debounce state is per instance, so two
  * API instances can each fire once per window.
@@ -80,6 +86,12 @@ export class RoutineTrigger {
   // the request path does.
   get settled(): Promise<void> {
     return this.inFlight ?? Promise.resolve();
+  }
+
+  /** Fire now, whatever the cooldown: a new topic's own run (notifyRoutine). The fire opens a cooldown as any
+   * does, so a reply right after it is served by a trailing fire, or by this run's own look at the queues. */
+  fireNow(reason: string, log: FireLogger): void {
+    this.start(reason, log);
   }
 
   notify(reason: string, log: FireLogger): void {
@@ -231,6 +243,14 @@ export function routineTrigger(): RoutineTrigger | null {
   return cached;
 }
 
+/** Whether every new topic fires a run of its own (POPSMOSIS_ROUTINE_EVERY_TOPIC), rather than being debounced. */
+export function everyTopicFires(): boolean {
+  return (knob('POPSMOSIS_ROUTINE_EVERY_TOPIC') || 'on') !== 'off';
+}
+
 export function notifyRoutine(reason: string, log: FireLogger): void {
-  routineTrigger()?.notify(reason, log);
+  const trigger = routineTrigger();
+  if (!trigger) return;
+  if (reason === FIRE_REASON_QUESTION && everyTopicFires()) trigger.fireNow(reason, log);
+  else trigger.notify(reason, log);
 }

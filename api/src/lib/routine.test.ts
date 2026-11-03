@@ -87,6 +87,24 @@ describe('RoutineTrigger', () => {
     expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
+  it('fires a new topic at once, every time, inside the cooldown too, and replies still wait for it', async () => {
+    // A run makes one topic at a time: a burst of topics debounced into one or two runs waited hours (Nov 3).
+    const fetchFn = stubFetch();
+    const trigger = new RoutineTrigger('https://api.example/fire', 'tok', 60_000, WORK);
+    for (let i = 0; i < 5; i += 1) {
+      trigger.fireNow('a new question', log);
+      await trigger.settled;
+    }
+    expect(fetchFn).toHaveBeenCalledTimes(5);
+    // A reply right after waits for the cooldown the last topic's fire opened: one trailing fire.
+    trigger.notify('a reply', log);
+    trigger.notify('another reply', log);
+    expect(fetchFn).toHaveBeenCalledTimes(5);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(6);
+  });
+
   it('fires again once the window has elapsed', async () => {
     const fetchFn = stubFetch();
     const trigger = new RoutineTrigger('https://api.example/fire', 'tok', 60_000, WORK);

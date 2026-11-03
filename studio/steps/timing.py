@@ -112,21 +112,14 @@ MMS_MODEL = "mms-fa"  # torchaudio.pipelines.MMS_FA, Meta's forced aligner
 # Characters around a word that are not part of it ("word," -> "word").
 _EDGES = "\"'.,;:!?()[]{}<>“”‘’«»…—–-*_/\\|"
 
-TURN = ".timing.lock"  # beside the jobs: the jobs on one machine time their songs in turn
+TURN = media.CPU_TURN  # beside the jobs: the jobs on one machine time their songs, and render, in turn
 
 
 @contextlib.contextmanager
 def cpu_turn(job: Path):
-    """Wait for this machine's other jobs to finish timing a song. Demucs and the aligner each use
-    every core; two at once (a test round's topics side by side) took 8 times as long each, their
-    threads fighting for the cores, where taking turns costs only the wait. A routine runs on a
-    machine of its own, so it never waits."""
-    with open(job.parent / TURN, "a") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(lock, fcntl.LOCK_UN)
+    """The machine's turn at its cores (media.cpu_turn()), shared with the render."""
+    with media.cpu_turn(job):
+        yield
 
 
 # align(vocals at 16 kHz, a list of normalised words) -> per word (start s, end s, score),

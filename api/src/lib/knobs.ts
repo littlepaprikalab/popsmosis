@@ -41,6 +41,8 @@ export const KNOBS = {
   VIDEO_MAX_ATTEMPTS: { where: 'api', kind: 'int', default: 2, min: 1, max: 10 },
   // The API: waking the teacher (lib/routine.ts).
   POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS: { where: 'api', kind: 'int', default: 300, min: 0, max: 3600 },
+  // Whether every new topic fires a run of its own, at once, rather than being debounced with the replies.
+  POPSMOSIS_ROUTINE_EVERY_TOPIC: { where: 'api', kind: 'choice', default: 'on', choices: ['on', 'off'] },
   POPSMOSIS_ROUTINE_BETA: {
     where: 'api', kind: 'text', default: 'experimental-cc-routine-2026-04-01',
     pattern: /^[a-z0-9][a-z0-9-]{0,99}$/, rule: 'lowercase letters, digits and hyphens',

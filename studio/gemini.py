@@ -57,6 +57,12 @@ class GeminiError(media.StepFailed):
     code = "Gemini failed"
 
 
+def _code(status: int) -> str | None:
+    """A refusal of what was asked (a key refused, a model retired) for a status no wait fixes; None, GeminiError's
+    own code, for one a later try may not meet (busy, the server's fault): what studio/retry.py tries again."""
+    return None if status in (0, 408, 429) or status >= 500 else "Gemini refused the request"
+
+
 class Declined(GeminiError):
     """Gemini would not make this picture."""
 
@@ -72,7 +78,8 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tu
         return e.code, dict(e.headers), e.read()
     except TimeoutError as e:
         # Not retried: Gemini may still be making, and billing, what was asked.
-        raise GeminiError(f"the Gemini API took over {TIMEOUT_S}s to answer") from e
+        # Not sent again in the run: Gemini may still be painting, and charging for, the picture (studio/retry.py).
+        raise GeminiError(f"the Gemini API took over {TIMEOUT_S}s to answer", code="the provider took too long") from e
     except (urllib.error.URLError, OSError) as e:
         raise GeminiError(f"the Gemini API did not answer: {getattr(e, 'reason', e)}") from e
 
@@ -104,7 +111,7 @@ def paint(job: Path, label: str, prompt: str, reference: Path | None = None) -> 
     started = time.monotonic()
     status, answer = _post(f"/models/{urllib.parse.quote(MODEL, safe='')}:generateContent", body)
     if status != 200:
-        raise GeminiError(f"{NAME} refused the picture: {status} {_message(answer)}")
+        raise GeminiError(f"{NAME} refused the picture: {status} {_message(answer)}", code=_code(status))
     try:
         data = json.loads(answer)
         if not isinstance(data, dict):

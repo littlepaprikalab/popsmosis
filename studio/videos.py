@@ -44,6 +44,7 @@ when the session starts (.claude/hooks/session-start.sh), never here.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import os
@@ -60,9 +61,9 @@ from pydantic import ValidationError
 
 from studio import brain, jobs, knobs, ledger, media, retry, session
 from studio.api import Api, ApiError
-from studio.run import (BRAIN_FILE, DEFERRED, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, failure_code,
-                        job_chosen, job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl,
-                        record_interrupted)
+from studio.run import (BRAIN_FILE, DEFERRED, DONE, FAILED, RENEW_S, STOPPED, Stop, api_outcome, default_brain,
+                        failure_code, job_chosen, job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run,
+                        read_jsonl, record_interrupted)
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
@@ -239,9 +240,10 @@ class Record:
         record = {"started": self.started, "part": "videos", "seconds": round(time.monotonic() - self.clock, 1),
                   "result": result, "step": step, "reason": reason, "steps": self.steps,
                   **({"code": code} if code and result != DONE else {})}
-        with (self.job / "runs.jsonl").open("a", encoding="utf-8") as log:
-            log.write(json.dumps(record, ensure_ascii=False) + "\n")
-        (self.job / "run.current.json").unlink(missing_ok=True)
+        with retry.finishing():  # the time limit no longer ends the run: it is recorded once
+            with (self.job / "runs.jsonl").open("a", encoding="utf-8") as log:
+                log.write(json.dumps(record, ensure_ascii=False) + "\n")
+            (self.job / "run.current.json").unlink(missing_ok=True)
         return result, step, reason
 
 
@@ -291,7 +293,8 @@ def _videos(job: Path, api: Api | None, ask, session_answers: bool = False) -> t
     # No step runs past its time limit: one that does ends the run, recorded as failed there (studio/retry.py).
     stop_watch = retry.watch(job, record.watched, lambda step, why: retry.end_process(job, step, why))
     try:
-        return record.finish(*_make(job, api, ask, record, TAIL))
+        with renewing(api, job):
+            return record.finish(*_make(job, api, ask, record, TAIL))
     finally:
         stop_watch()
 
@@ -310,6 +313,38 @@ def _make(job: Path, api: Api | None, ask, record: Record, tail: tuple[str, ...]
     if result == DONE and not (ran or tail_ran):
         reason = "the videos were already made"
     return result, step, reason
+
+
+@contextlib.contextmanager
+def renewing(api: Api, job: Path):
+    """Claim the attempt again every RENEW_S while the run goes, on a thread of its own, as well as before each step:
+    a step can run long (art whose calls wait for the operator's session, a render in turn behind another job's), and
+    one quiet past VIDEO_STALE_MINUTES would be taken for dead, handed to another machine, or failed on its last
+    attempt. Best effort: a renewal that fails is said once and tried again at the next; one the API refuses for good
+    (another run took the videos over) ends them, and the next step's claim stops the run."""
+    stop, every = threading.Event(), RENEW_S
+
+    def renew() -> None:
+        said = False
+        while not stop.wait(every):
+            try:
+                claim(api, job)
+            except Stop as e:
+                print(f"claim: the videos' attempt no longer renewed: {e}", file=sys.stderr)
+                return
+            except Exception as e:  # noqa: BLE001 (a renewal is never the run's outcome)
+                if not said:
+                    print(f"claim: a renewal of the videos failed, tried again every {every / 60:g} min: {e}",
+                          file=sys.stderr)
+                    said = True
+
+    thread = threading.Thread(target=renew, name=f"renew videos {job.name}", daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        thread.join(timeout=5)
 
 
 def local(job: Path, ask=None) -> tuple[str, str, str]:

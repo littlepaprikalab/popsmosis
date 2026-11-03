@@ -284,7 +284,7 @@ what each does.
 |---|---|---|
 | `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR`, `ATTACHMENT_MB_PER_USER_PER_DAY`, `ATTACHMENT_MB_HELD_PER_USER` | the API's limits on what learners may ask for | from the next request |
 | `QUESTION_CLAIM_MINUTES`, `QUESTION_MAX_RUNS`, `VIDEO_STALE_MINUTES`, `LESSON_HOLD_MINUTES`, `VIDEO_MAX_ATTEMPTS` | the API's leases and renders | from the next request |
-| `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS`, `POPSMOSIS_ROUTINE_BETA` | waking the teacher | from the next write |
+| `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS`, `POPSMOSIS_ROUTINE_EVERY_TOPIC`, `POPSMOSIS_ROUTINE_BETA` | waking the teacher | from the next write |
 | `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `GEMINI_TTS_VOICE`, `ELEVENLABS_USD_PER_1K_CREDITS`, `STUDIO_CLAUDE_DRAWS`, `STUDIO_SESSION_FALLBACK`, `STUDIO_STEP_MINUTES` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
 
 Each API instance keeps the knobs in memory, so the code that reads them stays as fast as an
@@ -408,7 +408,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 |---|---|---|
 | GET | `/api/agents/me` | confirm the key |
 | GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first, each leased to the caller for `QUESTION_CLAIM_MINUTES`, with the `runs` started on it and `maxRuns`; a topic whose lease lapsed after `QUESTION_MAX_RUNS` runs (default 3) is given up instead, its reason on its card |
-| POST | `/api/questions/:id/claim` | `{ newRun? }`: take or renew the lease on one topic and read it, with the `brain` an admin picked for it (`null`: the teacher's own), and its `runs` and `maxRuns`. `newRun: true`, sent by the first claim of a run on a machine, counts a run (`runs` includes it); with the runs used up, the topic is given up instead and the claim answers 409. Without it, a renewal: no run counted. 409 if answered, failed, or leased to another agent |
+| POST | `/api/questions/:id/claim` | `{ runId? }`: take or renew the lease on one topic and read it, with the `brain` an admin picked for it (`null`: the teacher's own), and its `runs` and `maxRuns`. `runId` (8 to 64 letters, digits, `-` or `_`) names the run, on every claim of it: an id other than the last run's counts a run (`runs` includes it), the same id again counts nothing. With the runs used up, a new run's claim answers 409: "Another run holds the claim" while the last run's lease is live, else the topic is given up. 409 if answered, failed, or leased to another agent |
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown?, checks? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); `checks`, with the bundle, is what the code checks found in it, for an admin's review ([Review](#review)); 409 once there is one, with `answerId` when it is the caller's own, and 409 unless the caller holds the topic's claim (the queue or `/claim`) |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |

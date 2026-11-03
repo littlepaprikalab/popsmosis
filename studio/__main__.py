@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import textwrap
 import time
@@ -208,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             result, step, reason = operator_videos.videos(args.question, session_answers=args.session)
         print(f"{result} {step}: {reason}")
-        return EXIT_CODES[result]
+        return detached_end(EXIT_CODES[result], args.command == "videos" and args.session)
     if args.command in ("run", "fail", "summary"):
         if not operator_run.ID_RE.fullmatch(args.question):
             parser.error(f"{args.question!r} is not a question id")
@@ -224,7 +225,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             result, step, reason = operator_run.run(args.question, note=args.note, session_answers=args.session)
         print(f"{result} {step}: {reason}")
-        return EXIT_CODES[result]
+        return detached_end(EXIT_CODES[result], args.session and not args.background)
 
     if args.command == "make":
         job = jobs.ROOT / args.job
@@ -280,6 +281,17 @@ def main(argv: list[str] | None = None) -> int:
             ok = run_steps(job, [args.name]) if args.command == "step" else True
     print_job(job, brief=args.brief)
     return 0 if ok else 1
+
+
+def detached_end(code: int, detached: bool) -> int:
+    """The exit code; a run detached for an operator (--session) ends here, its outcome written, without waiting for a
+    thread left behind (an early audit still waiting on the session for a bundle that failed), which would keep it
+    alive and `wait` from reading its outcome."""
+    if detached:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(code)
+    return code
 
 
 def run_steps(job: Path, names: list[str]) -> bool:
