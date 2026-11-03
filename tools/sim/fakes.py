@@ -143,6 +143,28 @@ def install() -> None:
 
     media.step_module = step_module
 
+    # Faults in the studio's own client, for the run against the real API (seam.py), which has none of its own:
+    # {"client": {"<Api method>": {"fault": "error", "status": 503, "times": 2}}}.
+    from studio import api as api_module
+
+    for name in ("claim", "claim_videos", "post_answer", "upload_url", "set_video", "download", "videos_queue"):
+        _client_fault(api_module.Api, name)
+    if os.environ.get("STUDIO_SIM_STORAGE") == "discard":  # R2 itself: the bytes go nowhere, the API's URLs are real
+        api_module.Api.put_file = lambda self, upload_url, data, headers: None
+
+
+def _client_fault(cls, name: str) -> None:
+    from studio.api import ApiError
+
+    real = getattr(cls, name)
+
+    def call(self, *args, **kwargs):
+        if take("client", name):
+            raise ApiError(503, "HTTP_ERROR", "the API answered 503")
+        return real(self, *args, **kwargs)
+
+    setattr(cls, name, call)
+
 
 def _fake_step(name: str):
     from studio import jobs, media

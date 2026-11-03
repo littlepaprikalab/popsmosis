@@ -465,8 +465,9 @@ function PhoneBill({ rows, bill, making, time, timeline }: {
                 <RowTime row={r} />
               </span>
             </div>
-            {r.bill && linesOf(r.bill).map((l) => (
-              <div key={`${l.name} ${l.version ?? ''}`} className={`flex gap-2 ${making ? 'pl-11' : 'pl-6'}`}>
+            {r.bill && linesOf(r.bill).map((l, k) => (
+              // By place: one model can have two lines, its API calls' and those answered in session.
+              <div key={k} className={`flex gap-2 ${making ? 'pl-11' : 'pl-6'}`}>
                 <span className="min-w-0 break-all">
                   <LineName line={l} />{l.calls !== null && l.calls > 1 ? ` ×${l.calls}` : ''}<MakerChip maker={l.maker} className="ml-1.5" />
                 </span>

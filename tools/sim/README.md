@@ -42,3 +42,22 @@ A scenario sets them in `faults.json` (the brain and the media steps, `fakes.py`
 - **a media step**: a failure with a code, a kill, a hang past the operator's hour, or a slow step.
 
 Add a scenario to `SCENARIOS` in `scenarios.py`.
+
+## Against the real API
+
+`seam.py` runs the same operator against the real API (`api/`), to prove what the stand-in API cannot: the
+studio's requests and the API's answers agree, field by field and status by status. Start the API on a scratch
+database made for it alone (it writes topics there and moves their times back), with placeholder R2 settings (it
+signs upload URLs without asking R2; the upload's bytes go nowhere, `STUDIO_SIM_STORAGE=discard`):
+
+    createdb seam_e2e   # or CREATE DATABASE in psql
+    DATABASE_URL=postgresql://.../seam_e2e npm --workspace api run db:deploy
+    cd api && DATABASE_URL=postgresql://.../seam_e2e JWT_SECRET=x PORT=3191 R2_ACCOUNT_ID=<32 hex> \
+        R2_ACCESS_KEY_ID=x R2_SECRET_ACCESS_KEY=x R2_PUBLIC_URL=https://media.seam.test npx tsx src/index.ts
+    DATABASE_URL=postgresql://.../seam_e2e npx tsx src/scripts/create-agent.ts --name seam-teacher
+    python tools/sim/seam.py --api http://127.0.0.1:3191 --key sk_pop_... --db postgresql://.../seam_e2e
+
+Six scenarios, one at a time (they share the topic queue): a droplet; the brain down for a whole run, answered in
+session, its bill saying so; a topic given up once its 3 runs are used; videos never claimed, recovered; a render
+that hung twice, recovered on its second attempt; a render abandoned on its last attempt, marked FAILED with why.
+Faults the real API cannot be told to make are made in the studio's own client (`"client"` in `fakes.py`).

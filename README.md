@@ -113,7 +113,8 @@ The teacher runs it on a topic from the queue, by the question's id. That needs
 
 ```bash
 python -m studio run <question-id>       # claim, bundle, fact audit, fact-check, post; again resumes at the first missing step
-python -m studio fail <question-id>      # after a second failure: give the topic up (its videos, once posted)
+python -m studio fail <question-id>      # after a second failure: give the topic up (its videos, once posted),
+                                         # or DEFERRED: left to a later sweep while runs or attempts are left
 python -m studio summary <question-id>   # what its runs did, for the teacher's record
 python -m studio videos <question-id>    # the posted lesson's two videos; --background on a routine
 python -m studio wait <question-id>      # the background videos' outcome, waiting up to 9 minutes

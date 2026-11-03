@@ -43,12 +43,12 @@ STEP_MINUTES = 0.33  # 20 seconds: under the budget, as 40 minutes is under the 
 SESSION_MODEL = "claude-opus-5-5"
 
 
-def environment(sim: Path, jobs: Path, api_url: str, extra: dict | None = None) -> dict:
+def environment(sim: Path, jobs: Path, api_url: str, extra: dict | None = None, api_key: str = "sk_pop_sim") -> dict:
     env = {k: v for k, v in os.environ.items() if k not in PAID_KEYS}
     env.update({
         "STUDIO_SIM_DIR": str(sim), "STUDIO_JOBS_DIR": str(jobs), "PYTHONUNBUFFERED": "1",
         "PYTHONPATH": os.pathsep.join(p for p in (str(BOOT), os.environ.get("PYTHONPATH", "")) if p),
-        "POPSMOSIS_API_URL": api_url, "POPSMOSIS_API_KEY": "sk_pop_sim",
+        "POPSMOSIS_API_URL": api_url, "POPSMOSIS_API_KEY": api_key,
         "POPSMOSIS_ANTHROPIC_API_KEY": FAKE_KEY, "GEMINI_API_KEY": FAKE_KEY, "MODEL_API_KEY": FAKE_KEY,
         "STUDIO_SESSION_WAIT_S": "40",
         "STUDIO_RETRY_SCALE": "0.02", "STUDIO_STEP_MINUTES": str(STEP_MINUTES),
@@ -64,10 +64,11 @@ def environment(sim: Path, jobs: Path, api_url: str, extra: dict | None = None) 
 class Machine:
     """One routine run's container: its own jobs folder and processes, gone when the run ends."""
 
-    def __init__(self, sim: Path, n: int, api_url: str, extra_env: dict | None = None, log: list[str] | None = None):
+    def __init__(self, sim: Path, n: int, api_url: str, extra_env: dict | None = None, log: list[str] | None = None,
+                 api_key: str = "sk_pop_sim"):
         self.jobs = sim / f"machine-{n}"
         self.jobs.mkdir(parents=True, exist_ok=True)
-        self.env = environment(sim, self.jobs, api_url, extra_env)
+        self.env = environment(sim, self.jobs, api_url, extra_env, api_key)
         self.log: list[str] = [] if log is None else log  # the operator's, so the lines stay in order
         self.output = ""  # the last command's whole output
 
@@ -94,8 +95,9 @@ class Machine:
 
 
 class Teacher:
-    def __init__(self, sim: Path, api_url: str, extra_env: dict | None = None, session: str = "answer"):
-        self.sim, self.api_url, self.extra_env = sim, api_url, extra_env
+    def __init__(self, sim: Path, api_url: str, extra_env: dict | None = None, session: str = "answer",
+                 api_key: str = "sk_pop_sim"):
+        self.sim, self.api_url, self.extra_env, self.api_key = sim, api_url, extra_env, api_key
         self.session = session  # answer: a subagent answers every call; invalid-first: its first answer is wrong
         self.log: list[str] = []
         self.session_calls = 0
@@ -104,7 +106,7 @@ class Teacher:
 
     def queue(self) -> tuple[int, list[dict]]:
         request = urllib.request.Request(f"{self.api_url}/api/questions/queue?limit=1",
-                                         headers={"Authorization": "Bearer sk_pop_sim"})
+                                         headers={"Authorization": f"Bearer {self.api_key}"})
         try:
             with urllib.request.urlopen(request, timeout=20) as response:
                 return response.status, json.loads(response.read()).get("data", [])
@@ -114,7 +116,7 @@ class Teacher:
             return 0, []
 
     def heartbeat(self, n: int) -> None:
-        machine = Machine(self.sim, n, self.api_url, self.extra_env, self.log)
+        machine = Machine(self.sim, n, self.api_url, self.extra_env, self.log, self.api_key)
         self.log.append(f"== heartbeat {n}")
         try:
             for _ in range(4):  # Step 4: at most three more rounds

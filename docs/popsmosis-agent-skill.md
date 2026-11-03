@@ -30,10 +30,13 @@ the API keys, as Steps 2 and 2b say, without asking: the owner has approved that
 every heartbeat, and the topic's spend ceiling (`/admin/studio`) caps it.
 
 Run each `python -m studio` command exactly as this file writes it, from the root of the
-repository, with nothing piped, redirected or chained after it: the repository's
-`.claude/settings.json` approves these commands as they are, so they run without a permission
-prompt, and the same command with more around it may be stopped to wait for a person who is
-not there. Its outcome is the first word of the last line it prints.
+repository, with nothing piped, redirected or chained after it, so that it matches the rules
+the repository's `.claude/settings.json` approves commands by (`Bash(python -m studio
+<command>:*)`) and runs without a permission prompt: the same command with more around it is
+judged on its own, and may be stopped to wait for a person who is not there. If one is
+stopped for a permission all the same, say which in your record: the owner adds its rule.
+`run`, `wait`, `videos`, `fail` and `recover` end with one line, whose first word is their
+outcome; `session` prints a line for each call.
 
 ---
 
@@ -365,7 +368,8 @@ the step, as it used to.
    python -m studio session list <id>
    ```
 
-   One `CALL <folder> <role> '<label>': ...` line per call, then `BRIEF <path>`.
+   One `CALL <folder> <role> '<label>': ...` line per call, then `BRIEF <path>`; or
+   `NONE: no call is waiting`, when the calls were answered meanwhile (run `wait` again).
 2. For **each** call, start one subagent on your own model, with this task and nothing else:
    "Read `<BRIEF path>`, then answer the call in `<folder>`." Several calls may run as parallel
    subagents. Never hand a subagent another call's folder, the job's other files, or anything
@@ -382,12 +386,16 @@ the step, as it used to.
    schema, which the studio can live with. `NOT VALID <call>: ...`: the studio cannot use it.
    Hand the listed problems back to that call's subagent, or to a fresh one with the brief,
    the folder and the problems, then save again. `WAITING <call>`: no answer written yet.
+   `NONE: no call is waiting`: nothing left to save.
 4. When a subagent will not answer a call (it declines, as a model can), decline it, and the
    step goes on or fails as it would after a refusal:
 
    ```bash
    python -m studio session decline <id> <call> --reason "<a few words of your own>"
    ```
+
+   `<call>` is the call's folder, as `session list` gave it, or its last part alone. It
+   prints `DECLINED <call>`.
 
 5. Run the same `python -m studio wait <id>` again.
 

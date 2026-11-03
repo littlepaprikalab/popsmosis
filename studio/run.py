@@ -141,6 +141,10 @@ def failure_code(e: BaseException) -> str:
             return "the topic was answered, given up or taken"
         if e.status in (401, 403):
             return "the API refused the key"
+        if e.code == "UNAVAILABLE" and not e.details.get("retryable"):
+            # The API's own 503: a service it needs is not set up (its file storage), which no wait or later sweep
+            # fixes, unlike a proxy's 503 when it is down (upload.py's _retrying reads it the same way).
+            return "the API is not set up for it"
         return f"the API answered {e.status}" if 100 <= e.status <= 599 else "the API failed"
     if isinstance(e, Stop):
         return "stopped"
@@ -345,12 +349,12 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
         if step == "audit" and is_done(job, "audit"):
             print("audit: done beside the bundle", file=sys.stderr)
             continue
-        tried = 0
+        tried, first_try = 0, time.monotonic()
         while True:  # once, and again after a wait while an outage explains the failure (studio/retry.py)
             print(f"{step}: running", file=sys.stderr)
             jobs.write(job / "run.current.json", {"started": started, "step": step, "steps": done_steps})
             step_clock = time.monotonic()
-            running[step] = step_clock
+            running[step] = first_try  # the time limit is the step's, its tries and the waits between them together
             try:
                 api = api or Api.from_env()
                 with ledger.at_step(step):

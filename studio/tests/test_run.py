@@ -399,7 +399,7 @@ def test_the_summary_never_quotes_a_rejected_line_or_what_a_step_found(jobs_root
 
 def test_every_run_that_does_not_end_done_keeps_a_fixed_code(jobs_root):
     api = FakeApi()
-    api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "down")
+    api.errors["post_answer"] = ApiError(503, "HTTP_ERROR", "the API answered 503")  # a proxy's page: it is down
     operator_run.run("q1", api=api, ask=FakeBrain())
     api.errors["post_answer"] = ApiError(409, "CONFLICT", "answered")
     operator_run.run("q1", api=api, ask=FakeBrain())
@@ -822,14 +822,14 @@ def test_the_command_line_hands_the_note_to_the_run(monkeypatch):
 
 def test_each_step_keeps_the_line_it_ended_on_and_a_failed_one_its_reason(jobs_root):
     api = FakeApi()
-    api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "down")
+    api.errors["post_answer"] = ApiError(503, "HTTP_ERROR", "the API answered 503")  # a proxy's page: it is down
     assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "FAILED"
     [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
     assert [(s["step"], s.get("detail")) for s in record["steps"]] == [
         ("request", "1 image(s), 1 text file(s)"), ("bundle", "AP Biology / the light reactions"),
         ("audit", "3 fact(s) judged by course knowledge, in 1 call(s)"),
         ("factcheck", "passed in 1 round(s), 0 correction(s)")] + [("post", None)] * 4  # tried again 3 times
-    assert record["reason"] == "503 UNAVAILABLE: down"
+    assert record["reason"] == "503 HTTP_ERROR: the API answered 503"
     assert [s.get("code") for s in record["steps"][-4:]] == ["the API answered 503"] * 4
     # No media step has run, so the summary is the one paragraph for the cycle log.
     assert "\n" not in operator_run.summary("q1")

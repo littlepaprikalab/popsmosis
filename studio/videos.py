@@ -179,6 +179,7 @@ class Record:
         self.started, self.clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
         self.steps: list[dict] = []
         self.running: dict[str, float] = {}  # step -> the time.monotonic() it started at
+        self.first: dict[str, float] = {}  # step -> when its first try in this run started, for the time limit
         self.failed: set[str] = set()  # steps whose last try in this run failed
         self.lock = threading.Lock()
         self.reporting = threading.Lock()  # one report at a time, so an older one never lands after a newer
@@ -193,8 +194,15 @@ class Record:
         print(f"{step}: running", file=sys.stderr)
         with self.lock:
             self.running[step] = time.monotonic()
+            self.first.setdefault(step, self.running[step])
             self.failed.discard(step)
             self._save()
+
+    def watched(self) -> dict[str, float]:
+        """The steps running now, each from its first try in this run: the time limit is the step's, its tries and
+        the waits between them together (studio/retry.py)."""
+        with self.lock:
+            return {step: self.first.get(step, since) for step, since in self.running.items()}
 
     def end(self, step: str, seconds: float, result: str, reason: str = "", code: str = "") -> None:
         """reason: the line the step ended on. A done step's is kept with the run too (an art step names the
@@ -281,7 +289,7 @@ def _videos(job: Path, api: Api | None, ask, session_answers: bool = False) -> t
         return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
 
     # No step runs past its time limit: one that does ends the run, recorded as failed there (studio/retry.py).
-    stop_watch = retry.watch(job, lambda: dict(record.running), lambda step, why: retry.end_process(job, step, why))
+    stop_watch = retry.watch(job, record.watched, lambda step, why: retry.end_process(job, step, why))
     try:
         return record.finish(*_make(job, api, ask, record, TAIL))
     finally:

@@ -236,7 +236,9 @@ in all; one that goes quiet on its last attempt is marked FAILED there. Videos n
 `VIDEO_STALE_MINUTES` after their lesson was posted (both claims failed, or the machine died
 in between) are handed on the same way, for a day after, unless `STUDIO_VIDEOS` is `off`.
 Videos that fail twice in a row are given up (`python -m studio fail <id>`): the
-lesson stays, and the droplet says why.
+lesson stays, and the droplet says why. Unless the failure is one a later attempt may get past (an outage, a run
+cut off, a step past its time limit) and an attempt is left: then `fail` says DEFERRED, and a later sweep takes
+them up once they go stale (studio/retry.py). A topic is the same, with its runs (`QUESTION_MAX_RUNS`).
 
 #### Wake the routine on write
 

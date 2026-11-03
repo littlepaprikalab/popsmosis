@@ -213,3 +213,26 @@ def test_a_run_past_its_time_limit_is_recorded_as_timed_out_and_its_process_ends
     [record] = operator_run.read_jsonl(job / "runs.jsonl")
     assert (record["result"], record["step"], record["code"]) == ("FAILED", "bundle", "timed out")
     assert not (job / "run.current.json").exists()
+
+
+def test_the_apis_own_503_is_a_setting_to_fix_not_an_outage_to_wait_out():
+    """The API answers 503 UNAVAILABLE itself when its file storage is not set up: no wait or later sweep fixes that,
+    so it is neither tried again in the run nor left to a later sweep (upload.py's _retrying reads it the same way).
+    A proxy's 503, when the API is down, is an outage."""
+    assert operator_run.failure_code(ApiError(503, "UNAVAILABLE", "File storage is not configured")) == \
+        "the API is not set up for it"
+    assert not retry.outage("the API is not set up for it") and not retry.deferrable("the API is not set up for it")
+    assert retry.outage(operator_run.failure_code(ApiError(503, "HTTP_ERROR", "the API answered 503")))
+    assert retry.outage(operator_run.failure_code(ApiError(503, "UNAVAILABLE", "busy", {"retryable": True})))
+
+
+def test_the_time_limit_is_the_steps_across_its_tries(setup_videos):
+    steps, api = setup_videos
+    job = posted()
+    record = videos.Record(job)
+    record.begin("audio")
+    first = record.running["audio"]
+    record.end("audio", 1.0, "FAILED", "busy", "the audio provider failed")
+    time.sleep(0.01)
+    record.begin("audio")  # the next try
+    assert record.watched() == {"audio": first}

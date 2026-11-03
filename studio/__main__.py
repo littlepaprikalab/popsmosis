@@ -97,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     asked_save.add_argument("--model", required=True, help="the model that wrote the answers, as its id")
     asked_decline = asked_actions.add_parser("decline", help="decline one waiting call: it fails as a refusal does")
     asked_decline.add_argument("question")
-    asked_decline.add_argument("call", help="the call's name, as `session list` gives its folder")
+    asked_decline.add_argument("call", help="the call's folder, as `session list` gives it, or its name")
     asked_decline.add_argument("--reason", default="", help="why, in a few words of your own")
     waiting = commands.add_parser("wait", help="the outcome line of the lesson or the videos, whichever went to the "
                                                "background last, or RUNNING after --minutes")
@@ -181,9 +181,10 @@ def main(argv: list[str] | None = None) -> int:
             print("\n".join(lines) if lines else "NONE: no call is waiting")
             return 0
         if args.action == "decline":
-            if not operator_run.ID_RE.fullmatch(args.call):
+            name = Path(args.call).name  # the folder `session list` gives, or its name alone
+            if not operator_run.ID_RE.fullmatch(name):
                 parser.error(f"{args.call!r} is not a call's name")
-            print(session.decline(job, args.call, args.reason))
+            print(session.decline(job, name, args.reason))
             return 0
         try:
             lines = session.save(job, args.model)
