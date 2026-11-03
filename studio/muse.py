@@ -66,6 +66,8 @@ class MuseError(media.StepFailed):
 class Declined(MuseError):
     """Muse Image would not make this picture (its content policy)."""
 
+    code = "the picture was declined"  # what was asked, not an outage: no later try is owed it (studio/retry.py)
+
 
 class NoAnswer(MuseError):
     """The request never reached Meta, or the connection dropped: safe to send again."""

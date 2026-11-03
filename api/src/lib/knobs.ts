@@ -35,6 +35,7 @@ export const KNOBS = {
   ATTACHMENT_MB_HELD_PER_USER: { where: 'api', kind: 'int', default: 300, min: 0, max: 100_000 },
   // The API: the leases and the renders (lib/claim.ts, lib/droplet.ts, lib/progress.ts, lib/video-claim.ts).
   QUESTION_CLAIM_MINUTES: { where: 'api', kind: 'int', default: 20, min: 1, max: 1440 },
+  QUESTION_MAX_RUNS: { where: 'api', kind: 'int', default: 3, min: 1, max: 20 },
   VIDEO_STALE_MINUTES: { where: 'api', kind: 'int', default: 60, min: 1, max: 1440 },
   LESSON_HOLD_MINUTES: { where: 'api', kind: 'int', default: 60, min: 0, max: 1440 },
   VIDEO_MAX_ATTEMPTS: { where: 'api', kind: 'int', default: 2, min: 1, max: 10 },
@@ -63,6 +64,8 @@ export const KNOBS = {
   STUDIO_CLAUDE_DRAWS: { where: 'studio', kind: 'choice', default: 'math', choices: ['math', 'charts', 'brain'] },
   // Whether a model call the API fails waits for the teacher's own Claude session to answer it (studio/session.py).
   STUDIO_SESSION_FALLBACK: { where: 'studio', kind: 'choice', default: 'on', choices: ['on', 'off'] },
+  // The most a step of the studio may run before it is ended as failed (studio/retry.py): under the operator's hour.
+  STUDIO_STEP_MINUTES: { where: 'studio', kind: 'int', default: 40, min: 0, max: 600 },
 } as const satisfies Record<string, Spec>;
 
 export type KnobName = keyof typeof KNOBS;

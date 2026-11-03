@@ -136,9 +136,11 @@ class Api:
                 return {}
             raise
 
-    def claim(self, question_id: str) -> dict:
-        """Take or renew the lease on one question; returns it with its attachments."""
-        return self.request("POST", f"/api/questions/{question_id}/claim", {})
+    def claim(self, question_id: str, new_run: bool = False) -> dict:
+        """Take or renew the lease on one question; returns it with its attachments, and how many runs the API has
+        counted for it and allows (runs, maxRuns). new_run: this machine starts on the topic, and the API counts a
+        run (QUESTION_MAX_RUNS); once they are used, it gives the topic up and answers 409."""
+        return self.request("POST", f"/api/questions/{question_id}/claim", {"newRun": True} if new_run else {})
 
     def post_answer(self, question_id: str, body: dict) -> dict:
         return self.request("POST", f"/api/questions/{question_id}/answer", body)

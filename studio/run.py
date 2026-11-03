@@ -66,7 +66,7 @@ import time
 import traceback
 from pathlib import Path
 
-from studio import brain, checks, jobs, knobs, ledger, review, session
+from studio import brain, checks, jobs, knobs, ledger, retry, review, session
 from studio.api import Api, ApiError
 from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
@@ -77,7 +77,12 @@ from studio.steps import factcheck as factcheck_step
 
 STEPS = ledger.LESSON_STEPS  # ("request", "bundle", "audit", "factcheck", "post")
 DONE, FAILED, STOPPED = "DONE", "FAILED", "STOPPED"
-EXIT_CODES = {DONE: 0, FAILED: 1, STOPPED: 3}
+DEFERRED = "DEFERRED"  # `fail` left the topic, or its videos, to a later sweep (studio/retry.py)
+EXIT_CODES = {DONE: 0, FAILED: 1, STOPPED: 3, DEFERRED: 0}
+LEASE = "lease.json"  # {runs, maxRuns}: how many runs the API has handed this topic out for, and how many it allows
+# A lesson the fact audit or the fact-check refused is set aside (bundle.rejected-<n>.json), so the retry writes a
+# new one rather than checking the same one again.
+REJECTED = ("the fact audit failed", "the fact-check failed")
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
 REASON_MAX = 400  # POST /api/questions/:id/fail takes 500, with the step in front
 CYCLE_LOG_MAX = 1000  # what an Inkmory cycle log holds (docs/PLAN.md, section 11)
@@ -334,47 +339,64 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     # audit, when the bundle step's early audit passed the facts the bundle kept (studio/steps/audit.py): until Nov 2
     # it was billed twice on every topic.
     first = next((i for i, name in enumerate(STEPS) if not is_done(job, name)), len(STEPS))
+    running: dict[str, float] = {}  # the step under way and when it started, for the time limit
+    stop_watch = retry.watch(job, lambda: dict(running), lambda step, why: retry.end_process(job, step, why))
     for step in STEPS[first:] if not is_done(job, "post") else ():
         if step == "audit" and is_done(job, "audit"):
             print("audit: done beside the bundle", file=sys.stderr)
             continue
-        print(f"{step}: running", file=sys.stderr)
-        jobs.write(job / "run.current.json", {"started": started, "step": step, "steps": done_steps})
-        step_clock = time.monotonic()
-        try:
-            api = api or Api.from_env()
-            with ledger.at_step(step):
-                question = claim(api, question_id) if step != "post" else None
-                if question is not None:
-                    use_brain(job, question, check_brain, keys=keys)
-                if step != "post":  # the post makes the answer, which the videos' reports go on
-                    report_progress(reporter, job, api, {step: step_clock})
-                with renewing(api, question_id) if step != "post" else contextlib.nullcontext():
-                    if step == "bundle":
-                        reason = make_bundle(job, api, question, ask, note=note)
-                    else:
-                        reason = STEP_RUNNERS[step](job, api, question, ask)
-            result, code = DONE, ""
-        except Stop as e:
-            result, reason, code = STOPPED, str(e), failure_code(e.__cause__ if isinstance(e.__cause__, ApiError) else e)
-        except (StepFailed, brain.BrainError) as e:
-            # A claim that failed is the API's failure, not the step's: its cause says which.
-            result, reason, code = FAILED, str(e), failure_code(e.__cause__ if isinstance(e.__cause__, ApiError) else e)
-        except ApiError as e:
-            (result, reason), code = api_outcome(e), failure_code(e)
-        except Exception as e:  # a bug: the run still ends with its one line
-            traceback.print_exc(file=sys.stderr)
-            result, reason, code = FAILED, f"{type(e).__name__}: {e}", failure_code(e)
-        seconds = round(time.monotonic() - step_clock, 1)
-        done_steps.append({"step": step, "seconds": seconds, "result": result,
-                           **({"detail": one_line(reason)} if result == DONE and reason else {})})
-        print(f"{step}: {result.lower()} in {seconds:.0f}s", file=sys.stderr)
-        if result == FAILED and api is not None:
-            # The page says so until the retry starts it again, and bills the try that failed. A failed post
-            # too: the topic has no lesson yet, so its card would otherwise show the fact-check still running.
-            report_progress(reporter, job, api, {}, failed=(step,), ending=(step, seconds))
+        tried = 0
+        while True:  # once, and again after a wait while an outage explains the failure (studio/retry.py)
+            print(f"{step}: running", file=sys.stderr)
+            jobs.write(job / "run.current.json", {"started": started, "step": step, "steps": done_steps})
+            step_clock = time.monotonic()
+            running[step] = step_clock
+            try:
+                api = api or Api.from_env()
+                with ledger.at_step(step):
+                    question = claim(api, question_id, job) if step != "post" else None
+                    if question is not None:
+                        use_brain(job, question, check_brain, keys=keys)
+                    if step != "post":  # the post makes the answer, which the videos' reports go on
+                        report_progress(reporter, job, api, {step: step_clock})
+                    with renewing(api, question_id) if step != "post" else contextlib.nullcontext():
+                        if step == "bundle":
+                            reason = make_bundle(job, api, question, ask, note=note)
+                        else:
+                            reason = STEP_RUNNERS[step](job, api, question, ask)
+                result, code = DONE, ""
+            except Stop as e:
+                result, reason, code = STOPPED, str(e), failure_code(e.__cause__ if isinstance(e.__cause__, ApiError) else e)
+            except (StepFailed, brain.BrainError) as e:
+                # A claim that failed is the API's failure, not the step's: its cause says which.
+                result, reason, code = FAILED, str(e), failure_code(e.__cause__ if isinstance(e.__cause__, ApiError) else e)
+            except ApiError as e:
+                (result, reason), code = api_outcome(e), failure_code(e)
+            except Exception as e:  # a bug: the run still ends with its one line
+                traceback.print_exc(file=sys.stderr)
+                result, reason, code = FAILED, f"{type(e).__name__}: {e}", failure_code(e)
+            running.pop(step, None)
+            seconds = round(time.monotonic() - step_clock, 1)
+            done_steps.append({"step": step, "seconds": seconds, "result": result,
+                               **({"detail": one_line(reason)} if result == DONE and reason else {}),
+                               **({"code": code} if code and result == FAILED else {})})
+            print(f"{step}: {result.lower()} in {seconds:.0f}s", file=sys.stderr)
+            if result == FAILED and api is not None:
+                # The page says so until the retry starts it again, and bills the try that failed. A failed post
+                # too: the topic has no lesson yet, so its card would otherwise show the fact-check still running.
+                report_progress(reporter, job, api, {}, failed=(step,), ending=(step, seconds))
+            waits = retry.waits(code) if result == FAILED else ()
+            if tried >= len(waits):
+                break
+            print(f"{step}: {code}, so it is tried again in {waits[tried]:.0f}s "
+                  f"({tried + 2} of {len(waits) + 1}): {one_line(reason)}", file=sys.stderr)
+            time.sleep(waits[tried])
+            tried += 1
         if result != DONE:
             break
+    stop_watch()
+    if result == FAILED and code in REJECTED:
+        set_aside(job)
     reason = one_line(reason)
     if done_steps:  # a run with nothing left to do is not one the record should count
         record = {"started": started, "seconds": round(time.monotonic() - clock, 1), "result": result, "step": step,
@@ -387,12 +409,48 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     return result, step, reason
 
 
-def claim(api: Api, question_id: str) -> dict:
+def claim(api: Api, question_id: str, job: Path | None = None) -> dict:
+    """Take or renew the topic's lease; keep with the job how many runs the API has handed it out for and allows
+    (LEASE), which `fail` reads before it gives the topic up."""
     try:
-        return api.claim(question_id)
+        # The first claim of the topic on this machine starts a run, which the API counts; the operator's retry
+        # here, the claim before each later step and the renewals do not.
+        question = api.claim(question_id, new_run=True) if job is not None and not (job / LEASE).exists() \
+            else api.claim(question_id)
     except ApiError as e:
         result, reason = api_outcome(e)
         raise (Stop if result == STOPPED else StepFailed)(f"claim: {reason}") from e
+    if job is not None and isinstance(question, dict) and isinstance(question.get("maxRuns"), int):
+        lease = {"runs": question.get("runs"), "maxRuns": question["maxRuns"]}
+        if _read_json(job / LEASE) != lease:
+            jobs.write(job / LEASE, lease)
+    return question
+
+
+def _read_json(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def runs_left(job: Path) -> int:
+    """The runs the API still allows this topic after this one (0 when it did not say: an API without the count)."""
+    lease = _read_json(job / LEASE)
+    runs, most = lease.get("runs"), lease.get("maxRuns")
+    return max(0, most - runs) if isinstance(runs, int) and isinstance(most, int) else 0
+
+
+def set_aside(job: Path) -> None:
+    """A lesson the checks refused: its bundle kept as bundle.rejected-<n>.json, and any answers the operator's
+    session gave for it with it, so the retry writes the lesson again instead of checking the same one."""
+    n = len(list(job.glob("bundle.rejected-*.json"))) + 1
+    (job / "bundle.json").replace(job / f"bundle.rejected-{n}.json")
+    answers = session.root(job) / "answers"
+    if answers.is_dir():
+        answers.replace(session.root(job) / f"answers.rejected-{n}")
+    print(f"the lesson was refused, so the retry writes it again (kept as bundle.rejected-{n}.json)", file=sys.stderr)
 
 
 @contextlib.contextmanager
@@ -547,7 +605,8 @@ def _ended(job: Path, started: dict) -> tuple[str, str, str]:
     reason = f"the background run ended without an outcome; see {job / LOG}"
     with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
         log.write(json.dumps({"started": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "seconds": None, "result": FAILED,
-                              "step": "run", "reason": reason, "steps": []}) + "\n")
+                              "step": "run", "reason": reason, "code": "the background run ended without an outcome",
+                              "steps": []}) + "\n")
     return FAILED, "run", reason
 
 
@@ -599,14 +658,25 @@ def split_style(content: str) -> tuple[str, str]:
     return topic, style
 
 
+DOWNLOAD_WAITS_S = (2.0, 6.0)  # before the second and third try of a file the API did not hand over
+
+
 def download(api: Api, url: str) -> bytes | None:
-    """An attachment's bytes, or None once they are past the retention (410): the topic is still worth a lesson."""
-    try:
-        return api.download(url)
-    except ApiError as e:
-        if e.status == 410:
-            return None
-        raise
+    """An attachment's bytes, or None when they cannot be had: past the retention (410), deleted (404), or still not
+    handed over after DOWNLOAD_WAITS_S. The topic is still worth a lesson without the file; only a refused key
+    stops the run."""
+    for wait in (*DOWNLOAD_WAITS_S, None):
+        try:
+            return api.download(url)
+        except ApiError as e:
+            if e.status in (401, 403):
+                raise
+            if e.status in (404, 410) or wait is None:
+                if e.status not in (404, 410):
+                    print(f"request: a file could not be downloaded ({e}); the lesson is made without it", file=sys.stderr)
+                return None
+            time.sleep(wait * retry._scale())
+    return None
 
 
 def make_bundle(job: Path, api: Api, question: dict, ask, note: str = "") -> str:
@@ -705,6 +775,14 @@ def mark_failed(question_id: str, api: Api | None = None) -> tuple[str, str]:
         return videos.give_up(job, runs, api)  # the lesson stays; its videos are what failed
     if not runs or runs[-1]["result"] != FAILED:
         return STOPPED, "the last run did not fail"
+    left = runs_left(job)
+    if retry.deferrable(runs[-1].get("code")) and left:
+        # An outage, a kill or a hang: another machine, later, may well get through. The lease lapses, the queue
+        # hands the topic out again, and the API gives it up itself once its runs are used (QUESTION_MAX_RUNS).
+        # A later run here, on a machine that outlives the heartbeat, counts as a new one too.
+        (job / LEASE).unlink(missing_ok=True)
+        return DEFERRED, (f"not given up: {runs[-1]['step']} failed ({runs[-1]['code']}), which a later try may get "
+                          f"past, and the topic has {left} run(s) left; a later sweep takes it up again")
     reason = f"{runs[-1]['step']} failed: {runs[-1]['reason']}"
     try:
         (api or Api.from_env()).fail(question_id, reason)

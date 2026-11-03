@@ -21,8 +21,8 @@ folder, with the studio's own `run.log`, `videos.log`, `runs.jsonl` and `calls.j
 |---|---|
 | The operator | `teacher.py`: the skill file's steps, on the real `python -m studio` commands (`run --background`, `wait`, the one retry, `fail`, `videos --background`, `recover`, and `session save` for an `ASK`) |
 | The machine | a fresh jobs folder per heartbeat, whose detached runs are killed when the heartbeat ends, as the routine's container goes away |
-| The popsmosis API and R2 | `fakeapi.py`: in memory, with the real API's lease, one answer per topic, video attempts (`VIDEO_MAX_ATTEMPTS` 2), stale renders (`VIDEO_STALE_MINUTES` 60) and its queue; the upload's PUTs land in it too |
-| Time | the API's clock moves 61 minutes between heartbeats; a `wait` is 3 seconds, and 6 of them stand for the operator's hour |
+| The popsmosis API and R2 | `fakeapi.py`: in memory, with the real API's lease, the runs a topic is started on (`QUESTION_MAX_RUNS` 3), one answer per topic, video attempts (`VIDEO_MAX_ATTEMPTS` 2), stale or never-claimed renders handed on by its queue (`VIDEO_STALE_MINUTES` 60), a render quiet on its last attempt marked FAILED; the upload's PUTs land in it too |
+| Time | the API's clock moves 61 minutes between heartbeats; a `wait` is 3 seconds, and 10 of them on one step stand for the operator's hour; the studio's own waits after an outage are a fiftieth (`STUDIO_RETRY_SCALE`), and its time limit on a step is 20 seconds (`STUDIO_STEP_MINUTES`) |
 | The lesson's steps | the studio's own code: request, bundle (script, early audit, narration edit), audit, fact-check, post |
 | The brain | `fakes.py` answers each call as the tests' brain does (`studio/tests/sample.py`), at made-up prices |
 | The media steps | stand-ins that mark themselves done (the art asks the drawer, the arrows the helper); the **upload is the real step** |

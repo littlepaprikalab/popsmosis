@@ -7,7 +7,7 @@ import { validateString, containsPersonalInfo, parseLimit, secretError } from '.
 import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
 import { questionInclude, serializeQuestion, serializeQuestionForAgent } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
-import { claimMinutes } from '../lib/claim.js';
+import { claimMinutes, questionMaxRuns } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
 import { breakdownError } from '../lib/breakdown.js';
@@ -23,6 +23,11 @@ import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritt
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
 export const ANSWER_MAX_LENGTH = 5000;
+
+// Why a topic whose runs are used up was given up (lib/claim.ts), on its card: written by the queue's sweep, and by
+// the claim that would have started one run too many.
+const RUNS_USED_REASON = Prisma.sql`CASE WHEN runs = 1 THEN 'given up after 1 run, which ended before the lesson was posted.'
+  ELSE format('given up after %s runs, each of which ended before the lesson was posted.', runs) END`;
 
 export default async function questionRoutes(app: FastifyInstance) {
   // GET /api/questions/status — cheap "anything new?" probe for polling.
@@ -88,11 +93,27 @@ export default async function questionRoutes(app: FastifyInstance) {
   });
 
   // GET /api/questions/queue — agent: PENDING questions, oldest first, claimed
-  // for this caller so an overlapping run is handed different ones.
+  // for this caller so an overlapping run is handed different ones. One whose
+  // runs are used up (QUESTION_MAX_RUNS, lib/claim.ts) is given up instead.
   app.get('/api/questions/queue', { preHandler: [requireAgent] }, async (request) => {
     const { limit } = request.query as Record<string, string | undefined>;
     const take = parseLimit(limit, 5, 20);
     const agentId = request.agent!.id;
+    const maxRuns = questionMaxRuns();
+
+    // A topic whose lease lapsed with its runs used up: every machine it was started on went away before its
+    // lesson was posted (it outlasted the routine's hour, or died). Give it up rather than pay for it again, as
+    // POST /api/questions/:id/fail does, so its card says why.
+    await prisma.$executeRaw`
+      UPDATE questions
+      SET status = 'FAILED', progress = NULL, "failedReason" = ${RUNS_USED_REASON}
+      WHERE id IN (
+        SELECT id FROM questions
+        WHERE status = 'PENDING' AND runs >= ${maxRuns}
+          AND ("claimedAt" IS NULL OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))
+        FOR UPDATE SKIP LOCKED
+      )
+    `;
 
     // Select and claim in one statement. FOR UPDATE SKIP LOCKED is the whole
     // trick: a concurrent caller steps over rows this one has locked instead of
@@ -103,7 +124,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       SET "claimedAt" = now(), "claimedById" = ${agentId}
       WHERE id IN (
         SELECT id FROM questions
-        WHERE status = 'PENDING'
+        WHERE status = 'PENDING' AND runs < ${maxRuns}
           AND ("claimedAt" IS NULL OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))
         ORDER BY "createdAt" ASC, id ASC
         LIMIT ${take}
@@ -282,23 +303,36 @@ export default async function questionRoutes(app: FastifyInstance) {
   app.delete('/api/questions/:id', { preHandler: [requireUser] }, deleteQuestion(false));
   app.delete('/api/questions/:id/everything', { preHandler: [requireUser] }, deleteQuestion(true));
 
-  // POST /api/questions/:id/claim — agent: take, or renew, the lease on one
+  // POST /api/questions/:id/claim — agent: { newRun? }: take, or renew, the lease on one
   // question, and get it back with its attachments. The studio calls it before
   // each step that writes the lesson and every 5 minutes while one runs, so a
   // long bundle or a retried step keeps the question out of an overlapping run's queue. The lease is the
   // queue's own (lib/claim.ts): the same agent may always renew it, another
-  // agent only once it has lapsed.
+  // agent only once it has lapsed. With newRun, a machine starts on the topic: one more of its runs, or, with
+  // its runs used up, the topic is given up and the claim refused, so that machine stops.
   app.post('/api/questions/:id/claim', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const agentId = request.agent!.id;
+    const { newRun } = (request.body ?? {}) as { newRun?: unknown };
+    if (newRun !== undefined && typeof newRun !== 'boolean') return sendError(reply, 'VALIDATION_ERROR', 'newRun must be true or false');
+    const maxRuns = questionMaxRuns();
+    // Free, lapsed, or already this agent's.
+    const claimable = Prisma.sql`status = 'PENDING'
+      AND ("claimedAt" IS NULL OR "claimedById" = ${agentId} OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))`;
     const claimed = await prisma.$queryRaw<{ id: string }[]>`
       UPDATE questions
-      SET "claimedAt" = now(), "claimedById" = ${agentId}
-      WHERE id = ${id} AND status = 'PENDING'
-        AND ("claimedAt" IS NULL OR "claimedById" = ${agentId}
-             OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))
+      SET "claimedAt" = now(), "claimedById" = ${agentId} ${newRun ? Prisma.sql`, runs = runs + 1` : Prisma.empty}
+      WHERE id = ${id} AND ${claimable} ${newRun ? Prisma.sql`AND runs < ${maxRuns}` : Prisma.empty}
       RETURNING id
     `;
+    if (claimed.length === 0 && newRun) {
+      // Every machine started on it went away before its lesson was posted: give it up rather than pay for it
+      // again, as the queue's sweep does.
+      await prisma.$executeRaw`
+        UPDATE questions SET status = 'FAILED', progress = NULL, "failedReason" = ${RUNS_USED_REASON}
+        WHERE id = ${id} AND ${claimable} AND runs >= ${maxRuns}
+      `;
+    }
     await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
     const question = await prisma.question.findUnique({ where: { id }, include: questionInclude });
     if (!question) return sendError(reply, 'NOT_FOUND', 'Question not found');

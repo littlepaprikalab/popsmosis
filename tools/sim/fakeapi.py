@@ -3,10 +3,12 @@
 It serves the agent endpoints the studio and the operator call, with the rules the real API keeps
 (api/src/routes/questions.ts, api/src/routes/videos.ts, api/src/routes/answers.ts):
 
-    the topic queue and its lease (QUESTION_CLAIM_MINUTES), the claim and its renewal, a topic given up,
+    the topic queue and its lease (QUESTION_CLAIM_MINUTES), the claim and its renewal, the runs a topic is
+    started on (a claim with newRun counts one; QUESTION_MAX_RUNS, then it is given up), a topic given up,
     the one answer per topic (409 with answerId when it is this agent's own), the videos' claim and its
-    attempts (VIDEO_MAX_ATTEMPTS), a render gone quiet (VIDEO_STALE_MINUTES) handed on by the videos queue,
-    the videos given up, READY, and a signed upload URL whose PUT lands on /r2/... here.
+    attempts (VIDEO_MAX_ATTEMPTS), a render gone quiet (VIDEO_STALE_MINUTES) or videos never claimed handed
+    on by the videos queue, a render quiet on its last attempt marked FAILED, the videos given up, READY, and a
+    signed upload URL whose PUT lands on /r2/... here.
 
 Time is the simulation's: real time plus whatever advance() has added, so a lease can lapse or a render go
 stale between two heartbeats without waiting an hour.
@@ -58,11 +60,12 @@ class Fault:
 
 class State:
     def __init__(self, settings: dict | None = None, claim_minutes: float = 20, stale_minutes: float = 60,
-                 max_attempts: int = 2):
+                 max_attempts: int = 2, max_runs: int = 3):
         self.lock = threading.RLock()
         self.offset = 0.0
         self.settings = json.loads(json.dumps(settings or SETTINGS))
         self.claim_minutes, self.stale_minutes, self.max_attempts = claim_minutes, stale_minutes, max_attempts
+        self.max_runs = max_runs
         self.questions: dict[str, dict] = {}
         self.answers: dict[str, dict] = {}
         self.attachments: dict[str, bytes] = {}
@@ -92,7 +95,8 @@ class State:
                                "url": f"/api/attachments/{aid}", "expired": False})
             self.questions[qid] = {"id": qid, "content": content, "status": "PENDING", "attachments": listed,
                                    "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S.000Z"), "claimedAt": None,
-                                   "claimedBy": None, "failedReason": None, "answerId": None, "progress": None}
+                                   "claimedBy": None, "failedReason": None, "answerId": None, "progress": None,
+                                   "runs": 0}
             self.events.append(f"topic {qid} asked")
             return qid
 
@@ -106,7 +110,7 @@ class State:
                     "answer": a and a["id"], "videoStatus": a and a["videoStatus"],
                     "videoAttempts": a and a["videoAttempts"], "videoError": a and a["videoError"],
                     "videoUrls": a and {k: v for k, v in a.items() if k.endswith("VideoUrl") and v},
-                    "model": a and a.get("model"), "lessonBreakdown": a and a.get("breakdown"),
+                    "model": a and a.get("model"), "lessonBreakdown": a and a.get("breakdown"), "runs": q["runs"],
                     "videoBreakdown": a and a.get("videoBreakdown")}
 
     # --- the routes ---------------------------------------------------------------------------
@@ -119,7 +123,14 @@ class State:
         out["answer"] = None
         out["studio"] = self.settings
         out["brain"] = None
+        out["runs"], out["maxRuns"] = q["runs"], self.max_runs
         return out
+
+    def _runs_used(self, q: dict) -> None:
+        q["status"], q["progress"] = "FAILED", None
+        q["failedReason"] = (f"given up after {q['runs']} runs, each of which ended before the lesson was posted."
+                             if q["runs"] != 1 else "given up after 1 run, which ended before the lesson was posted.")
+        self.events.append(f"topic {q['id']} given up: its runs are used")
 
     def route(self, method: str, path: str, query: dict, body: dict | None, raw: bytes) -> tuple[int, dict | bytes | None]:
         now = self.now()
@@ -128,6 +139,9 @@ class State:
             return 200, self.settings
         if method == "GET" and path == "/api/questions/queue":
             limit = int(query.get("limit", ["1"])[0])
+            for q in self.questions.values():  # its runs used and none going on: given up
+                if q["status"] == "PENDING" and q["runs"] >= self.max_runs and self._lease_free(q):
+                    self._runs_used(q)
             free = [q for q in self.questions.values() if q["status"] == "PENDING" and self._lease_free(q)][:limit]
             for q in free:
                 q["claimedAt"], q["claimedBy"] = now, self.agent
@@ -140,6 +154,12 @@ class State:
             if not q:
                 return 404, _error("NOT_FOUND", "Question not found")
             if q["status"] == "PENDING" and (q["claimedBy"] == self.agent or self._lease_free(q)):
+                if (body or {}).get("newRun"):
+                    if q["runs"] >= self.max_runs:
+                        self._runs_used(q)
+                        return 409, _error("CONFLICT", "Question was marked failed")
+                    q["runs"] += 1
+                    self.events.append(f"topic {q['id']}: run {q['runs']} of {self.max_runs}")
                 q["claimedAt"], q["claimedBy"] = now, self.agent
                 return 200, self._question_out(q)
             return 409, _error("CONFLICT", {"ANSWERED": "Question already has an answer",
@@ -181,7 +201,7 @@ class State:
                                  "model": body.get("model"), "breakdown": body.get("breakdown"),
                                  "videoStatus": None, "videoAttempts": 0, "videoUpdatedAt": None, "videoError": None,
                                  "songVideoUrl": None, "lessonVideoUrl": None, "hookVideoUrl": None,
-                                 "videoBreakdown": None}
+                                 "videoBreakdown": None, "createdAt": now}
             q["status"], q["answerId"] = "ANSWERED", aid
             self.events.append(f"topic {q['id']} answered as {aid}")
             return 201, {"id": aid, "questionId": q["id"]}
@@ -214,11 +234,20 @@ class State:
             return 204, None
         if method == "GET" and path == "/api/videos/queue":
             limit = int(query.get("limit", ["1"])[0])
-            stale = [a for a in self.answers.values() if a["videoStatus"] == "RENDERING"
-                     and a["videoUpdatedAt"] < now - self.stale_minutes * 60
-                     and a["videoAttempts"] < self.max_attempts][:limit]
+            stale_before = now - self.stale_minutes * 60
+            for a in self.answers.values():  # quiet on its last attempt: no later run will take it
+                if a["videoStatus"] == "RENDERING" and a["videoUpdatedAt"] < stale_before \
+                        and a["videoAttempts"] >= self.max_attempts:
+                    a.update(videoStatus="FAILED", videoError="The machine making them went away before they were "
+                             f"finished, on their last attempt ({a['videoAttempts']} of {self.max_attempts}).")
+                    self.events.append(f"videos of {a['questionId']} failed: quiet on their last attempt")
+            videos_on = str(self.settings.get("knobs", {}).get("STUDIO_VIDEOS", "on")).lower() not in ("off", "0", "false", "no")
+            stale = [a for a in self.answers.values() if a["videoAttempts"] < self.max_attempts and (
+                (a["videoStatus"] == "RENDERING" and a["videoUpdatedAt"] < stale_before)
+                or (videos_on and a["videoStatus"] is None and a["bundle"] is not None
+                    and stale_before - 24 * 3600 < a["createdAt"] < stale_before))][:limit]
             for a in stale:
-                a.update(videoUpdatedAt=now, videoAttempts=a["videoAttempts"] + 1)
+                a.update(videoStatus="RENDERING", videoUpdatedAt=now, videoAttempts=a["videoAttempts"] + 1)
                 self.events.append(f"videos of {a['questionId']}: recovered as attempt {a['videoAttempts']}")
             return 200, {"data": [self._claim_out(a, False) for a in stale]}
         if (found := m(r"/api/answers/([^/]+)/video/fail", path)) and method == "POST":
@@ -259,7 +288,8 @@ class State:
 
     def _claim_out(self, a: dict, renewed: bool) -> dict:
         out = {"answerId": a["id"], "questionId": a["questionId"], "attempt": a["videoAttempts"],
-               "status": a["videoStatus"], "brain": None, "model": a.get("model"), "studio": self.settings}
+               "maxAttempts": self.max_attempts, "status": a["videoStatus"], "brain": None, "model": a.get("model"),
+               "studio": self.settings}
         if not renewed:
             out.update(bundle=a["bundle"], factcheck=a["factcheck"])
         return out

@@ -32,7 +32,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-MAX_HEARTBEATS = 4
+MAX_HEARTBEATS = 5
 BETWEEN_MIN = 61  # past the topic's lease (20) and a render's stale time (60)
 TOPIC = "ATP synthesis for my AP Bio exam"
 
@@ -105,6 +105,8 @@ SCENARIOS = [
     Scenario("audit-wrong-once", "lesson: audit", "the fact audit finds the facts wrong once", brain("fact audit", "wrong", 1)),
     Scenario("audit-wrong-always", "lesson: audit", "the fact audit finds the facts wrong every time",
              brain("fact audit", "wrong", 999)),
+    Scenario("factcheck-fails-once", "lesson: factcheck", "the fact-check refuses the first lesson",
+             brain("factcheck", "unsupported", 1)),
     Scenario("factcheck-fails-always", "lesson: factcheck", "every fact-check round finds every line unsupported",
              brain("factcheck", "unsupported", 999)),
     Scenario("spend-ceiling", "lesson: any call", "the topic's spend ceiling is below one bundle",
@@ -113,6 +115,8 @@ SCENARIOS = [
     Scenario("killed-in-bundle-once", "lesson: bundle", "the run dies mid-bundle once (machine restart, OOM)",
              brain("bundle", "kill", 1)),
     Scenario("killed-in-bundle-twice", "lesson: bundle", "the run dies mid-bundle twice", brain("bundle", "kill", 2)),
+    Scenario("killed-in-bundle-always", "lesson: bundle", "the run dies mid-bundle every time",
+             brain("bundle", "kill", 999)),
     Scenario("lesson-hangs-once", "lesson: bundle", "the bundle call never returns once (past the operator's hour)",
              brain("bundle", "hang", 1)),
     Scenario("lesson-hangs-always", "lesson: bundle", "the bundle call never returns, every time",
@@ -124,7 +128,7 @@ SCENARIOS = [
              api_faults=[{"match": r"POST /api/answers/[^/]+/video/claim", "status": 503, "times": 2}]),
     Scenario("art-fails-once", "videos: art", "the art step fails once", step("art", "fail", 1)),
     Scenario("audio-fails-twice", "videos: audio", "the song provider fails twice (Lyria outage)",
-             step("audio", "fail", 2, "the song provider failed")),
+             step("audio", "fail", 2, "the audio provider failed")),
     Scenario("timing-drifts-twice", "videos: timing", "the song drifts from its lyrics twice",
              step("timing", "fail", 2, "the song did not sing its lyrics")),
     Scenario("drawer-down-no-session", "videos: art", "Claude's drawer fails twice in a row, no fallback",

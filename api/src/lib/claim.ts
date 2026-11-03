@@ -12,6 +12,10 @@
  * can be trusted to say "I finished". Answering removes the question from the
  * queue on its own, by flipping status, so the happy path never needs to clear
  * a claim.
+ *
+ * Each machine that starts on a topic is counted, so a topic whose every run dies
+ * before its lesson is posted is given up after QUESTION_MAX_RUNS of them rather
+ * than paid for again on every sweep (questionMaxRuns, below).
  */
 import { knob } from './knobs.js';
 
@@ -26,6 +30,19 @@ export function claimMinutes(): number {
   // "no lease at all", so anything unparseable falls back rather than to zero.
   if (Number.isNaN(n) || n <= 0) return DEFAULT_CLAIM_MINUTES;
   return n;
+}
+
+// How many runs may start on one topic. A run whose machine goes away before it posts the lesson (it outlasted the
+// routine's hour, or died) lets the lease lapse, and the queue would hand the topic to the next run, which starts it
+// over and pays for it again, for ever. The studio's first claim on a machine says it starts a run ({ newRun: true }),
+// which counts it (the question's `runs`); once a topic has had this many, that claim and the queue give it up. Not
+// the hand-out: a run that stops before it tries the topic (its settings are wrong) uses none. Nor the claims that
+// renew a lease, before each step and every 5 minutes.
+const DEFAULT_MAX_RUNS = 3;
+
+export function questionMaxRuns(): number {
+  const n = parseInt(knob('QUESTION_MAX_RUNS') ?? '', 10);
+  return Number.isNaN(n) || n <= 0 ? DEFAULT_MAX_RUNS : n;
 }
 
 // Callers compare against `now() - make_interval(mins => claimMinutes())` in

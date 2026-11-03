@@ -58,10 +58,11 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain, jobs, knobs, ledger, media, session
+from studio import brain, jobs, knobs, ledger, media, retry, session
 from studio.api import Api, ApiError
-from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, failure_code, job_chosen,
-                        job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl, record_interrupted)
+from studio.run import (BRAIN_FILE, DEFERRED, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, failure_code,
+                        job_chosen, job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl,
+                        record_interrupted)
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
@@ -69,7 +70,7 @@ TAIL = ("timeline", "arrows", "render", "upload")
 LOCAL_TAIL = ("timeline", "arrows", "render")  # a local job has no posted lesson to upload the videos to
 STARTED, RUNNING, RECOVER, NONE = "STARTED", "RUNNING", "RECOVER", "NONE"
 UNAVAILABLE = "the videos cannot be made here"  # the code of a run that stopped on unavailable()
-CLAIM = "videos.json"  # {answerId, attempt}: the attempt this machine holds
+CLAIM = "videos.json"  # {answerId, attempt, maxAttempts}: the attempt this machine holds, and how many the API allows
 BACKGROUND = "videos.background.json"  # {pid, runs}: the detached run and where its outcome will be
 LOG = "videos.log"
 WAIT_MINUTES = 9.0  # under the 10 minutes one tool command may take
@@ -124,6 +125,15 @@ def answer_of(job: Path) -> str | None:
         return None
 
 
+def attempts_left(job: Path) -> int:
+    """The attempts at the videos the API still allows after the one held (0 when it did not say)."""
+    try:
+        claimed = json.loads((job / CLAIM).read_text(encoding="utf-8"))
+        return max(0, int(claimed["maxAttempts"]) - int(claimed["attempt"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        return 0
+
+
 def held_attempt(job: Path) -> int | None:
     try:
         return int(json.loads((job / CLAIM).read_text(encoding="utf-8"))["attempt"])
@@ -141,7 +151,8 @@ def claim(api: Api, job: Path) -> dict:
     except ApiError as e:
         result, reason = api_outcome(e)
         raise (Stop if result == STOPPED else media.StepFailed)(f"claim: {reason}") from e
-    jobs.write(job / CLAIM, {"answerId": answer, "attempt": claimed["attempt"]})
+    jobs.write(job / CLAIM, {"answerId": answer, "attempt": claimed["attempt"],
+                             **({"maxAttempts": claimed["maxAttempts"]} if isinstance(claimed.get("maxAttempts"), int) else {})})
     return claimed
 
 
@@ -269,7 +280,12 @@ def _videos(job: Path, api: Api | None, ask, session_answers: bool = False) -> t
     if why:  # the render goes quiet and `recover` hands it on once the setting or the key is fixed
         return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
 
-    return record.finish(*_make(job, api, ask, record, TAIL))
+    # No step runs past its time limit: one that does ends the run, recorded as failed there (studio/retry.py).
+    stop_watch = retry.watch(job, lambda: dict(record.running), lambda step, why: retry.end_process(job, step, why))
+    try:
+        return record.finish(*_make(job, api, ask, record, TAIL))
+    finally:
+        stop_watch()
 
 
 def _make(job: Path, api: Api | None, ask, record: Record, tail: tuple[str, ...]) -> tuple[str, str, str]:
@@ -315,10 +331,14 @@ def _step_done(job: Path, name: str) -> bool:
 
 def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: Record,
                fresh: bool = False) -> tuple[str, str, str, bool]:
-    """Run steps in order from the first not done (all of them when fresh); (result, step, reason, ran any)."""
-    first = 0 if fresh else next((i for i, name in enumerate(steps) if not _step_done(job, name)), len(steps))
+    """Run steps in order from the first not done (all of them when fresh); (result, step, reason, ran any). A step
+    whose failure an outage explains is tried again after a wait, and a song or narration the timing step deleted is
+    made again once (studio/retry.py), from the first step of these that is then not done."""
+    i = 0 if fresh else next((i for i, name in enumerate(steps) if not _step_done(job, name)), len(steps))
     result, step, reason, ran = DONE, steps[-1], "already done", False
-    for step in steps[first:]:
+    tried: dict[str, int] = {}  # step -> further tries made in this run
+    while i < len(steps):
+        step = steps[i]
         record.begin(step)
         clock = time.monotonic()
         code = ""
@@ -345,8 +365,18 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: 
         # already carried the last bill, and a run that was stopped has nothing to report.
         if api is not None and (result == FAILED or (result == DONE and step != "upload")):
             record.report(api)
-        if result != DONE:
+        if result == DONE:
+            i += 1
+            continue
+        waits = retry.waits(code) if result == FAILED else ()
+        if tried.get(step, 0) >= len(waits):
             break
+        wait = waits[tried.get(step, 0)]
+        tried[step] = tried.get(step, 0) + 1
+        print(f"{step}: {code}, so it is tried again in {wait:.0f}s: {one_line(reason)}", file=sys.stderr)
+        time.sleep(wait)
+        # From the failed step, or an earlier one it undid (the timing step deletes a song that drifted).
+        i = min(i, next((j for j, name in enumerate(steps) if not _step_done(job, name)), i))
     return result, step, reason, ran
 
 
@@ -515,7 +545,8 @@ def rebuild(job: Path, item: dict) -> None:
     default, effort = default_brain(item.get("studio"))
     keep_brain(job, item.get("brain") or brain.choice_for_model(item.get("model")) or default, effort)
     jobs.keep_studio_settings(job, item.get("studio"))  # who paints its art
-    jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
+    jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"],
+                             **({"maxAttempts": item["maxAttempts"]} if isinstance(item.get("maxAttempts"), int) else {})})
 
 
 def _read_as_now(path: Path) -> dict | None:
@@ -538,6 +569,12 @@ def give_up(job: Path, runs: list[dict], api: Api | None = None) -> tuple[str, s
     answer, attempt = answer_of(job), held_attempt(job)
     if not answer or attempt is None:
         return STOPPED, "this job holds no attempt at the videos"
+    left = attempts_left(job)
+    if retry.deferrable(last.get("code")) and left:
+        # An outage, a kill or a hang: the render is left RENDERING, goes quiet, and once it is stale the video
+        # queue hands it to a later sweep as its next attempt (`recover`), until VIDEO_MAX_ATTEMPTS.
+        return DEFERRED, (f"not given up: {last['step']} failed ({last['code']}), which a later try may get past, "
+                          f"and {left} attempt(s) are left; a later sweep takes the videos up once they go stale")
     reason = one_line(f"{last['step']} failed: {last['reason']}")
     try:
         # With what the failed tries took and cost, so the page's bill counts them too.

@@ -60,6 +60,8 @@ class GeminiError(media.StepFailed):
 class Declined(GeminiError):
     """Gemini would not make this picture."""
 
+    code = "the picture was declined"  # what was asked, not an outage: no later try is owed it (studio/retry.py)
+
 
 def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tuple[int, dict, bytes]:
     request = urllib.request.Request(url, data=body, headers={"User-Agent": USER_AGENT, **headers}, method=method)

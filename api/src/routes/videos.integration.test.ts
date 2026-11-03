@@ -3,7 +3,8 @@
  * unless INTEGRATION=1.
  *
  * Covers: starting and renewing an attempt, refusing a second run, the recovery queue
- * for a render whose machine died, the attempt cap, and giving the videos up.
+ * for a render whose machine died and for videos never claimed, the attempt cap, giving
+ * up a render that went quiet on its last attempt, and giving the videos up.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -30,14 +31,14 @@ d('video claim and queue', () => {
   const queue = (key = keyA, limit = 1) =>
     app.inject({ method: 'GET', url: `/api/videos/queue?limit=${limit}`, headers: asAgent(key) });
   const row = (id: string) => prisma.answer.findUniqueOrThrow({ where: { id } });
-  const goQuiet = (id: string) =>
-    prisma.answer.update({ where: { id }, data: { videoUpdatedAt: new Date(Date.now() - 2 * 60 * 60_000) } });
+  const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60_000);
+  const goQuiet = (id: string) => prisma.answer.update({ where: { id }, data: { videoUpdatedAt: hoursAgo(2) } });
 
-  async function lesson(opts: { bundle?: boolean; agentId?: string; brain?: string } = {}) {
+  async function lesson(opts: { bundle?: boolean; agentId?: string; brain?: string; createdAt?: Date } = {}) {
     const q = await prisma.question.create({ data: { userId, content: 'ATP synthesis', status: 'ANSWERED', brain: opts.brain } });
     const a = await prisma.answer.create({
       data: {
-        questionId: q.id, agentId: opts.agentId ?? agentA, content: 'A lesson.',
+        questionId: q.id, agentId: opts.agentId ?? agentA, content: 'A lesson.', createdAt: opts.createdAt,
         ...(opts.bundle !== false && { bundle: BUNDLE, factcheck: FACTCHECK }),
       },
     });
@@ -58,6 +59,7 @@ d('video claim and queue', () => {
 
   beforeEach(async () => {
     delete process.env.VIDEO_MAX_ATTEMPTS;
+    delete process.env.STUDIO_VIDEOS;
     await prisma.$executeRawUnsafe('TRUNCATE replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
     const { generateApiKey } = await import('../lib/apikey.js');
     const ka = generateApiKey();
@@ -73,14 +75,16 @@ d('video claim and queue', () => {
     const id = await lesson();
     const first = await claim(id);
     expect(first.statusCode).toBe(200);
-    expect(first.json()).toMatchObject({ answerId: id, attempt: 1, status: 'RENDERING', bundle: BUNDLE, factcheck: FACTCHECK, brain: null });
+    expect(first.json()).toMatchObject({
+      answerId: id, attempt: 1, maxAttempts: 2, status: 'RENDERING', bundle: BUNDLE, factcheck: FACTCHECK, brain: null,
+    });
     expect((await row(id)).videoAttempts).toBe(1);
 
     const before = (await row(id)).videoUpdatedAt!;
     await new Promise((r) => setTimeout(r, 20));
     const renewed = await claim(id, { attempt: 1 });
     expect(renewed.statusCode).toBe(200);
-    expect(renewed.json().attempt).toBe(1);
+    expect(renewed.json()).toMatchObject({ attempt: 1, maxAttempts: 2 });
     expect(renewed.json().bundle).toBeUndefined(); // the heartbeat does not resend the lesson's plan
     expect((await row(id)).videoUpdatedAt!.getTime()).toBeGreaterThan(before.getTime());
 
@@ -119,24 +123,98 @@ d('video claim and queue', () => {
     await goQuiet(id);
     const recovered = (await queue()).json().data;
     expect(recovered).toHaveLength(1);
-    expect(recovered[0]).toMatchObject({ answerId: id, attempt: 2, status: 'RENDERING', bundle: BUNDLE, brain: null });
+    expect(recovered[0]).toMatchObject({ answerId: id, attempt: 2, maxAttempts: 2, status: 'RENDERING', bundle: BUNDLE, brain: null });
     expect((await queue()).json().data).toEqual([]); // just claimed: alive again
 
     // The run that went quiet comes back: its attempt is no longer the current one.
     expect((await claim(id, { attempt: 1 })).statusCode).toBe(409);
     expect((await fail(id, { reason: 'late', attempt: 1 })).statusCode).toBe(409);
 
+    // An admin raises the cap before the next sweep: the third attempt is handed on.
     await goQuiet(id);
-    expect((await queue()).json().data).toEqual([]); // two attempts used: the default cap
     process.env.VIDEO_MAX_ATTEMPTS = '3';
-    expect((await queue()).json().data[0].attempt).toBe(3);
+    expect((await queue()).json().data[0]).toMatchObject({ attempt: 3, maxAttempts: 3 });
+  });
+
+  it('gives up a render that went quiet on its last attempt, so the droplet says why and shows the lesson', async () => {
+    const id = await lesson();
+    await claim(id);
+    await goQuiet(id);
+    expect((await queue()).json().data[0].attempt).toBe(2);
+    expect((await queue()).json().data).toEqual([]); // alive on its last attempt: left to it
+    expect((await row(id)).videoStatus).toBe('RENDERING');
+
+    // Another agent's, quiet on its last attempt too, is not this caller's to give up.
+    const theirs = await lesson({ agentId: (await prisma.agent.findFirstOrThrow({ where: { name: 'other' } })).id });
+    await prisma.answer.update({ where: { id: theirs }, data: { videoStatus: 'RENDERING', videoAttempts: 2, videoUpdatedAt: hoursAgo(2) } });
+
+    await goQuiet(id);
+    expect((await queue()).json().data).toEqual([]);
+    expect(await row(id)).toMatchObject({
+      videoStatus: 'FAILED', videoAttempts: 2,
+      videoError: 'The machine making them went away before they were finished, on their last attempt (2 of 2).',
+    });
+    expect((await row(theirs)).videoStatus).toBe('RENDERING');
+
+    // The run that went quiet comes back too late, and nobody may start a third attempt.
+    expect((await claim(id, { attempt: 2 })).json().error.message).toMatch(/given up after 2 attempt/);
+    // The learner's card: the lesson's text, and why there are no videos.
+    const { SESSION_EXPIRES_IN } = await import('../lib/session.js');
+    const cookie = `popsmosis_session=${app.jwt.sign({ sub: userId }, { expiresIn: SESSION_EXPIRES_IN })}`;
+    const card = await app.inject({
+      method: 'GET', url: `/api/questions/${(await row(id)).questionId}`, headers: { cookie, 'x-requested-with': 'XMLHttpRequest' },
+    });
+    expect(card.json().answer).toMatchObject({
+      content: 'A lesson.', awaitingVideos: false,
+      video: { status: 'FAILED', error: 'The machine making them went away before they were finished, on their last attempt (2 of 2).' },
+    });
+  });
+
+  it('hands on videos never claimed a stale time after the post, for a day, oldest first with the stale renders', async () => {
+    const other = (await prisma.agent.findFirstOrThrow({ where: { name: 'other' } })).id;
+    const fresh = await lesson(); // just posted: its own claim may still come
+    const old = await lesson({ createdAt: hoursAgo(26) }); // past the day: a text-only lesson from before the videos
+    await lesson({ bundle: false, createdAt: hoursAgo(2) }); // nothing to make videos from
+    await lesson({ agentId: other, createdAt: hoursAgo(2) });
+    const unclaimed = await lesson({ createdAt: hoursAgo(2) });
+    const quiet = await lesson({ createdAt: hoursAgo(3) });
+    await claim(quiet);
+    await goQuiet(quiet);
+
+    // One at a time, the older first, whichever way it was stranded.
+    expect((await queue()).json().data).toEqual([expect.objectContaining({ answerId: quiet, attempt: 2 })]);
+    const handed = (await queue()).json().data;
+    expect(handed).toHaveLength(1);
+    expect(handed[0]).toMatchObject({
+      answerId: unclaimed, attempt: 1, maxAttempts: 2, status: 'RENDERING', bundle: BUNDLE, factcheck: FACTCHECK,
+    });
+    expect((await queue(keyA, 5)).json().data).toEqual([]);
+    expect((await row(fresh)).videoStatus).toBeNull();
+    expect((await row(old)).videoStatus).toBeNull();
+
+    // Claimed now, it is a render like any other: alive while it renews, recovered once it goes quiet.
+    expect((await claim(unclaimed, { attempt: 1 })).statusCode).toBe(200);
+    await goQuiet(unclaimed);
+    expect((await queue()).json().data[0]).toMatchObject({ answerId: unclaimed, attempt: 2 });
+  });
+
+  it('leaves videos never claimed alone while the videos are turned off, but still recovers a render', async () => {
+    const unclaimed = await lesson({ createdAt: hoursAgo(2) });
+    const quiet = await lesson({ createdAt: hoursAgo(3) });
+    await claim(quiet);
+    await goQuiet(quiet);
+    process.env.STUDIO_VIDEOS = 'off';
+    expect((await queue(keyA, 5)).json().data.map((x: { answerId: string }) => x.answerId)).toEqual([quiet]);
+    expect((await row(unclaimed)).videoStatus).toBeNull();
+    process.env.STUDIO_VIDEOS = 'lesson'; // the lesson video alone is still videos
+    expect((await queue(keyA, 5)).json().data.map((x: { answerId: string }) => x.answerId)).toEqual([unclaimed]);
   });
 
   it('never recovers videos that were given up, never started, finished, or another agent\'s', async () => {
     const failed = await lesson();
     await claim(failed);
     await fail(failed, { reason: 'the song was refused', attempt: 1 });
-    await lesson(); // never started: a lesson from before the videos, or with them turned off
+    await lesson({ createdAt: hoursAgo(48) }); // never started: a lesson from before the videos, or with them turned off
     const ready = await lesson();
     await prisma.answer.update({ where: { id: ready }, data: { videoStatus: 'READY', videoUpdatedAt: new Date(0) } });
     const theirs = await lesson({ agentId: (await prisma.agent.findFirstOrThrow({ where: { name: 'other' } })).id });

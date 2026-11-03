@@ -46,8 +46,9 @@ class FakeApi:
         self._call("studio_settings")
         return self.studio
 
-    def claim(self, question_id):
+    def claim(self, question_id, new_run=False):
         self._call("claim", question_id)
+        self.new_runs = getattr(self, "new_runs", 0) + bool(new_run)
         return {**self.question, **({"studio": self.studio} if self.studio else {})}
 
     def report_progress(self, question_id, progress):
@@ -279,21 +280,24 @@ def test_running_again_resumes_at_the_step_that_failed(jobs_root):
     assert len(operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")) == 2
 
 
-def test_a_failed_fact_check_is_retried_on_the_same_bundle_and_nothing_is_posted(jobs_root):
+def test_a_lesson_the_fact_check_refused_is_written_again_on_the_retry_and_nothing_is_posted(jobs_root):
+    """Until Nov 3 the retry checked the same bundle again, and a lesson refused once was refused again: the topic
+    was given up (docs/operator-failures.md). The refused one is kept beside it, for a look."""
     api = FakeApi()
     result, step, reason = operator_run.run("q1", api=api, ask=FakeBrain(verdict="UNSUPPORTED"))
     assert (result, step) == ("FAILED", "factcheck")
     assert reason.endswith("is unsupported and has no correction: wrong")
     assert "post_answer" not in api.names()
+    assert not (jobs_root / "q1" / "bundle.json").exists() and (jobs_root / "q1" / "bundle.rejected-1.json").exists()
 
     ask = FakeBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.labels == ["factcheck round 1"]  # the bundle and its audit were kept
+    assert ask.labels == ["script", "bundle", "narration edit", "fact audit", "factcheck round 1"]
 
 
 def test_a_new_bundle_runs_every_step_after_it(jobs_root):
     operator_run.run("q1", api=FakeApi(), ask=FakeBrain(verdict="UNSUPPORTED"))
-    (jobs_root / "q1" / "bundle.json").unlink()  # by hand: the audit.json and factcheck.json beside it are now stale
+    assert not (jobs_root / "q1" / "bundle.json").exists()  # set aside: the audit.json and factcheck.json are stale
     ask = FakeBrain()
     assert operator_run.run("q1", api=FakeApi(), ask=ask)[0] == "DONE"
     assert ask.labels == ["script", "bundle", "narration edit", "fact audit", "factcheck round 1"]
@@ -420,7 +424,9 @@ def test_only_a_question_id_names_a_job():
 
 
 def test_a_step_file_cut_short_counts_as_not_done(jobs_root):
-    operator_run.run("q1", api=FakeApi(), ask=FakeBrain(verdict="UNSUPPORTED"))
+    api = FakeApi()
+    api.errors["post_answer"] = ApiError(400, "VALIDATION_ERROR", "refused")  # the lesson is made, and not posted
+    operator_run.run("q1", api=api, ask=FakeBrain())
     (jobs_root / "q1" / "factcheck.json").write_text('{"status": "pass')  # written by an older, non-atomic studio
     ask = FakeBrain()
     assert operator_run.run("q1", api=FakeApi(), ask=ask)[0] == "DONE"
@@ -693,7 +699,7 @@ def test_a_default_changed_after_the_check_to_one_that_cannot_run_stops_rather_t
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
     monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
     api = FakeApi(studio={"brain": {"default": "claude"}})
-    api.claim = lambda question_id: {**QUESTION, "studio": {"brain": {"default": "muse-spark"}}}  # changed meanwhile
+    api.claim = lambda question_id, new_run=False: {**QUESTION, "studio": {"brain": {"default": "muse-spark"}}}  # changed meanwhile
     result, step, reason = operator_run.run("q1", api=api)
     assert (result, step, reason) == ("STOPPED", "request", "the studio's settings are wrong: Muse Spark 1.3 needs MODEL_API_KEY")
 
@@ -717,12 +723,24 @@ def test_an_api_that_cannot_be_reached_stops_the_run_rather_than_failing_the_top
     assert not (jobs_root / "q1").exists()  # nothing recorded that `fail` could give the topic up for
 
 
+class DownForTheFactCheck(SpyBrain):
+    """SpyBrain whose fact-check calls fail, as in an outage, while `down`."""
+
+    down = True
+
+    def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+        if self.down and (label or "").startswith("factcheck"):
+            self.brains.append((brain.provider(), brain.brain_model()))
+            raise brain.BrainError("claude-opus-5-5: Error code: 529 - overloaded_error")
+        return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+
 def test_a_lesson_begun_on_the_default_stays_on_it_when_the_default_changes(jobs_root):
     api = FakeApi(studio={"brain": {"default": "claude"}})
-    ask = SpyBrain(verdict="UNSUPPORTED")  # the fact-check fails, so a retry comes
-    assert operator_run.run("q1", api=api, ask=ask)[:2] == ("FAILED", "factcheck")
+    ask = DownForTheFactCheck()  # the fact-check's calls fail, so a retry comes (a lesson the fact-check refuses
+    assert operator_run.run("q1", api=api, ask=ask)[:2] == ("FAILED", "factcheck")  # is written again instead)
     api.studio = {"brain": {"default": "muse-spark"}}  # an admin changes the default meanwhile
-    ask.verdict = "SUPPORTED"
+    ask.down = False
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
     assert {provider for provider, _ in ask.brains} == {"claude"}  # the bundle's brain checked it too
     assert operator_run.job_brain(jobs_root / "q1") == "claude"
@@ -810,8 +828,9 @@ def test_each_step_keeps_the_line_it_ended_on_and_a_failed_one_its_reason(jobs_r
     assert [(s["step"], s.get("detail")) for s in record["steps"]] == [
         ("request", "1 image(s), 1 text file(s)"), ("bundle", "AP Biology / the light reactions"),
         ("audit", "3 fact(s) judged by course knowledge, in 1 call(s)"),
-        ("factcheck", "passed in 1 round(s), 0 correction(s)"), ("post", None)]
+        ("factcheck", "passed in 1 round(s), 0 correction(s)")] + [("post", None)] * 4  # tried again 3 times
     assert record["reason"] == "503 UNAVAILABLE: down"
+    assert [s.get("code") for s in record["steps"][-4:]] == ["the API answered 503"] * 4
     # No media step has run, so the summary is the one paragraph for the cycle log.
     assert "\n" not in operator_run.summary("q1")
 

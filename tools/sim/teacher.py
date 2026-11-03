@@ -13,8 +13,9 @@ what the skill file says, and nothing more:
     ASK      while a run waits on the session (studio/session.py): a stand-in subagent answers each call from its
              folder, as the test brain would, and `session save` checks and saves the answers
 
-Time is scaled: a `wait` is WAIT_MINUTES (seconds, not nine minutes), and RUNNING_BUDGET of them stand for the
-skill's hour.
+Time is scaled: a `wait` is WAIT_MINUTES (seconds, not nine minutes), and RUNNING_BUDGET of them on the same
+step stand for the skill's hour. The studio's own waits are scaled the same way: its tries after an outage
+(STUDIO_RETRY_SCALE) and its time limit on a step (STUDIO_STEP_MINUTES, under the budget).
 """
 
 from __future__ import annotations
@@ -37,7 +38,8 @@ PAID_KEYS = ("ANTHROPIC_API_KEY", "POPSMOSIS_ANTHROPIC_API_KEY", "MODEL_API_KEY"
              "BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "SONG_PROVIDER", "ART_PROVIDER")
 FAKE_KEY = "sim-not-a-key"  # every provider is a stand-in; a call that slipped past one is refused, never billed
 WAIT_MINUTES = 0.05
-RUNNING_BUDGET = 6
+RUNNING_BUDGET = 10  # waits on the same step: 30 seconds, the skill's hour
+STEP_MINUTES = 0.33  # 20 seconds: under the budget, as 40 minutes is under the hour
 SESSION_MODEL = "claude-opus-5-5"
 
 
@@ -49,6 +51,7 @@ def environment(sim: Path, jobs: Path, api_url: str, extra: dict | None = None) 
         "POPSMOSIS_API_URL": api_url, "POPSMOSIS_API_KEY": "sk_pop_sim",
         "POPSMOSIS_ANTHROPIC_API_KEY": FAKE_KEY, "GEMINI_API_KEY": FAKE_KEY, "MODEL_API_KEY": FAKE_KEY,
         "STUDIO_SESSION_WAIT_S": "40",
+        "STUDIO_RETRY_SCALE": "0.02", "STUDIO_STEP_MINUTES": str(STEP_MINUTES),
     })
     for name, value in (extra or {}).items():
         if value is None:
@@ -165,14 +168,15 @@ class Teacher:
         machine.cmd("fail", qid)
 
     def wait(self, machine: Machine, qid: str) -> str:
-        running = 0
+        running, on = 0, None
         while True:
             line = machine.cmd("wait", qid, "--minutes", str(WAIT_MINUTES))
             if line.startswith("ASK"):
                 self.answer(machine, qid)
                 continue
             if line.startswith("RUNNING"):
-                running += 1
+                step = line.split()[1].rstrip(":")
+                running, on = (running + 1, on) if step == on else (1, step)
                 if running >= RUNNING_BUDGET:
                     self.log.append(f"stopped waiting on {qid} after the wait budget (the skill's hour)")
                     return "GAVE UP WAITING"

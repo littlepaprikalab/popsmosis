@@ -53,9 +53,10 @@ The runner needs these in its environment:
 | `STUDIO_VIDEOS` | optional: `lesson` leaves the song out from the start (a lesson written while it is set has no lyrics to write or fact-check; the lesson video alone, no hook clip); `off` makes text-only droplets (no claim, no media steps, no recovery) |
 | `STUDIO_CLAUDE_DRAWS` | optional: what Claude draws as SVG whoever paints the rest. `math` (default): charts, graphs and a math lesson's pictures; `charts`: charts and graphs; `brain`: only on Claude's brain. On a Muse topic it draws them on `POPSMOSIS_ANTHROPIC_API_KEY` |
 | `STUDIO_SESSION_FALLBACK` | optional: `on` (default) has a model call the API fails wait for the teacher's own session to answer it (`studio/session.py`; the skill file's "When the studio asks your session"); `off` fails the call, and the step |
+| `STUDIO_STEP_MINUTES` | optional: the most one step of the studio may run before it is ended as failed, in minutes (default 40; 0: no limit) |
 
 `ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL`, `GEMINI_TTS_VOICE`, `STUDIO_VIDEOS`,
-`STUDIO_CLAUDE_DRAWS` and `STUDIO_SESSION_FALLBACK` are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the
+`STUDIO_CLAUDE_DRAWS`, `STUDIO_SESSION_FALLBACK` and `STUDIO_STEP_MINUTES` are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the
 one here from the next run (README, [Knobs](../README.md#knobs)).
 
 The brain, the singer and the painters are not set here. Which brain writes the lessons,
@@ -219,7 +220,10 @@ runs in the background too and the run waits for it (`python -m studio wait <id>
 most 9 minutes a call). The studio renews the topic's claim before each step and every 5
 minutes while one runs, so the default `QUESTION_CLAIM_MINUTES` of 20 holds a step of any
 length; keep it above 5 (on the API, or on `/admin/studio`). A lapsed claim, once the run's
-machine is gone, lets a later run start the topic again.
+machine is gone, lets a later run start the topic again, up to `QUESTION_MAX_RUNS` (3) runs
+in all: the studio's first claim on a machine counts a run (`{ newRun: true }`), and a topic
+whose runs are used is given up, by that claim or by the queue, so a topic that outlasts the
+hour every time is not paid for on every sweep. A run stopped by wrong settings uses none.
 
 Its videos take longer: the run starts them in the background as soon as the lesson is
 posted, answers follow-ups meanwhile, then waits for them (`python -m studio wait <id>`,
@@ -228,7 +232,10 @@ claimed the same way (`POST /api/answers/:id/video/claim`), renewed before every
 step. A render that stops reporting for `VIDEO_STALE_MINUTES` (60) has died with its
 machine: the next run takes it from `GET /api/videos/queue` (`python -m studio recover`)
 and makes it again from the lesson the API stored, up to `VIDEO_MAX_ATTEMPTS` (2) attempts
-in all. Videos that fail twice in a row are given up (`python -m studio fail <id>`): the
+in all; one that goes quiet on its last attempt is marked FAILED there. Videos never claimed
+`VIDEO_STALE_MINUTES` after their lesson was posted (both claims failed, or the machine died
+in between) are handed on the same way, for a day after, unless `STUDIO_VIDEOS` is `off`.
+Videos that fail twice in a row are given up (`python -m studio fail <id>`): the
 lesson stays, and the droplet says why.
 
 #### Wake the routine on write

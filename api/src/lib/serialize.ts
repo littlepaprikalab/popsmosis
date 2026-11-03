@@ -7,7 +7,7 @@ import { endToEndOf, serializeBreakdown } from './breakdown.js';
 import { serializeTags } from './tags.js';
 import { termsCurrent } from './terms.js';
 import { awaitingVideos, lessonProgress, readProgress, videoProgress } from './progress.js';
-import { claimMinutes } from './claim.js';
+import { claimMinutes, questionMaxRuns } from './claim.js';
 import { pastRetention } from './attachments.js';
 
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
@@ -100,6 +100,7 @@ type QuestionRow = {
   failedReason: string | null;
   createdAt: Date;
   claimedAt: Date | null;
+  runs: number;
   progress: unknown;
   brain: string | null;
   user: { id: string; name: string | null; avatarUrl: string | null } | null;
@@ -217,11 +218,15 @@ export function serializeReplyForAgent(r: ReplyRow) {
   return rest;
 }
 
-/** A question as the teacher reads it (the queues, the claim): the request and its files, never who asked. */
+/**
+ * A question as the teacher reads it (the queues, the claim): the request and its files, never who asked. With the
+ * runs started on it (after a claim with newRun, that one included) and the most there may be (lib/claim.ts): while
+ * runs is below maxRuns a later sweep starts it again, so a run that fails for an outage can leave it to that one.
+ */
 export function serializeQuestionForAgent(q: QuestionRow, now = new Date()) {
   const { user: _user, isOwner: _isOwner, canDelete: _canDelete, answer, ...rest } = serializeQuestion(q, undefined, now);
   const replies = q.answers[0]?.replies.map(serializeReplyForAgent) ?? [];
-  return { ...rest, answer: answer && { ...answer, replies } };
+  return { ...rest, runs: q.runs, maxRuns: questionMaxRuns(), answer: answer && { ...answer, replies } };
 }
 
 export type SerializedQuestion = ReturnType<typeof serializeQuestion>;
