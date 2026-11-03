@@ -13,8 +13,12 @@ import { containsPersonalInfo } from './validation.js';
 export const TAGS_PER_VIDEO = 10;
 export const TAG_MAX_LENGTH = 40; // characters; a longer one is dropped, not cut short
 const TAG_QUERY_MAX_INPUT = 200; // a search longer than this is not a tag, so it is not normalised
-// Tags that find nothing a student searches for, dropped as the studio drops them (studio/schemas.py, NO_TAGS).
-const NO_TAGS = new Set(['fyp', 'fypシ', 'foryou', 'foryoupage', 'viral', 'trending']);
+// Tags that find nothing a student searches for, dropped as the studio drops them (studio/schemas.py, NO_TAGS): a hope
+// of being shown, or only the video's format ("#studytok" is on every droplet, so it finds none in particular).
+const NO_TAGS = new Set([
+  'fyp', 'fypシ', 'foryou', 'foryoupage', 'viral', 'trending',
+  'studysong', 'studytok', 'explained', 'examprep', 'edutok', 'learnontiktok', 'studywithme',
+]);
 
 /**
  * "#AP Bio" -> "apbio": lowercase letters (with their accents), digits and underscores,

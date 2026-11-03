@@ -280,7 +280,7 @@ already written.
 8. `tags`: `song[]` and `lesson[]`, 5–7 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
    then the song's genre. Last, so they are written knowing the whole plan. Code cleans them
-   to one lowercase word each, adds the tags every video carries ("#studysong",
+   to one lowercase word each, drops any that name only the video's format ("#studytok",
    "#explained") and never fails a bundle over one; the fact-check (step 2) passes or drops
    each one (README, "Tags").
 
@@ -389,7 +389,7 @@ it lists on the public Droplets tab.
 
 The same call checks the tags, by their own rules (`studio/prompts/factcheck.md`, "Tags"):
 SUPPORTED when a tag names something the facts cover, FILLER when it names only the topic,
-a subject containing it, the course or the video itself (with `about`, the course, topic
+a subject containing it, the course or the song's genre (with `about`, the course, topic
 and song style, sent for the tags alone), UNSUPPORTED otherwise. A tag that fails, or gets
 no verdict in 3 rounds, is dropped from both videos, never rewritten, and never fails the
 job; the posted bundle carries only the tags that passed. They add a few hundred tokens to
