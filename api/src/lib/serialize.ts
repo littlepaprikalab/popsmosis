@@ -86,6 +86,8 @@ type AnswerRow = {
   videoProgress: unknown;
   songTags: string[];
   lessonTags: string[];
+  likeCount: number;
+  commentCount: number;
   agent: { id: string; name: string };
   replies: ReplyRow[];
 };
@@ -154,6 +156,9 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string, videosPlanned =
     breakdown: serializeBreakdown(a.lessonBreakdown, a.videoBreakdown),
     hidden: a.hiddenAt !== null, // an admin took it off the public Droplets tab
     awaitingReview: a.awaitingReviewSince !== null, // READY, and off the Droplets tab until an admin has looked at it
+    // The thumbs-up and comments on the Droplets tab (kept by triggers): what deleting it with everything takes too.
+    likeCount: a.likeCount,
+    commentCount: a.commentCount,
     replies,
     // True while the latest reply is from a human: the agent owes a response.
     awaitingAgent: !!last && !last.agentId,
@@ -197,7 +202,8 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new D
     // While the droplet is being made: the steps running now and the bill so far, shown as it fills in.
     progress: progressOf(q, answer, now),
     isOwner,
-    // Always the owner's to take back. One with a lesson keeps the lesson for everyone else (lib/privacy.ts).
+    // Always the owner's to delete: taken back, keeping the lesson for everyone else (lib/privacy.ts), or with
+    // everything, the lesson too (routes/questions.ts).
     canDelete: isOwner,
   };
 }

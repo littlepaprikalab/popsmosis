@@ -84,6 +84,8 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'default';
+  // The confirm button cannot be pressed yet: what the message asks for (a word typed, say) is not done.
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -95,6 +97,7 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'default',
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -137,10 +140,14 @@ export function ConfirmDialog({
           <button
             type="button"
             autoFocus
-            onClick={onConfirm}
-            style={{ ...confirmBtnBase, background: accentVar, color: confirmText }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            disabled={confirmDisabled}
+            onClick={() => { if (!confirmDisabled) onConfirm(); }}
+            style={{
+              ...confirmBtnBase, background: accentVar, color: confirmText,
+              ...(confirmDisabled && { opacity: 0.45, cursor: 'not-allowed' }),
+            }}
+            onMouseEnter={e => { if (!confirmDisabled) e.currentTarget.style.opacity = '0.85'; }}
+            onMouseLeave={e => { if (!confirmDisabled) e.currentTarget.style.opacity = '1'; }}
           >
             {confirmLabel}
           </button>
