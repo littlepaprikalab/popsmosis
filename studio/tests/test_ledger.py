@@ -78,9 +78,11 @@ def test_the_lesson_counts_every_try_and_every_model_that_answered(tmp_path):
     assert (steps["bundle"]["seconds"], steps["bundle"]["tries"]) == (180.0, 2)
     assert steps["bundle"]["costUsd"] == pytest.approx(0.9)
     assert steps["bundle"]["models"] == [
-        {"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.4, "credits": None},
-        {"model": "claude-opus-5", "calls": 1, "costUsd": 0.5, "credits": None}]  # after a refusal fell back
-    assert steps["factcheck"]["models"] == [{"model": "claude-opus-5-5", "calls": 2, "costUsd": 0.25, "credits": None}]
+        {"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.4, "credits": None, "task": "writes the lesson"},
+        {"model": "claude-opus-5", "calls": 1, "costUsd": 0.5, "credits": None,
+         "task": "writes the lesson"}]  # after a refusal fell back
+    assert steps["factcheck"]["models"] == [{"model": "claude-opus-5-5", "calls": 2, "costUsd": 0.25, "credits": None,
+                                             "task": "fact-checks every line"}]
     assert steps["request"]["models"] == [] and steps["request"]["costUsd"] == 0
 
 
@@ -115,10 +117,11 @@ def test_elevenlabs_without_a_price_keeps_its_credits(tmp_path):
     with ledger.at_step("audio"):
         ledger.log(tmp_path, [call("song", model="lyria-3.5", cost=0.08, role="audio"),
                               call("narration", model="eleven_multilingual_v2", cost=None, role="audio", credits=2900),
-                              call("frq", model="eleven_multilingual_v2", cost=None, role="audio", credits=400)])
+                              call("narration", model="eleven_multilingual_v2", cost=None, role="audio", credits=400)])
     [audio] = ledger.breakdown(tmp_path, "videos")["steps"]
     assert audio["costUsd"] == 0.08 and audio["seconds"] is None and audio["tries"] == 0
-    assert audio["models"][1] == {"model": "eleven_multilingual_v2", "calls": 2, "costUsd": None, "credits": 3300}
+    assert audio["models"][1] == {"model": "eleven_multilingual_v2", "calls": 2, "costUsd": None, "credits": 3300,
+                                  "task": "reads the narration"}
     assert ledger.cost_text(ledger.read(tmp_path)) == "$0.08 + 3300 credits"
 
 
@@ -212,7 +215,8 @@ def test_each_media_step_lists_the_software_it_runs_at_the_version_installed_her
     with ledger.at_step("timing"):
         ledger.log(tmp_path, [call("song vocals", model="htdemucs", cost=0.0, role="local")])
     steps = {s["step"]: s for s in ledger.breakdown(tmp_path, "videos")["steps"]}
-    assert steps["timing"]["models"] == [{"model": "htdemucs", "calls": 1, "costUsd": 0.0, "credits": None}]
+    assert steps["timing"]["models"] == [{"model": "htdemucs", "calls": 1, "costUsd": 0.0, "credits": None,
+                                          "task": "separates the vocals"}]
     assert steps["timing"]["tools"] == [{"name": "demucs", "version": "4.1.0"}, {"name": "torchaudio", "version": "2.11.0"},
                                         {"name": "torch", "version": "2.11.0+cpu"}, {"name": "ffmpeg", "version": "7.1.1"}]
     assert steps["render"]["tools"] == [{"name": "skia-python", "version": "144.1"}, {"name": "ffmpeg", "version": "7.1.1"}]
@@ -419,3 +423,36 @@ def test_each_line_says_what_its_calls_did_and_the_checker_is_apart_from_the_pai
     assert ledger.task_of({"label": "song", "step": "audio"}) == "sings the song"
     assert ledger.task_of({"label": "song", "step": "timing"}) == "times the song"
     assert ledger.task_of({"label": "something new", "step": "art"}) == ""
+
+
+def test_every_label_the_studio_logs_says_what_its_call_did():
+    """Each label as the code logs it (the step's module in the comment), and what its line on the bill says."""
+    said = {
+        ("bundle", "script"): "writes the script",  # steps/script.py
+        ("bundle", "bundle"): "writes the lesson", ("bundle", "bundle again"): "writes the lesson",  # steps/bundle.py
+        ("bundle", "fact audit"): "audits the facts", ("bundle", "fact audit again"): "audits the facts",  # audit.py
+        ("bundle", "learner"): "takes the lesson as a student",  # steps/learner.py: the student, then its grader
+        ("bundle", "learner grade"): "grades the student's answers",
+        ("bundle", "lesson rewrite"): "rewrites the lesson",
+        ("bundle", "learner again"): "takes the lesson as a student",
+        ("bundle", "learner again grade"): "grades the student's answers",
+        ("bundle", "narration edit"): "edits the narration",  # steps/narration.py
+        ("factcheck", "factcheck round 1"): "fact-checks every line",  # steps/factcheck.py
+        ("factcheck", "lyric rewrite round 1"): "rewrites the lyrics",  # steps/songwriter.py
+        ("art", "art overview try 2"): "makes the pictures",  # steps/art.py
+        ("art", "art check overview"): "checks the pictures",
+        ("art", "art rewrite overview"): "rewrites a scene's words",
+        ("locate", "locate overview pump try 2"): "finds the parts",  # steps/locate.py: SAM
+        ("locate", "locate overview pump box"): "finds the parts",  # SAM again, in the helper's box
+        ("locate", "locate box overview pump"): "boxes a part SAM missed",  # the helper's box
+        ("locate", "label check overview"): "checks the labels",
+        ("locate", "repair overview"): "finds upside-down parts",  # repair.py
+        ("locate", "repair check overview"): "checks the flipped picture",
+        ("audio", "song"): "sings the song", ("audio", "narration"): "reads the narration",  # steps/audio.py
+        ("timing", "song vocals"): "separates the vocals",  # steps/timing.py: Demucs
+        ("timing", "song alignment"): "times the song",  # MMS
+        ("timing", "narration alignment"): "times the narration",
+        ("arrows", "arrows point overview"): "places the arrows",  # steps/arrows.py
+        ("arrows", "arrows look overview ATP pump > cell"): "checks the arrows",
+    }
+    assert {key: ledger.task_of({"label": key[1], "step": key[0]}) for key in said} == said

@@ -238,7 +238,8 @@ def test_giving_up_sends_what_the_failed_tries_took_and_cost(setup):
     assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
     bill = {s["step"]: s for s in api.given_up_breakdown["steps"]}
     assert bill["render"]["tries"] == 2 and "videos" not in bill
-    assert bill["art"]["models"] == [{"model": "claude-haiku-5-5", "calls": 1, "costUsd": 0.002, "credits": None}]
+    assert bill["art"]["models"] == [{"model": "claude-haiku-5-5", "calls": 1, "costUsd": 0.002, "credits": None,
+                                      "task": "makes the pictures"}]
 
 
 def test_fail_after_videos_that_were_made_gives_nothing_up(setup):
@@ -448,7 +449,8 @@ def test_on_meta_the_run_paints_the_art_then_sam_locates_it_and_bills_both(meta_
     steps = {s["step"]: s for s in ledger.breakdown(job, "videos")["steps"]}
     art_models = {m["model"]: m for m in steps["art"]["models"]}
     assert art_models["muse-image-1.0"]["calls"] == 3 and art_models["muse-image-1.0"]["costUsd"] == pytest.approx(0.03)
-    assert art_models["muse-spark-1.3"]["calls"] == 3 and art_models["muse-spark-1.3"]["costUsd"] > 0
+    # Each picture checked by Claude Sonnet, whatever the brain (studio/brain.py's checker)
+    assert art_models["claude-sonnet-5-5"]["calls"] == 3 and art_models["claude-sonnet-5-5"]["costUsd"] > 0
     locate_models = {m["model"]: m for m in steps["locate"]["models"]}
     assert locate_models["sam-3.1"] == {**locate_models["sam-3.1"], "calls": 4, "costUsd": pytest.approx(0.01)}
     assert locate_models["muse-spark-1.3"]["calls"] == 3  # the helper's look at where each scene's labels are pinned

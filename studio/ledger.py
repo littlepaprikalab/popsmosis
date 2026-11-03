@@ -363,16 +363,21 @@ def version(tool: str) -> str | None:
 
 
 # What a call did, for its line on the bill, by its label's first words (one or two), and its step where the same
-# words mean different work: the longest match wins. A label none matches leaves its line unlabelled.
+# words mean different work: the longest match wins. "again" in a label is a retry of the same work, so it is passed
+# over ("learner again grade" grades, as "learner grade" does). A label none matches leaves its line unlabelled.
 TASKS = {
     "script": "writes the script", "bundle": "writes the lesson", "lesson rewrite": "rewrites the lesson",
-    ("bundle", "narration"): "writes the narration", "narration edit": "edits the narration",
-    "lyric rewrite": "rewrites the lyrics", "repair": "repairs the lines", "learner": "takes the lesson as a student",
-    "fact": "audits the facts", "fact audit": "audits the facts", "factcheck": "fact-checks every line",
+    "narration edit": "edits the narration", "lyric rewrite": "rewrites the lyrics",
+    "learner": "takes the lesson as a student", "learner grade": "grades the student's answers",
+    "fact audit": "audits the facts", "factcheck": "fact-checks every line",
     "art": "makes the pictures", "art check": "checks the pictures", "art rewrite": "rewrites a scene's words",
-    "locate": "finds the parts", "locate box": "boxes a part it missed", "label check": "checks the labels",
+    "locate": "finds the parts", "locate box": "boxes a part SAM missed", "label check": "checks the labels",
+    # studio/repair.py: the helper says which out-of-place parts are upside down; the checker looks again once flipped
+    "repair": "finds upside-down parts", "repair check": "checks the flipped picture",
     "arrows point": "places the arrows", "arrows look": "checks the arrows",
     ("audio", "song"): "sings the song", ("audio", "narration"): "reads the narration",
+    # Demucs takes the singing out of the mix; MMS then lines the lyrics up with it
+    ("timing", "song vocals"): "separates the vocals",
     ("timing", "song"): "times the song", ("timing", "narration"): "times the narration",
     "judge": "grades the droplet",
 }
@@ -380,7 +385,7 @@ TASKS = {
 
 def task_of(row: dict) -> str:
     """What a logged call did, in a few words for the bill (TASKS); "" when its label says nothing known."""
-    words, step = str(row.get("label", "")).split(), step_of(row)
+    words, step = [w for w in str(row.get("label", "")).split() if w != "again"], step_of(row)
     for n in (2, 1):
         if len(words) >= n:
             said = " ".join(words[:n])
