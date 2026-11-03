@@ -154,7 +154,7 @@ one diagram:
   phases): each stage taught is a scene of its own, in order, 2 to 5, each with `stage_of`
   naming the process ("mitosis"); `stage_of` is "" on every other scene. Each stage's
   `image_prompt` opens with the same sentence word for word, saying the kind of picture,
-  the subject, its size and place ("Educational textbook illustration of one animal cell,
+  the subject, its size and place ("Textbook illustration of one animal cell,
   clean scientific style, the cell large and round in the centre of the picture."), then
   says what this stage looks like: a painter that cannot redraw from the first stage (Gemini)
   keeps them alike only by that sentence. The video fades each stage into the next.
@@ -173,10 +173,10 @@ one diagram:
 `image_prompt` asks an illustrator for a standard textbook diagram, in a few plain
 sentences. The illustrator draws best the diagrams it already knows:
 
-- Open with "Educational textbook illustration of" the subject and its style: "clean
+- Open with "Textbook illustration of" the subject and its style: "clean
   scientific style" for a science scene, "clean textbook style" for anything else
   (history, literature, economics, every hook). Then say what it shows and how
-  it is oriented: "Educational textbook illustration of a thylakoid membrane in
+  it is oriented: "Textbook illustration of a thylakoid membrane in
   cross-section, clean scientific style: the membrane across the middle, the stroma above,
   the lumen below, four protein complexes passing through it..." Never name a textbook, a
   publisher or an artist: the fact-check strikes it, a round spent for nothing.
