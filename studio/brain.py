@@ -18,9 +18,9 @@ and SAM 3.1 then finds the structures in either. Claude's brain may instead draw
 SVG. The helper, which boxes a structure SAM missed, is the brain's.
 
 The checker, which looks at each painted picture for a wrong label, a part out of place or a mistake (art.look()),
-is Claude Opus 5.5 whatever the brain: on Nov 3 Muse Spark passed an eye with its cornea above the lens instead of
-in front of it, which Opus, given the same prompt and picture, listed as out of place two times in two (the owner:
-"keep picture checker to be opus").
+is Claude Sonnet 5.5 whatever the brain: on Nov 3 Muse Spark passed an eye with its cornea above the lens instead of
+in front of it (at high effort, 3 times in 3), and so did Muse Wonder at low (3 in 3), while Claude, given the same
+prompt and picture, caught it every time (the owner: "let the image checker be Claude Sonnet regardless of brain").
 
 The drawer is Claude Opus 5.5 at high effort, whatever the brain: on Muse's brain it draws as SVG the scenes the
 admin's STUDIO_CLAUDE_DRAWS knob gives Claude (charts, and a math lesson's pictures; studio/steps/art.py), since a
@@ -66,7 +66,7 @@ CLAUDE = {
     # parts SAM missed.
     "helper": {"model": "claude-sonnet-5-5", "effort": "low", "max_tokens": 16000},
     # Checks each painted picture (art.look()), on every brain.
-    "checker": {"model": "claude-opus-5-5", "effort": "medium", "max_tokens": 32000},
+    "checker": {"model": "claude-sonnet-5-5", "effort": "medium", "max_tokens": 16000},
     # The scorecard's judge, on every brain. Changing it makes earlier scorecards no longer comparable.
     "judge": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 32000},
     # Draws a Muse brain's charts and math as SVG (studio/steps/art.py): Claude's brain as it is by default.

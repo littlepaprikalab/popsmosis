@@ -62,7 +62,7 @@ request right 8 times in 12 where the earlier prompt, with hex codes, a list of 
 biology style for every subject, was right once in 6; on Oct 31 the pictures came back better
 again without the style line every prompt ended in (a flat dark slate blue background, no text).
 The picture labels its own parts, and the video draws no labels over it, only over a drawing.
-The checker (Claude Opus, whatever the brain: brain.py) looks at each picture for a label that is wrong, for a
+The checker (Claude Sonnet, whatever the brain: brain.py) looks at each picture for a label that is wrong, for a
 structure missing or out of place, and for anything else wrong, told what kind of scene it is. A picture with a structure missing or out of
 place, or anything else wrong, can be asked for again, up to MAX_PAINTS pictures in all. The writer's role looks at
 every first picture with what the check found (rewrite()), and keeps it or writes the scene's words again for the
