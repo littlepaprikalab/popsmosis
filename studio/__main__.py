@@ -223,7 +223,11 @@ def main(argv: list[str] | None = None) -> int:
             operator_run.keep_brain(job, args.brain, args.effort)
         print(f"job {job.name}", file=sys.stderr)
         with brain.chosen(args.brain, args.effort):
-            ok = run_steps(job, ["bundle", "audit", "factcheck"])
+            ok = run_steps(job, ["bundle"])
+            done = ok and audit_step.is_done(job)  # the bundle step's early audit passed its facts: not again
+            if done:
+                print("audit: done beside the bundle", file=sys.stderr)
+            ok = ok and run_steps(job, ([] if done else ["audit"]) + ["factcheck"])
         if ok and args.videos:
             print_job(job, brief=args.brief)
             result, step, reason = operator_videos.local(job)  # on the job's brain, as `make` is

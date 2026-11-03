@@ -31,7 +31,7 @@ class FakeAsk:
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
         self.calls.append({"role": role, "label": label, "prompt": prompt, "system": system})
-        if label == self.fail:
+        if label in (self.fail, f"{self.fail} again"):  # a refused bundle is asked once more, and fails again
             raise brain.InvalidOutput("does not fit", "{}")
         if self.cost and self.job:
             ledger.log(self.job, [brain.Call(label, role, "claude-opus-5-5", 10, 10, self.cost, 1.0, "end_turn")])

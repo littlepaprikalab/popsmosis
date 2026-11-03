@@ -153,6 +153,29 @@ def test_a_song_asked_for_and_not_written_is_refused(tmp_path):
     assert (tmp_path / "bundle.invalid.json").exists() and not (tmp_path / "bundle.json").exists()
 
 
+def test_a_bundle_refused_once_is_asked_again_with_what_was_wrong(tmp_path):
+    # Muse Wonder planned a whole song and sent no lyrics (Nov 2): the call is asked again, not the whole step.
+    write(tmp_path / "request.json", Request(topic="the light reactions"))
+    songless = {**bundle_data(), "lyrics": []}
+    answers, asked = [songless, bundle_data()], []
+
+    def fake_ask(role, prompt, schema=None, images=(), *, system=None, label=None):
+        if label == "script":
+            raise brain.BrainError("no answer")
+        if label == "narration edit":
+            return {"lines": [{"id": n["id"], "text": n["text"]} for n in bundle_data()["narration"]]}
+        asked.append((label, prompt))
+        return answers[len(asked) - 1]
+
+    bundle = bundle_step.run(tmp_path, ask=fake_ask)
+    assert [label for label, _ in asked] == ["bundle", "bundle again"]
+    first, again = asked[0][1], asked[1][1]
+    assert again.startswith(first) and "Your last answer to this was refused" in again
+    assert "lyrics and narration must not be empty" in again and "input_value" not in again
+    assert read(tmp_path / "bundle.json", Bundle) == bundle and bundle.lyrics
+    assert (tmp_path / "bundle.invalid.json").exists()  # the refused answer, kept for a look
+
+
 def test_a_lesson_alone_that_does_not_hold_together_is_kept_for_a_look(tmp_path):
     knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
     write(tmp_path / "request.json", Request(topic="the light reactions"))

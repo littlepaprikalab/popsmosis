@@ -77,8 +77,9 @@ def system_prompt(brief: str) -> str:
     return (PROMPTS / "script.md").read_text(encoding="utf-8") + "\n" + brief_sections(brief)
 
 
-def write_script(prompt: str, brief: str, ask, images=(), job: Path | None = None) -> Script | None:
-    """The lesson's script for this request (the bundle's user prompt), or None when the call fails."""
+def write_script(prompt: str, brief: str, ask, images=(), job: Path | None = None, topic: str = "") -> Script | None:
+    """The lesson's script for this request (the bundle's user prompt), or None when the call fails or its answer is
+    no script of the topic (_problem())."""
     try:
         answer = ask("brain", prompt, Script, images, system=system_prompt(brief), label="script")
         script = Script.model_validate(answer)
@@ -87,7 +88,8 @@ def write_script(prompt: str, brief: str, ask, images=(), job: Path | None = Non
         if job is not None:
             write(job / RECORD, {"script": None, "why": str(e)})
         return None
-    problem = _problem(script)
+    script = numbered(script)
+    problem = _problem(script, topic)
     if problem:
         print(f"script: none, the bundle is written without one: {problem}", file=sys.stderr)
     if job is not None:  # follow() adds what the bundle kept of it
@@ -95,10 +97,66 @@ def write_script(prompt: str, brief: str, ask, images=(), job: Path | None = Non
     return None if problem else script
 
 
-def _problem(script: Script) -> str:
+FACT_ID = re.compile(r"f[1-9][0-9]*")
+
+
+def numbered(script: Script) -> Script:
+    """The script with its facts numbered f1, f2, ... in order, unless each already has an id of that form of its
+    own. Muse Wonder gave all four facts the id "[generated]" (Nov 2). The bundle numbered them itself, so it no
+    longer kept the script's facts (follow()) and the early audit was thrown away; a bundle that copied the ids would
+    be refused for them, and the audit, which corrects a fact by its id, would give all four one text. Nothing else in
+    a script names a fact, so the numbers are safe to give."""
+    ids = [f.id for f in script.facts]
+    if len(set(ids)) == len(ids) and all(FACT_ID.fullmatch(i) for i in ids):
+        return script
+    print(f"script: its facts' ids were {ids}, so they are numbered f1 to f{len(ids)}", file=sys.stderr)
+    return script.model_copy(update={"facts": [f.model_copy(update={"id": f"f{k}"})
+                                               for k, f in enumerate(script.facts, start=1)]})
+
+
+# The fewest scenes a lesson has (schemas.bundle_problems): the bundle draws the script's scenes, so a script with fewer
+# cannot be followed.
+MIN_SCENES = 3
+# Words of a topic that say nothing of what it is about ("how a rocket moves", "why the Moon has phases").
+TOPIC_STOPWORDS = frozenset("a an and are as at by do does for from has have how in into is it its make makes mean "
+                            "means of on or set sets than that the their to use uses what when where which who why "
+                            "with work works".split())
+
+
+def _forms(word: str) -> set[str]:
+    """A word and the forms it may take in a fact: "phases" is "phase", "conditioned" is "condition"."""
+    word = word.casefold()
+    forms = {word}
+    for end in ("s", "es", "ed", "ing"):
+        if word.endswith(end) and len(word) - len(end) >= 3:
+            forms.add(word[:-len(end)])
+    return forms
+
+
+def topic_words(topic: str) -> set[str]:
+    """The forms of the words that say what a topic is about: "natural selection" gives natural and selection."""
+    return {form for word in re.findall(r"[^\W_]+", topic) if word.casefold() not in TOPIC_STOPWORDS
+            and len(word) >= 3 for form in _forms(word)}
+
+
+def about(facts: list[Fact], topic: str) -> bool:
+    """Whether the facts name the topic: one word of it, in any fact. Muse Wonder's second script for natural
+    selection (Nov 2) was about none of it: its facts were a club's interviews, a C++ tournament and a lab procedure,
+    its one scene "Tokyo". "selected" is not "selection": a word's forms are its plural and its -ed and -ing."""
+    wanted = topic_words(topic)
+    if not wanted:
+        return True
+    return any(_forms(word) & wanted for fact in facts for word in re.findall(r"[^\W_]+", fact.text))
+
+
+def _problem(script: Script, topic: str = "") -> str:
     ids = [s.id for s in script.scenes]
     if not script.sentences():
         return "it has no narration"
+    if len(ids) < MIN_SCENES:
+        return f"it has {len(ids)} scene(s), not at least {MIN_SCENES}"
+    if not about(script.facts, topic):
+        return f"no fact of it names the topic, {topic!r}"
     if len(set(ids)) != len(ids):
         return "two of its scenes share an id"
     unknown = sorted({p.scene for p in script.narration} - set(ids))

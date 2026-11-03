@@ -2,7 +2,7 @@ import json
 
 from studio import brain
 from studio.jobs import write
-from studio.schemas import Bundle, Request
+from studio.schemas import Bundle, Fact, Request
 from studio.steps import bundle as bundle_step
 from studio.steps import script
 from studio.tests.sample import bundle_data
@@ -103,3 +103,54 @@ def test_the_script_writer_hears_there_is_no_song_only_when_there_is_none():
     without = script.system_prompt(bundle_step.LESSON_ONLY_PROMPT)
     assert "## No song for this droplet" in without and "there is no songwriter" in without
     assert "## The plan without the song" not in without  # the plan's rules are the bundle writer's
+
+
+def test_facts_that_share_an_id_are_numbered_before_the_bundle_sees_them(tmp_path):
+    # Muse Wonder gave every fact the id "[generated]" (Nov 2): the bundle would cite one id for four facts.
+    facts = [dict(f, id="[generated]") for f in bundle_data()["facts"]]
+    write(tmp_path / "request.json", Request(topic="the light reactions"))
+    ask = asking({"script": script_data(facts=facts), "bundle": bundle_data(), "narration edit": unchanged_narration})
+    bundle_step.run(tmp_path, ask=ask)
+    second = [a for a in ask.asked if a[0] == "bundle"][0][1]
+    wanted = [f"f{k}" for k in range(1, len(facts) + 1)]
+    assert [f["id"] for f in json.loads(second.split("<script>\n")[1].split("\n</script>")[0])["facts"]] == wanted
+    assert [f["id"] for f in json.loads((tmp_path / script.RECORD).read_text())["script"]["facts"]] == wanted
+
+
+def test_facts_numbered_their_own_way_keep_their_ids():
+    data = script_data()
+    kept = script.numbered(script.Script.model_validate(data))
+    assert [f.id for f in kept.facts] == [f["id"] for f in data["facts"]]
+    reordered = script_data(facts=list(reversed(data["facts"])))
+    assert [f.id for f in script.numbered(script.Script.model_validate(reordered)).facts] == [
+        f["id"] for f in reversed(data["facts"])]
+
+
+def test_a_script_about_something_else_or_with_too_few_scenes_is_not_followed(tmp_path):
+    # Muse Wonder's second natural selection script (Nov 2): a club's interviews and one scene, "Tokyo".
+    club = [{"id": f"f{k}", "text": text, "source_quote": ""} for k, text in enumerate((
+        "The interview process determines membership through an online application.",
+        "Since 2023, C++ has held one 4v4 tournament each semester.",
+        "28 selected members per year does not exceed the 28-person club cap."), start=1)]
+    off_topic = script_data(facts=club)
+    one_scene = script_data(scenes=[{"id": "overview", "picture": "A thylakoid membrane."}],
+                            narration=[{"scene": "overview", "lines": ["One."]}])
+    for answer, why in ((off_topic, "no fact of it names the topic"), (one_scene, "1 scene(s)")):
+        write(tmp_path / "request.json", Request(topic="the light reactions"))
+        ask = asking({"script": answer, "bundle": bundle_data(), "narration edit": unchanged_narration})
+        bundle = bundle_step.run(tmp_path, ask=ask)
+        assert "<script>" not in [a for a in ask.asked if a[0] == "bundle"][0][1]
+        assert bundle.facts[0].text == bundle_data()["facts"][0]["text"]  # the bundle's own facts
+        assert why in json.loads((tmp_path / script.RECORD).read_text())["why"]
+
+
+def test_a_topic_is_named_by_any_form_of_its_words():
+    def named(topic, text):
+        return script.about([Fact(id="f1", text=text, source_quote="")], topic)
+
+    assert named("why the Moon has phases", "Each phase is the lit half we see.")
+    assert named("classical conditioning", "The dog was conditioned to the bell.")
+    assert named("what a p-value means", "A small p-value says the data would be rare.")
+    assert not named("natural selection", "28 selected members per year.")  # "selected" is not "selection"
+    assert not named("how a rocket moves", "How and why it works.")  # the topic's stopwords name nothing
+    assert named("", "Anything at all.")  # no topic to hold it to

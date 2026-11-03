@@ -17,6 +17,8 @@ later. With the knob anywhere else the prompt and the schema are as they always 
 from __future__ import annotations
 
 import json
+import re
+import sys
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -105,7 +107,7 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
                   "learner.json", narration.RECORD, script_step.RECORD):
         (job / stale).unlink(missing_ok=True)
     prompt = user_prompt(request, style_for_job(job), sung)
-    script = script_step.write_script(prompt, brief, ask, request.images, job)
+    script = script_step.write_script(prompt, brief, ask, request.images, job, request.topic)
     unquoted = []
     if script:  # held to the guide before the audit is shown them as its words
         facts, unquoted = checks.held_to_guide(script.facts, request.study_guide)
@@ -113,16 +115,8 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     system = (brief + ("" if script else NO_SCRIPT + script_step.narration_rules())
               + (NOTE.format(note=note) if note.strip() else ""))
     early = audit.begin(request, script, ask)  # the facts audited beside the bundle call (studio/steps/audit.py)
-    try:
-        answer = ask("brain", prompt + ("\n\n" + script_step.as_prompt(script) if script else ""),
-                     Bundle if sung else LessonBundle, request.images, system=system, label="bundle")
-        bundle = Bundle.model_validate(answer) if sung else _lesson_only(answer)
-        if sung and not bundle.sung:  # asked for a song and wrote none: refused, as before there was a LessonBundle
-            raise brain.InvalidOutput("the answer does not fit Bundle: lyrics and narration must not be empty",
-                                      json.dumps(answer, ensure_ascii=False))
-    except brain.InvalidOutput as e:
-        (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
-        raise
+    bundle = _written(job, ask, prompt + ("\n\n" + script_step.as_prompt(script) if script else ""), sung,
+                      request.images, system)
     if script:
         bundle = script_step.follow(bundle, script, job)
     bundle, report = checks.review(bundle)
@@ -140,6 +134,51 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     write(job / "bundle.json", bundle)
     write(job / "checks.json", report)
     return audit.settle(job, bundle, early)
+
+
+# Said after the prompt when the bundle call is asked a second time (_written()).
+REFUSED = """
+
+Your last answer to this was refused, and none of it is kept: {problem}. Write the whole answer
+again, fixing that."""
+
+
+def _written(job: Path, ask, prompt: str, sung: bool, images, system: str) -> Bundle:
+    """The bundle call's answer as a Bundle, asked a second time when the first does not fit, with what was wrong
+    (REFUSED). Muse Wonder planned a 37-line song (its direction, its key lines, its style) and sent no lyrics
+    (Nov 2): the step failed, and a retry of the step writes the script again as well. A second answer that does not
+    fit fails the step, as before; bundle.invalid.json keeps the last."""
+    problem = None
+    while True:
+        try:
+            answer = ask("brain", prompt + (REFUSED.format(problem=problem) if problem else ""),
+                         Bundle if sung else LessonBundle, images, system=system,
+                         label="bundle again" if problem else "bundle")
+            try:
+                bundle = Bundle.model_validate(answer) if sung else _lesson_only(answer)
+            except ValidationError as e:  # brain.ask validated it already; an answer from elsewhere may not fit
+                raise brain.InvalidOutput(f"the answer does not fit Bundle: {e}",
+                                          json.dumps(answer, ensure_ascii=False)) from e
+            if sung and not bundle.sung:  # asked for a song and wrote none: refused, as before there was a LessonBundle
+                raise brain.InvalidOutput("the answer does not fit Bundle: lyrics and narration must not be empty",
+                                          json.dumps(answer, ensure_ascii=False))
+            return bundle
+        except brain.InvalidOutput as e:
+            (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
+            if problem:
+                raise
+            problem = refusal(str(e))
+            print(f"bundle: the answer was refused, so it is asked again: {problem}", file=sys.stderr)
+
+
+def refusal(error: str) -> str:
+    """What a validation error says was wrong, without pydantic's own words: the answer it quotes back (input_value),
+    its error types and its link."""
+    error = re.sub(r"\s*\[type=.*?input_type=\w+\]", "", error, flags=re.S)
+    error = re.sub(r":?\s*\d+ validation errors? for \w+", ":", error)
+    lines = [line.strip() for line in error.splitlines()
+             if line.strip() and not line.strip().startswith("For further information")]
+    return re.sub(r":+", ":", " ".join(re.sub(r"^Value error, ", "", line) for line in lines))
 
 
 def _lesson_only(answer: dict) -> Bundle:

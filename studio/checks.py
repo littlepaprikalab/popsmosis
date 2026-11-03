@@ -338,8 +338,9 @@ def _check_crowded(data: dict, problems: list) -> None:
 # 340): with the bands at 290 and 335, round 17 asked for a purple Roman Empire as "light pink" and its pink
 # civil wars as "red", and the label "Civil wars" went on the Empire. Cyan is its own since Nov 1: the light
 # reactions' water (#00ACC1) was "teal" like the carbon dioxide beside it (#00897B), and the picture drew two alike
-# teal balls.
-HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (182, "teal"), (197, "cyan"), (250, "blue"),
+# teal balls. Green runs to 170 since Nov 2: the beetles' leaves (#43AA8B, 162), "light green leaves" to the writer,
+# were asked for and painted teal while the song sang "leaves so green"; teal itself is 180 (#008080).
+HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (170, "green"), (182, "teal"), (197, "cyan"), (250, "blue"),
         (310, "purple"), (345, "pink"), (360, "red"))
 # A mid-tone orange this dark is brown, as everyone names it: ATP synthase's #A0703C, the Bastille's #A86B32 and a
 # friar's robe were "orange" to the illustrator while the writer called them brown (Nov 1).

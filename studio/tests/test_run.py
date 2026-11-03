@@ -112,6 +112,26 @@ def jobs_root(tmp_path, monkeypatch):
     return tmp_path
 
 
+class ScriptedBrain(FakeBrain):
+    """FakeBrain with a script, so the bundle step begins the fact audit beside the bundle call."""
+
+    def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+        if label == "script":
+            self.labels.append(label)
+            from studio.tests.test_script import script_data
+            return script_data()
+        return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+
+def test_an_audit_the_bundle_step_passed_is_not_billed_again(jobs_root):
+    # Until Nov 2 every step after the bundle ran, the audit too, though the early audit had passed its facts.
+    api, ask = FakeApi(), ScriptedBrain()
+    assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
+    assert ask.labels.count("fact audit") == 1 and ask.labels[-1] == "factcheck round 1"
+    record = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")[-1]
+    assert [s["step"] for s in record["steps"]] == ["request", "bundle", "factcheck", "post"]
+
+
 def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     api, ask = FakeApi(), FakeBrain()
     (jobs_root / "q1").mkdir()
