@@ -19,7 +19,7 @@ from studio import jobs, knobs, media
 from studio.render import primitives as p
 from studio.render.encode import EncodeError, audio_filter, encode, encode_all, poster_time, ranges, write_poster
 from studio.render.layouts import LAYOUTS
-from studio.render.renderer import Renderer, RenderError, SceneArt
+from studio.render.renderer import Renderer, RenderError, SceneArt, to_frame
 from studio.schemas import (
     Arrows,
     AudioClip,
@@ -28,6 +28,7 @@ from studio.schemas import (
     Bundle,
     Converting,
     Crowd,
+    Flag,
     Locations,
     Particles,
     PlacedArrow,
@@ -921,30 +922,30 @@ def test_videos_made_at_once_on_one_set_of_workers_are_the_files_made_one_by_one
 
 
 @needs_ffmpeg
-def test_an_upright_hook_cut_with_a_notice_card_made_beside_the_song_is_the_file_made_alone(job, tmp_path):
-    # Each worker builds its own Renderer, and an upright one keeps room above the picture for the tallest card:
-    # every worker must keep the same room, so the hook cut made beside the song is the one made alone, card and all.
-    notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
+def test_an_upright_hook_cut_with_a_corner_note_made_beside_the_song_is_the_file_made_alone(job, tmp_path):
+    # Each worker builds its own Renderer and places the corner notes itself: every worker must place them alike, so
+    # the hook cut made beside the song is the one made alone, notes and all.
+    notices = {"overview": ["Cytochrome b6f sits across the membrane"]}
     song = short_timeline(job, "song").model_copy(update={"notices": notices})
     hook = short_timeline(job, "hook").model_copy(update={"notices": notices, "title": "the light reactions"})
     alone = encode(job, hook, tmp_path / "alone_hook.mp4", media.HOOK_LAYOUT, parts=2)
     together = encode_all(job, [(song, tmp_path / "song.mp4", "h"), (hook, tmp_path / "hook.mp4", media.HOOK_LAYOUT)],
                           parts=2)
     assert together[1].path.read_bytes() == alone.path.read_bytes()
-    # The workers drew the card: the frame decoded from the video is the one a Renderer draws, not the one without.
+    # The workers drew the note: the frame decoded from the video is the one a Renderer draws, not the one without.
     n, size = 45, LAYOUTS[media.HOOK_LAYOUT]
     raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(together[1].path), "-vf", f"select=eq(n\\,{n})",
                           "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True)
     decoded = np.frombuffer(raw.stdout, np.uint8).reshape(size.height, size.width, 3).astype(int)
-    carded = Renderer(job, hook, media.HOOK_LAYOUT)
-    assert carded._card_h > 0
-    rows = slice(int(carded.view("overview")[1] - carded._card_h), int(carded.view("overview")[1]))
+    noted = Renderer(job, hook, media.HOOK_LAYOUT)
+    drawn = noted.frame(n / hook.fps)
+    x0, y0, x1, y1 = (round(v) for v in noted._corners["overview"][0])
     plain = Renderer(job, hook.model_copy(update={"notices": {}}), media.HOOK_LAYOUT)
 
-    def off(renderer):
-        return np.abs(decoded[rows] - renderer.frame(n / hook.fps)[rows, :, :3].astype(int)).mean()
+    def off(frame):
+        return np.abs(decoded[y0:y1, x0:x1] - frame[y0:y1, x0:x1, :3].astype(int)).mean()
 
-    assert off(carded) < 4 < off(plain)
+    assert off(drawn) * 4 < off(plain.frame(n / hook.fps))  # the note's text costs a little to the encoding
 
 
 @needs_ffmpeg
@@ -1079,78 +1080,90 @@ def test_one_stage_of_a_process_fades_into_the_next_framed_alike(job):
     assert backwards.plans[1].fade_from is None and min(at(backwards, 4 + fade / 2)) > 245
 
 
-def test_a_picture_with_mistakes_found_moves_over_for_a_card_that_discloses_them(job):
+def postit_at(frame, rect) -> bool:
+    """Whether a sticky note's yellow fills this rect of the frame, along the blank strip under its words."""
+    y = rect[3] - 10
+    return all(np.allclose(pixel(frame, rect[0] + k * (rect[2] - rect[0]) / 4, y), p.rgb("#FFE27A"), atol=12)
+               for k in (1, 2, 3))
+
+
+def test_a_picture_with_mistakes_found_keeps_its_framing_and_shows_them_in_a_corner(job):
+    # The owner, Nov 2: sticky notes, not a card beside the picture, which moved the picture and every stage of its
+    # process over and left an empty strip down the frame.
     beat = flow_beat(0, 4, path=[], labels=["Thylakoid"], reveal=[Reveal(name="Thylakoid", t=0.0)])
     plain = Renderer(job, flowing([beat]))
-    notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
-    noted = Renderer(job, flowing([beat]).model_copy(update={"notices": notices}))
-    width = noted.layout.width
-    edge = width - renderer_module.NOTICE_W
-    assert plain.view("overview")[2] == width and noted.view("overview")[2] == edge
-    assert noted.art_to_frame(2.0, 896, 560)[0] < plain.art_to_frame(2.0, 896, 560)[0]  # the picture moved left
-    amber = p.rgb("#F59E0B")
-    assert np.allclose(pixel(noted.frame(2.0), edge + 3, 120), amber, atol=12)  # the card's side
-    assert not np.allclose(pixel(plain.frame(2.0), edge + 3, 120), amber, atol=12)
-    # Every stage of a process with notices keeps the same framing, card or not.
-    staged = Renderer(job, flowing([beat]).model_copy(update={"notices": notices, "stages": [["hook", "overview"]]}))
-    assert staged.view("hook") == staged.view("overview") and plain.view("hook")[2] == width
+    notices = {"overview": ["Cytochrome b6f sits across the membrane"]}
+    noted = Renderer(job, flowing([beat]).model_copy(update={"notices": notices, "stages": [["hook", "overview"]]}))
+    assert noted.view("overview") == noted.view("hook") == plain.view("overview")
+    assert noted.view("overview")[2] == noted.layout.width
+    assert noted.art_to_frame(2.0, 896, 560) == plain.art_to_frame(2.0, 896, 560)  # the picture stays put
+    frame = noted.frame(2.0)
+    [rect] = noted._corners["overview"]
+    assert postit_at(frame, rect) and not postit_at(plain.frame(2.0), rect)
 
 
-def test_a_notice_card_sits_beside_the_picture_and_upright_above_it(job):
+def test_a_corner_note_sits_in_a_top_corner_of_the_picture_wide_and_upright(job):
     beat = flow_beat(0, 4, path=[], labels=["Thylakoid"], reveal=[Reveal(name="Thylakoid", t=0.0)])
-    notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
+    notices = {"overview": ["Cytochrome b6f sits across the membrane", "Two notes stack down the corner"]}
     keyed = flowing([beat.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"})])
-    amber = p.rgb("#F59E0B")
-    wide = Renderer(job, keyed.model_copy(update={"notices": notices}))
-    view = wide.view("overview")
-    edge, top = view[2], view[1] + wide.layout.margin + 8
-    assert view[1] == 0 and view[3] == wide.layout.height - wide.layout.band_h - wide.layout.key_h
-    # The card's amber side runs down beside the picture, from its top.
-    assert np.allclose(pixel(wide.frame(2.0), edge + 3, top + 40), amber, atol=12)
-    assert not np.allclose(pixel(wide.frame(2.0), edge + 3, top - 12), amber, atol=12)
-    # Upright, the card goes across the frame above the picture, which keeps the frame's whole width.
-    upright = Renderer(job, keyed.model_copy(update={"notices": notices, "title": "the light reactions"}), "v")
-    plain = Renderer(job, keyed.model_copy(update={"title": "the light reactions"}), "v")
-    tall, short = plain.view("overview"), upright.view("overview")
-    assert short[0] == tall[0] and short[2] == tall[2] == upright.layout.width  # nothing moves over
-    assert short[1] > tall[1] + 100 and short[3] == tall[3]  # it starts below the card
-    frame = upright.frame(2.0)
-    card_top = tall[1] + renderer_module.NOTICE_GAP
-    assert np.allclose(pixel(frame, upright.layout.margin + 3, card_top + 40), amber, atol=12)
-    # The hook cut carries the song's notices; one for a scene it never shows keeps no room above the picture.
-    elsewhere = Renderer(job, keyed.model_copy(update={"notices": {"synthase": notices["overview"] * 3},
-                                                       "title": "the light reactions"}), "v")
-    assert elsewhere.view("overview") == tall
-    assert np.allclose(pixel(frame, upright.layout.width - upright.layout.margin - 20, card_top + 40),
-                       (255, 255, 255), atol=12)  # white across the frame
+    for timeline, layout in ((keyed, "h"), (keyed.model_copy(update={"title": "the light reactions"}), "v")):
+        noted = Renderer(job, timeline.model_copy(update={"notices": notices}), layout)
+        plain = Renderer(job, timeline, layout)
+        assert noted.view("overview") == plain.view("overview")  # nothing moves over, upright or wide
+        frame = noted.frame(2.0)
+        bounds = noted._pill_bounds("overview", noted.view("overview"))
+        first, second = noted._corners["overview"]
+        assert first[1] == bounds[1] and second[1] > first[3]  # from the top, down the corner
+        assert first[2] == bounds[2] or first[0] == bounds[0]  # in its right corner, or its left
+        for rect in (first, second):
+            assert bounds[0] <= rect[0] and rect[2] <= bounds[2] and rect[3] <= bounds[3]
+            assert postit_at(frame, rect)
+    # The hook cut carries the song's notices; one for a scene it never shows is drawn nowhere.
+    elsewhere = Renderer(job, keyed.model_copy(update={"notices": {"synthase": notices["overview"]}}))
+    elsewhere.frame(2.0)
+    assert elsewhere._corner_notes("overview") == [] and elsewhere._corners.get("overview", []) == []
 
 
-def test_every_ai_made_picture_is_tagged_unless_its_notice_card_says_so(job):
+def test_a_wrong_label_with_no_room_beside_it_keeps_its_ring_and_its_note_goes_in_a_corner(job, monkeypatch):
+    # Left off before (Nov 2): since one look names a fact of the lesson for every note, a note left off was a
+    # mistake the student could learn.
+    beat = flow_beat(0, 4, path=[])
+    flag = Flag(box=Box(x0=600, y0=400, x1=900, y1=460), note="Should read: thylakoid")
+    renderer = Renderer(job, flowing([beat]).model_copy(update={"flags": {"overview": [flag]}}))
+    monkeypatch.setattr(renderer, "_place_postits", lambda *a, **k: [None])  # no spot near enough
+    frame = renderer.frame(2.0)
+    assert renderer._corner_notes("overview") == ["Should read: thylakoid"]
+    assert postit_at(frame, renderer._corners["overview"][0])
+    scale, dx, dy = to_frame(renderer.plans[0].cam(2.0, renderer.view("overview"), renderer.scene("overview")),
+                             renderer.view("overview"), renderer.scene("overview"))
+    ring = p.flag_ring((600 * scale + dx, 400 * scale + dy, 900 * scale + dx, 460 * scale + dy))
+    assert np.allclose(pixel(frame, (ring[0] + ring[2]) / 2, ring[1] + 1), p.rgb("#F59E0B"), atol=40)  # its ring
+
+
+def test_every_ai_made_picture_is_tagged_mistakes_found_or_not(job):
     beat = flow_beat(0, 4, path=[])
     plain = Renderer(job, flowing([beat]))
     tagged = Renderer(job, flowing([beat]).model_copy(update={"ai_pictures": ["overview"]}))
-    carded = Renderer(job, flowing([beat]).model_copy(update={"ai_pictures": ["overview"],
-                                                               "notices": {"overview": ["A note."]}}))
+    noted = Renderer(job, flowing([beat]).model_copy(update={"ai_pictures": ["overview"],
+                                                              "notices": {"overview": ["A note."]}}))
     view, margin = tagged.view("overview"), tagged.layout.margin
     spot = (view[0] + margin + 6, view[3] - margin - renderer_module.AI_TAG_FONT * 0.85)  # inside the tag
 
     def dark(renderer):
         return max(pixel(renderer.frame(2.0), *spot)) < 120
 
-    assert dark(tagged) and not dark(plain)
-    carded_view = carded.view("overview")
-    assert not max(pixel(carded.frame(2.0), carded_view[0] + margin + 6, spot[1])) < 120  # the card instead
+    assert dark(tagged) and dark(noted) and not dark(plain)
 
 
 def test_every_frame_carries_the_brand_in_one_place_and_upright_in_the_title_band(job):
     beat = flow_beat(0, 4, path=[])
     chip = p.rgb("#0B7499")
     wide = Renderer(job, flowing([beat]))
-    carded = Renderer(job, flowing([beat]).model_copy(update={"notices": {"overview": ["A note."]}}))
+    noted = Renderer(job, flowing([beat]).model_copy(update={"notices": {"overview": ["A note."]}}))
     layout, (w, h) = wide.layout, wide.brand
     spot = (layout.width - layout.margin - w + 3, layout.height - layout.band_h - layout.margin - h / 2)  # in the chip
     assert pixel(wide.frame(0.0), *spot) == pixel(wide.frame(3.9), *spot) == chip
-    assert pixel(carded.frame(2.0), *spot) == chip and carded.view("overview")[2] < spot[0]  # under the card
+    assert pixel(noted.frame(2.0), *spot) == chip  # a corner note keeps clear of it
     titled = flowing([beat]).model_copy(update={"title": "the light reactions"})
     keyed = titled.model_copy(update={"beats": [beat.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"})]})
     for timeline in (titled, keyed):  # upright, in the title band's corner, with a key line or without
@@ -1161,7 +1174,7 @@ def test_every_frame_carries_the_brand_in_one_place_and_upright_in_the_title_ban
         assert pixel(frame, v.width - v.margin - w + 3, v.height - v.band_h - v.margin - h / 2) != chip  # not twice
 
 
-def test_a_stage_fading_into_the_next_keeps_its_tag_and_card_on(job):
+def test_a_stage_fading_into_the_next_keeps_its_tag_on(job):
     def beat(t0, t1, scene):
         return Beat(t0=t0, t1=t1, scene=scene, camera=TimelineCamera(target=None, zoom=1.0), reveal=[],
                     spotlight=None, labels=[], particles=[], caption=None, line_id=f"v{t0}", line="x", words=[])
@@ -1171,20 +1184,24 @@ def test_a_stage_fading_into_the_next_keeps_its_tag_and_card_on(job):
                                       stages=[["hook", "overview"]], beats=[beat(0, 4, "hook"), beat(4, 8, "overview")],
                                       ai_pictures=["hook", "overview"], **extra))
 
-    tagged = video()
-    view, margin = tagged.view("overview"), tagged.layout.margin
-    spot = (view[0] + margin + 6, view[3] - margin - renderer_module.AI_TAG_FONT * 0.85)
-    assert max(pixel(tagged.frame(4.05), *spot)) < 120  # the tag, not fading in again
-    carded = video(notices={"hook": ["A note."], "overview": ["Another note."]})
-    edge = carded.view("overview")[2]
-    assert np.allclose(pixel(carded.frame(4.05), edge + 3, 120), p.rgb("#F59E0B"), atol=12)  # the card's side
+    for renderer in (video(), video(notices={"hook": ["A note."], "overview": ["Another note."]})):
+        view, margin = renderer.view("overview"), renderer.layout.margin
+        spot = (view[0] + margin + 6, view[3] - margin - renderer_module.AI_TAG_FONT * 0.85)
+        assert max(pixel(renderer.frame(4.05), *spot)) < 120  # the tag, not fading in again, notes or not
 
 
-def test_a_long_note_is_cut_so_the_card_stays_above_the_lyric_band():
-    surface = skia.Surface(1920, 1080)
+def test_a_long_corner_note_is_cut_and_many_go_on_in_a_column_beside_inside_the_picture(job):
     long = " ".join(["word"] * 400)
-    bottom = p.draw_notice(surface.getCanvas(), 1480, 28, 1900, [long] * 3, 22)
-    assert bottom < 1080 - 110
+    w, h = p.postit_size(long, lines=renderer_module.CORNER_LINES)
+    assert h < p.postit_size(long, lines=renderer_module.CORNER_LINES + 1)[1]  # cut at CORNER_LINES
+    beat = flow_beat(0, 4, path=[])
+    renderer = Renderer(job, flowing([beat]).model_copy(update={"notices": {"overview": [long] * 5}}))
+    renderer.frame(2.0)
+    rects = renderer._corners["overview"]
+    bounds = renderer._pill_bounds("overview", renderer.view("overview"))
+    assert len(rects) == 5 and len({r[0] for r in rects}) > 1  # a second column
+    for rect in rects:
+        assert bounds[0] <= rect[0] and rect[2] <= bounds[2] and bounds[1] <= rect[1] and rect[3] <= bounds[3]
 
 
 def test_key_terms_are_found_whole_ignoring_case_longest_first():
@@ -1902,9 +1919,9 @@ def test_a_post_it_sits_off_its_labels_ring_on_its_side_and_stays_in_bounds():
     assert left[0] < 0 and _within(left, (40, 40, 1880, 1000)) == (40, left[1], 240, left[3])
 
 
-def test_a_note_about_a_place_points_just_inside_it_and_a_far_one_is_left_off():
+def test_a_note_about_a_place_points_just_inside_it_and_a_far_one_draws_no_line():
     # The owner, Nov 2: sticky notes drew long lines across the French Revolution's picture, to the middle of a whole
-    # fortress, from notes 180 pixels out or pushed off by the frame's edge.
+    # fortress, from notes 180 pixels out or pushed off by the frame's edge. A note that far goes in a corner instead.
     from studio.render.renderer import POSTIT_MAX_LINE, POSTIT_REACH, _anchor, _line_length
 
     fortress, note = (1200.0, 200.0, 1600.0, 600.0), (900.0, 350.0, 1100.0, 430.0)  # the note on its left
@@ -2125,3 +2142,75 @@ def test_an_everyday_thing_a_flow_carries_rides_as_its_emoji_and_anything_else_a
     p.draw_kind(surface.getCanvas(), (40.0, 40.0), "#FFD166", "money", 1.0)
     shown = pixels[30:50, 30:50, :3].reshape(-1, 3)
     assert (shown.max(1) - shown.min(1) > 60).any()  # the bag's own colours, not a flat disc
+
+
+def test_a_scenes_notes_are_placed_alike_whichever_frame_a_worker_draws_first(job):
+    # Each render worker builds its own Renderer and starts at its own frame: one starting while a caption shows and
+    # one starting after it must stick every note in the same place, or a note jumps (or moves to a corner) at the
+    # seam between their parts of the video.
+    flags = {"overview": [Flag(box=Box(x0=700, y0=420, x1=980, y1=470), note="Should read: thylakoid"),
+                          Flag(box=Box(x0=500, y0=600, x1=1300, y1=900), note="Fibers attach at the middle",
+                               ring=False)]}
+    beats = [flow_beat(0, 2, path=[]).model_copy(update={"caption": "Metaphase"}), flow_beat(2, 6, path=[])]
+    timeline = flowing(beats).model_copy(update={"flags": flags, "notices": {"overview": ["A whole-picture note"]},
+                                                 "ai_pictures": ["overview"]})
+    first, second = Renderer(job, timeline), Renderer(job, timeline)
+    first.frame(0.5)  # starts while the caption shows
+    assert first.frame(4.0).tobytes() == second.frame(4.0).tobytes()  # the other starts after it
+    assert first._postits == second._postits and first._corners == second._corners
+
+
+def test_a_wrong_label_the_camera_never_shows_has_its_note_in_a_corner(job):
+    # A picture cropped to fill the frame can leave a flagged label off it for the whole scene: its note beside it
+    # would never be seen.
+    beat = flow_beat(0, 4, path=[])
+    flag = Flag(box=Box(x0=800, y0=5, x1=1000, y1=40), note="Should read: stroma")  # the art's top, cropped off
+    renderer = Renderer(job, flowing([beat]).model_copy(update={"flags": {"overview": [flag]}}))
+    view, art = renderer.view("overview"), renderer.scene("overview")
+    scale, dx, dy = to_frame(renderer.plans[0].cam(2.0, view, art), view, art)
+    assert 40 * scale + dy < view[1]  # off the frame
+    renderer.frame(2.0)
+    assert renderer._postit_spots("overview") == [None] and renderer._corner_notes("overview") == [flag.note]
+
+
+def test_corner_notes_past_the_most_a_picture_holds_are_counted(job):
+    beat = flow_beat(0, 4, path=[])
+    notes = [f"Note {k}" for k in range(8)]
+    renderer = Renderer(job, flowing([beat]).model_copy(update={"notices": {"overview": notes}}))
+    shown = renderer._corner_notes("overview")
+    assert len(shown) == renderer_module.CORNER_MAX
+    assert shown[:-1] == notes[:renderer_module.CORNER_MAX - 1]
+    assert shown[-1] == f"And {8 - renderer_module.CORNER_MAX + 1} more mistakes the check found"
+
+
+def test_a_stages_corner_notes_cross_fade_with_the_next_stages_and_shared_ones_stay_on(job):
+    def beat(t0, t1, scene):
+        return Beat(t0=t0, t1=t1, scene=scene, camera=TimelineCamera(target=None, zoom=1.0), reveal=[],
+                    spotlight=None, labels=[], particles=[], caption=None, line_id=f"v{t0}", line="x", words=[])
+
+    def video(notices):
+        return Renderer(job, Timeline(video="song", duration=8, fps=30, audio=[], palette=PALETTE,
+                                      stages=[["hook", "overview"]], beats=[beat(0, 4, "hook"), beat(4, 8, "overview")],
+                                      notices=notices))
+
+    fade = renderer_module.STAGE_FADE_S
+    shared = video({"hook": ["Fibers attach at the middle"], "overview": ["Fibers attach at the middle"]})
+    rect = shared._corner_layout("hook")[1][0]
+    assert shared._corner_layout("overview")[1][0] == rect
+    for t in (3.9, 4.0 + fade / 2, 4.0 + fade + 0.1):  # the same note in the same place, on all through the fade
+        assert postit_at(shared.frame(t), rect)
+    moved = video({"hook": ["A note on the first stage"], "overview": []})
+    rect = moved._corner_layout("hook")[1][0]
+    yellow, white = p.rgb("#FFE27A"), (255, 255, 255)
+
+    def under(t):
+        return pixel(moved.frame(t), (rect[0] + rect[2]) / 2, rect[3] - 10)
+
+    assert np.allclose(under(3.9), yellow, atol=12)
+    early = under(4.0 + fade / 4)  # fading out, not gone at the cut
+    assert not np.allclose(early, yellow, atol=12) and not np.allclose(early, white, atol=12)
+    assert not np.allclose(under(4.0 + fade / 2 + 0.05), yellow, atol=40)  # out by the fade's middle
+    # The next stage's own note comes in over the second half, never written over the first.
+    swapped = video({"hook": ["A note on the first stage"], "overview": ["Another on the second"]})
+    rect = swapped._corner_layout("overview")[1][0]
+    assert not postit_at(swapped.frame(4.0 + fade / 2 - 0.05), rect) and postit_at(swapped.frame(4.0 + fade + 0.1), rect)

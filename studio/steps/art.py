@@ -651,7 +651,8 @@ CHECK_WIDTH = 1024
 def look(job: Path, bundle: Bundle, scene: Scene, ask, label: str, path: Path | None = None
          ) -> tuple[ArtCheck, list[dict], list[dict]]:
     """The helper's one look at a picture of the scene (the kept art, or `path`): its check, the wrong labels it boxed
-    (flags()), and its notes about one place, as sticky notes there. A note that names no fact of the lesson is
+    (flags()), and its notes as sticky notes: at their place, boxed, or with no one place (all 0), which the video
+    sticks in a corner of the picture (notices()). A note that names no fact of the lesson is
     dropped: a correction must rest on what the lesson teaches, which the fact-check passed, not on the checker's own
     knowledge (round 20's kidney note was false). One look replaces the check, the second look at its labels and the
     brain's review of its notes, the owner's choice on Nov 2: too many layers."""
@@ -662,8 +663,9 @@ def look(job: Path, bundle: Bundle, scene: Scene, ask, label: str, path: Path | 
     facts = {f.id for f in bundle.facts}
     notes = [n for n in answer.notes if n.fact.strip() in facts and n.text.strip()]
     flags = [f.model_dump() for f in answer.labels if _boxed(f) and f.note.strip()]
-    pinned = [{"text": n.text, "note": n.note, "left": n.left, "top": n.top, "right": n.right, "bottom": n.bottom}
-              for n in notes if _boxed(n) and n.note.strip()]
+    pinned = [{"text": n.text, "note": n.note, **({"left": n.left, "top": n.top, "right": n.right, "bottom": n.bottom}
+                                                  if _boxed(n) else NO_PLACE)}
+              for n in notes if n.note.strip()]
     check = ArtCheck(labels=[f"'{f.text}': {f.note}" if f.note.strip() else f.text for f in answer.labels],
                      misplaced=answer.misplaced,
                      wrong=answer.wrong, notes=[n.text for n in notes])
@@ -758,6 +760,17 @@ def _boxed(found) -> bool:
     return 0 <= found.left < found.right <= 1 and 0 <= found.top < found.bottom <= 1
 
 
+NO_PLACE = {"left": 0.0, "top": 0.0, "right": 0.0, "bottom": 0.0}  # a pinned note's box when it has no one place
+
+
+def _placed(pin: dict) -> bool:
+    """Whether a pinned note of a record (look()) has a place in the picture: a box, not all 0."""
+    try:
+        return 0 <= float(pin["left"]) < float(pin["right"]) <= 1 and 0 <= float(pin["top"]) < float(pin["bottom"]) <= 1
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
 @dataclass
 class Painting:
     """One picture of a scene, checked."""
@@ -768,7 +781,7 @@ class Painting:
     check: ArtCheck
     refused: list[str] = field(default_factory=list)  # paint(): why each other picture of the scene was not kept
     flags: list[dict] = field(default_factory=list)  # its wrong labels, boxed (look())
-    pinned: list[dict] = field(default_factory=list)  # its notes about one place, as sticky notes there
+    pinned: list[dict] = field(default_factory=list)  # its notes, as sticky notes: at their place, or all 0
     rejected: bool = False  # the writer's role saw it and wrote the scene's words again (rewrite())
 
     def problems(self) -> list[str]:
@@ -1151,21 +1164,25 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
 
 
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
-    """What the checks found still wrong in the Muse Image pictures the videos use, as notes for the student,
-    by scene: the video discloses them beside the picture rather than pass off a flawed picture as right.
-    None for a drawing (the brain's SVG), which is not checked this way. A note about a label the video flags on
-    the picture (flags()) is left out: its sticky note says it there, and the card said it again (the owner, Nov 1).
-    One about a label that could not be flagged stays. So does any other, but one stuck on the picture where it
-    applies (look()'s pinned notes): the card holds only what has no one place."""
+    """What the checks found still wrong in the Muse Image pictures the videos use, with no one place in them, as
+    notes for the student, by scene: the video sticks each in a corner of the picture rather than pass off a flawed
+    picture as right. Each is the short sticky note look() wrote for it, or, in a record made before Nov 2's evening,
+    the sentence for the student. None for a drawing (the brain's SVG), which is not checked this way. A note about a
+    label the video flags on the picture (flags()) is left out: its sticky note says it there (the owner, Nov 1). One
+    about a label that could not be flagged stays. So does any other, but one stuck on the picture where it applies
+    (look()'s pinned notes with a box)."""
     found = {}
     for scene in bundle.scenes:
         if not _painted(job, bundle, scene):
             continue
         made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
         flagged = [str(f.get("text") or "").strip().lower() for f in made.get("flags") or [] if isinstance(f, dict)]
-        pinned = {" ".join(str(p.get("text") or "").split()) for p in made.get("pinned") or [] if isinstance(p, dict)}
-        notes = [n.strip() for n in (made.get("check") or {}).get("notes") or []
-                 if n.strip() and not _about_flagged(n, flagged) and " ".join(n.split()) not in pinned]
+        pins = [p for p in made.get("pinned") or [] if isinstance(p, dict)]
+        placed = {" ".join(str(p.get("text") or "").split()) for p in pins if _placed(p)}
+        short = {" ".join(str(p.get("text") or "").split()): str(p.get("note") or "").strip()
+                 for p in pins if not _placed(p)}
+        notes = [short.get(" ".join(n.split())) or n.strip() for n in (made.get("check") or {}).get("notes") or []
+                 if n.strip() and not _about_flagged(n, flagged) and " ".join(n.split()) not in placed]
         if notes:
             found[scene.id] = notes
     return found
@@ -1205,7 +1222,7 @@ def flags(job: Path, bundle: Bundle) -> dict[str, list[Flag]]:
                 made.append(Flag(note=flag["note"], ring=flag.get("ring", True), box=Box(
                     x0=flag["left"] * media.ART_WIDTH, y0=flag["top"] * media.ART_HEIGHT,
                     x1=flag["right"] * media.ART_WIDTH, y1=flag["bottom"] * media.ART_HEIGHT)))
-            except (KeyError, TypeError, ValueError):  # a record written by hand, or an empty box
+            except (KeyError, TypeError, ValueError):  # a record written by hand, or a note with no place (all 0)
                 continue
         if made:
             found[scene.id] = made

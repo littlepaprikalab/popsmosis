@@ -1081,8 +1081,9 @@ class Timeline(Strict):
     core_idea: str = ""  # Bundle.core_idea, written across the top of every frame; "" in a timeline made before
     bpm: int = 0  # the song's tempo, which a working part pulses to; 0 in the lesson, and in a timeline made before
     stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
-    # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
-    # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.
+    # What the art check found still wrong in a scene's AI-made picture with no one place in it, a short note each
+    # for the student (a sentence in a timeline made before Nov 2's evening), by scene: stuck in a corner of the
+    # picture, so a flawed picture is disclosed rather than passed off as right.
     notices: dict[str, list[str]] = {}
     # The scenes whose picture a model made, each tagged as AI-generated: every scene, as the studio makes its
     # art (Muse Image paints it, or the brain draws it as SVG); a picture from anywhere else would be left out.

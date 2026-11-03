@@ -1031,75 +1031,8 @@ KEY_MIN_FONT = 26
 # --- the caption pill ----------------------------------------------------------------------
 
 
-NOTICE_ACCENT = 0xFFF59E0B  # amber: the side of a notice card, and its warning sign
-NOTICE_SUBTLE = 0xFF475569  # slate-600
+NOTICE_ACCENT = 0xFFF59E0B  # amber: a flagged label's ring, and the line and dot joining a sticky note to its place
 NOTICE_TITLE = "AI-generated picture"
-NOTICE_LEAD = "A check found these mistakes:"
-NOTICE_LINES = 6  # lines a note may take on the card
-
-
-def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: list[str], font_size: float,
-                alpha: float = 1.0, more: int = 0) -> float:
-    """A white card telling the viewer the picture beside it is AI-made and what a check found wrong in it, a
-    bullet per note (and how many more were left out). Returns the card's bottom."""
-    if alpha <= 0.01:
-        return top
-    pad, bar = 22.0, 7.0
-    title, body = font("ExtraBold", font_size * 1.15), font("SemiBold", font_size)
-    line_h = font_size * 1.32
-    inner = x1 - x0 - 2 * pad - bar
-    bullet = text_width(body, "•  ")
-    rows: list[tuple[str, float, skia.Font, int]] = []  # text, indent, font, colour
-    for note in notes:
-        lines = wrap(note, body, inner - bullet)
-        if len(lines) > NOTICE_LINES:  # a long note is cut, so the card stays above the lyric band
-            lines = lines[:NOTICE_LINES]
-            lines[-1] = lines[-1].rstrip(" .,;:") + "…"
-        for k, line in enumerate(lines):
-            rows.append((("•  " if k == 0 else "") + line, 0.0 if k == 0 else bullet, body, INK))
-    if more:
-        rows.append((f"and {more} more", 0.0, body, NOTICE_SUBTLE))
-    lead = wrap(NOTICE_LEAD, body, inner)
-    sign = font_size * 1.15
-    height = pad + sign + 12 + len(lead) * line_h + 8 + len(rows) * line_h + pad - 6
-    rect = (x0, top, x1, top + height)
-    rrect = rounded(rect, 16)
-    shadow(canvas, rrect, alpha, blur=12, dy=4)
-    canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha * 0.97)))
-    canvas.save()
-    canvas.clipRRect(rrect, doAntiAlias=True)
-    canvas.drawRect(skia.Rect.MakeLTRB(x0, top, x0 + bar, top + height), skia.Paint(Color=with_alpha(NOTICE_ACCENT, alpha)))
-    canvas.restore()
-    x, y = x0 + bar + pad, top + pad
-    warning_sign(canvas, x, y, sign, alpha)
-    draw_text(canvas, NOTICE_TITLE, x + sign + 12, y + sign * 0.5 + cap_height(title) / 2, title, with_alpha(INK, alpha))
-    y += sign + 12
-    for line in lead:
-        y += line_h
-        draw_text(canvas, line, x, y - line_h * 0.3, body, with_alpha(NOTICE_SUBTLE, alpha))
-    y += 8
-    for text, indent, f, color in rows:
-        y += line_h
-        draw_text(canvas, text, x + indent, y - line_h * 0.3, f, with_alpha(color, alpha))
-    return top + height
-
-
-def warning_sign(canvas: skia.Canvas, x: float, y: float, size: float, alpha: float, edge: float = 0.0) -> None:
-    """The warning sign, its top-left corner at (x, y): an amber triangle with a dark "!", in a dark edge this
-    wide where it sits on a picture."""
-    path = skia.Path()
-    path.moveTo(x + size / 2, y)
-    path.lineTo(x + size, y + size * 0.9)
-    path.lineTo(x, y + size * 0.9)
-    path.close()
-    if edge:
-        canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha), StrokeWidth=2 * edge,
-                                         Style=skia.Paint.kStroke_Style, StrokeJoin=skia.Paint.kRound_Join))
-    canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha)))
-    bang = font("ExtraBold", size * 0.62)
-    draw_text(canvas, "!", x + size / 2 - text_width(bang, "!") / 2, y + size * 0.78, bang, with_alpha(INK, alpha))
-
-
 FLAG_PAD = 6.0  # frame pixels between a flagged label and the ring round it
 FLAG_RING = 4.0  # the ring's amber stroke, inside a dark edge FLAG_EDGE wider each side, so it reads on any picture
 FLAG_EDGE = 2.0
@@ -1136,25 +1069,26 @@ POSTIT_CURL = 18.0  # frame pixels: its top-right corner curls up this far down 
 POSTIT_UNDERSIDE = 0xFFEFCB55  # the curled corner's underside, a shade darker than the note
 
 
-def postit_size(note: str, font_size: float = POSTIT_FONT) -> tuple[float, float]:
-    """How wide and tall a post-it with this note is, in frame pixels."""
+def postit_size(note: str, font_size: float = POSTIT_FONT, lines: int = POSTIT_LINES) -> tuple[float, float]:
+    """How wide and tall a post-it with this note is, in frame pixels, its note cut to this many lines."""
     f = font("SemiBold", font_size)
-    lines = wrap(note, f, POSTIT_TEXT_W)[:POSTIT_LINES] or [""]
+    lines = wrap(note, f, POSTIT_TEXT_W)[:lines] or [""]
     width = max(text_width(f, line) for line in lines)
     badge = font_size * (POSTIT_BADGE + 0.4)  # the "!" badge and its gap, before every line
     return max(width, 3 * font_size) + badge + 2 * POSTIT_PAD, len(lines) * font_size * 1.3 + 2 * POSTIT_PAD + 6
 
 
-def draw_postit(canvas: skia.Canvas, rect: Rect, note: str, alpha: float, font_size: float = POSTIT_FONT) -> None:
+def draw_postit(canvas: skia.Canvas, rect: Rect, note: str, alpha: float, font_size: float = POSTIT_FONT,
+                lines: int = POSTIT_LINES) -> None:
     """A sticky note with the note on it, filling `rect` (frame pixels), tilted a little about its middle, with a
-    soft shadow and the darker strip it sticks by along its top. A note past POSTIT_LINES lines is cut short."""
+    soft shadow and the darker strip it sticks by along its top. A note past `lines` lines is cut short."""
     if alpha <= 0.01:
         return
     x0, y0, x1, y1 = rect
     f = font("SemiBold", font_size)
-    lines = wrap(note, f, POSTIT_TEXT_W)
-    if len(lines) > POSTIT_LINES:
-        lines = lines[:POSTIT_LINES]
+    most, lines = lines, wrap(note, f, POSTIT_TEXT_W)
+    if len(lines) > most:
+        lines = lines[:most]
         lines[-1] = lines[-1].rstrip(" .,;:") + "…"
     canvas.save()
     canvas.rotate(POSTIT_TILT, (x0 + x1) / 2, (y0 + y1) / 2)

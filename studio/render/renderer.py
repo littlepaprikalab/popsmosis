@@ -70,11 +70,7 @@ SETTLE_ZOOM = 1.06
 DRIFT = 0.05
 DRIFT_S = 8.0
 STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stages), in place of a cut
-NOTICE_W = 440  # frame px at the right kept for a picture's notice card (Timeline.notices); the picture moves over
-NOTICE_GAP = 16  # frame px above and below the card in an upright frame, where it sits across the top of the picture
-NOTICE_MAX = 3  # notes on the card; any more are counted
-NOTICE_FONT = 22
-AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures) without a notice card
+AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures), mistakes found or not
 BRAND_GAP = 12  # frame px between the brand and the title band's bottom: a two-line topic clears it
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
 # A cut between two scenes that draw the same part, one far closer than the other (an overview and its close-up),
@@ -693,6 +689,11 @@ POSTIT_MAX_LINE = 130.0
 POSTIT_MAX_COVER = 0.35
 POSTIT_SIDES = ((1, 0), (-1, 0), (0, 1), (0, -1), (-1, 1), (1, 1), (-1, -1), (1, -1))  # (across, down) from the ring
 POSTIT_FRAMINGS = 31  # framings a post-it's spot is judged over: the whole scene and up to 10 beats, 3 times each
+# A note with no spot near its place, or none at all (the whole picture), sits in a corner of the picture with no
+# line (_corner_notes()): never left off, and never on a card beside the picture (the owner, Nov 2).
+CORNER_GAP = 12.0  # frame px between two corner notes
+CORNER_LINES = 7  # lines a corner note may take: a sentence written for the student before Nov 2's short notes
+CORNER_MAX = 5  # corner notes on one picture: past it, the last says how many more the check found
 
 
 def _postit_rect(ring: Rect, size: tuple[float, float], side: int, gap: float) -> Rect:
@@ -1088,18 +1089,6 @@ class Renderer:
         # Each process's stages, which fade one into the next. What was shown on the stage before is on
         # the next from its first frame, rather than shown again from a pale wash.
         self._process = {sid: (n, k) for n, group in enumerate(timeline.stages) for k, sid in enumerate(group)}
-        # The scenes drawn beside a notice card: those with notices, and every stage of a process one of whose
-        # stages has them, so its stages keep one framing.
-        self._beside = set(timeline.notices)
-        for group in timeline.stages:
-            if self._beside & set(group):
-                self._beside |= set(group)
-        # An upright frame has no room beside the picture: there the card goes across the frame above it, and the
-        # picture starts below the tallest card, so every scene with one keeps the same framing.
-        self._card_h = 0.0
-        shown = [notes for scene_id, notes in timeline.notices.items() if scene_id in scene_ids]  # the hook cut
-        if self.portrait and shown:  # carries the song's notices, scenes it never shows included
-            self._card_h = max(self._card_height(notes) for notes in shown) + 2 * NOTICE_GAP
         for i, beat in enumerate(timeline.beats):
             if i and self.staged(timeline.beats[i - 1].scene, beat.scene):
                 before, now = self.revealed.get(timeline.beats[i - 1].scene, {}), self.revealed.get(beat.scene, {})
@@ -1125,7 +1114,8 @@ class Renderer:
         self._background: tuple[tuple, skia.Image] | None = None
         # The background drawn last and where its picture went, (key, (scale, dx, dy)): kept once it comes twice running.
         self._last_background: tuple[tuple, tuple[float, float, float]] | None = None
-        self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
+        self._corners: dict[str, list[Rect]] = {}  # per scene: where each note with no place near goes, frame px
+        self._corner_images: dict[str, tuple[skia.Image, float, float] | None] = {}  # those notes, drawn once
         self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
         self._travelling: dict[tuple[str, str], bool] = {}  # (scene, what travels) -> drawn as hand-off arrows
         self._handoff_arrows: dict[tuple, list] = {}  # each such flow's arrows, in art pixels, with the part entered
@@ -1170,14 +1160,13 @@ class Renderer:
                         self._said.add(key)
 
     def view(self, scene_id: str) -> Rect:
-        """Where the scene's picture goes on the frame: above the key band and the lyric band, and left of the
-        notice card when it has one, or in an upright frame below it."""
+        """Where the scene's picture goes on the frame: above the key band and the lyric band. The same for every
+        scene: no card beside the picture moves it over since Nov 2 (corner notes, _corner_notes())."""
+        del scene_id
         x0, y0, x1, y1 = self.layout.view
         if self.keyed:
             y1 -= self.layout.key_h
-        if scene_id not in self._beside:
-            return (x0, y0, x1, y1)
-        return (x0, y0 + self._card_h, x1, y1) if self.portrait else (x0, y0, x1 - NOTICE_W, y1)
+        return (x0, y0, x1, y1)
 
     def staged(self, before: str, after: str) -> bool:
         """Whether going from one scene to the other is one stage of a process giving way to a later one. Back to
@@ -1462,7 +1451,7 @@ class Renderer:
         canvas.clear(art.paper)
         canvas.restore()
         canvas.save()
-        canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))  # the picture stops at its view
         canvas.translate(dx, dy)
         canvas.scale(scale, scale)
         canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
@@ -1589,26 +1578,29 @@ class Renderer:
             rects.append((lb.x - w / 2, lb.y - h / 2, lb.x + w / 2, lb.y + h / 2))
         return rects
 
-    def _flags(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, bounds: Rect, alpha: float) -> None:
+    def _flags(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, alpha: float) -> None:
         """Each label the art check found wrong in the scene's painted picture (Timeline.flags), from the scene's first
         frame: an amber ring round it, framed with the picture, and a post-it saying what is true, on the side of the
         ring _place_postits() chose, joined to it by a line when it sits away from it. A post-it keeps its size and
         its gap from the ring as the camera moves, and stays inside the picture's bounds; it fades out with its ring
-        as the camera leaves the label, as a label does (edge_fade()), rather than stay on screen pointing at nothing."""
+        as the camera leaves the label, as a label does (edge_fade()), rather than stay on screen pointing at nothing.
+        A note with no spot near enough keeps its ring, and its post-it goes in a corner of the picture
+        (_corner_notes())."""
         art = self.scene(scene_id)
-        if scene_id not in self._postits:
-            self._postits[scene_id] = self._place_postits(scene_id, view, bounds)
+        bounds = self._pill_bounds(scene_id, view)  # the same on every frame: a caption coming on moves no note
         scale, dx, dy = to_frame(cam, view, art)
         canvas.save()
-        canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
-        for flag, spot in zip(self.timeline.flags[scene_id], self._postits[scene_id]):
-            if spot is None:  # no spot near enough: left off rather than drawn far away (POSTIT_MAX_LINE)
-                continue
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))  # the picture stops at its view
+        for flag, spot in zip(self.timeline.flags[scene_id], self._postit_spots(scene_id)):
             box = flag.box
             label = (box.x0 * scale + dx, box.y0 * scale + dy, box.x1 * scale + dx, box.y1 * scale + dy)
             ring = p.flag_ring(label)
             shown = alpha * edge_fade((ring[0] + ring[2]) / 2, (ring[1] + ring[3]) / 2, view)
             if shown <= 0.01:
+                continue
+            if spot is None:  # no spot near enough: the ring stays, the note goes in a corner (_corner_notes())
+                if flag.ring:
+                    p.draw_flag(canvas, label, shown)
                 continue
             note = _within(_postit_rect(ring, p.postit_size(flag.note), *spot), bounds)
             if flag.ring:
@@ -1630,11 +1622,10 @@ class Renderer:
         in (the whole scene, and the camera at the start, middle and end of each of its beats): the picture moves and
         grows under a post-it that keeps its size. Chosen once, so a post-it never jumps. None for a note with no
         spot near enough (its line past POSTIT_MAX_LINE over the whole scene) or none that leaves the picture seen
-        (POSTIT_MAX_COVER): it is left off."""
+        (POSTIT_MAX_COVER), or whose label the camera never shows (the picture cropped to fill the frame): it goes in
+        a corner of the picture instead (_corner_notes())."""
         art = self.scene(scene_id)
-        cams = [self._whole(scene_id, view)] + [
-            plan.cam(t, view, art) for beat, plan in zip(self.timeline.beats, self.plans) if beat.scene == scene_id
-            for t in (beat.t0, (beat.t0 + beat.t1) / 2, max(beat.t0, beat.t1 - 1e-3))][:POSTIT_FRAMINGS - 1]
+        cams = self._framings(scene_id, view)
         flags = self.timeline.flags[scene_id]
         chosen: list[tuple[int, float] | None] = []
         for i, flag in enumerate(flags):
@@ -1663,8 +1654,111 @@ class Renderer:
                     score = (round(cost / len(cams), 2), k, side)
                     if best is None or score < best[0]:
                         best = (score, (side, gap))
-            chosen.append(best[1] if best is not None and best[0][0] <= POSTIT_MAX_COVER else None)
+            shown = cams[1:] or cams  # the framings the video shows
+            seen = max(edge_fade((r[0] + r[2]) / 2, (r[1] + r[3]) / 2, view) for r in (
+                p.flag_ring((flag.box.x0 * sc + ox, flag.box.y0 * sc + oy, flag.box.x1 * sc + ox,
+                             flag.box.y1 * sc + oy)) for sc, ox, oy in (to_frame(cam, view, art) for cam in shown)))
+            chosen.append(best[1] if best is not None and best[0][0] <= POSTIT_MAX_COVER and seen > 0.01 else None)
         return chosen
+
+    def _postit_spots(self, scene_id: str) -> list[tuple[int, float] | None]:
+        """Each flag's post-it spot (_place_postits()), chosen once for the scene in bounds that are the same on every
+        frame (_pill_bounds()): alike whichever frame a render worker draws first, a caption showing or not, so no
+        note jumps, or moves to a corner, at the seam between two workers' parts of the video."""
+        if scene_id not in self._postits:
+            view = self.view(scene_id)
+            self._postits[scene_id] = self._place_postits(scene_id, view, self._pill_bounds(scene_id, view))
+        return self._postits[scene_id]
+
+    def _framings(self, scene_id: str, view: Rect) -> list[Cam]:
+        """The framings a note's spot is judged over: the whole scene, and the camera at the start, middle and end of
+        each of its beats (POSTIT_FRAMINGS)."""
+        art = self.scene(scene_id)
+        return [self._whole(scene_id, view)] + [
+            plan.cam(t, view, art) for beat, plan in zip(self.timeline.beats, self.plans) if beat.scene == scene_id
+            for t in (beat.t0, (beat.t0 + beat.t1) / 2, max(beat.t0, beat.t1 - 1e-3))][:POSTIT_FRAMINGS - 1]
+
+    def _corner_notes(self, scene_id: str) -> list[str]:
+        """The notes the video sticks in a corner of the picture, with no line: what the check found wrong with no one
+        place in it (Timeline.notices), and each flag's note with no spot near its place (_place_postits()). Never
+        left off: since Nov 2 every note names a fact of the lesson the picture contradicts (art.look()), so one left
+        off was a mistake the student could learn, and a card beside the picture left them to find the place (the
+        owner, Nov 1) and moved every stage of its process over."""
+        flags = self.timeline.flags.get(scene_id, [])
+        notes = [*self.timeline.notices.get(scene_id, []),
+                 *(flag.note for flag, spot in zip(flags, self._postit_spots(scene_id) if flags else []) if spot is None)]
+        if len(notes) > CORNER_MAX:  # never more than the corners hold: the rest are counted
+            notes = notes[:CORNER_MAX - 1] + [f"And {len(notes) - CORNER_MAX + 1} more mistakes the check found"]
+        return notes
+
+    def _place_corner(self, scene_id: str, view: Rect, notes: list[str]) -> list[Rect]:
+        """Where each corner note goes, in frame pixels, fixed on the frame as the camera moves: down from the top
+        right corner of the picture's bounds (clear of its caption, its tag and its brand), or the top left, whichever
+        covers less of the picture and of its flags and their post-its over its framings; a column that reaches the
+        bottom goes on in one beside it, further in. Chosen once, so a note never jumps."""
+        art = self.scene(scene_id)
+        bounds = self._pill_bounds(scene_id, view)
+        flags = self.timeline.flags.get(scene_id, [])
+        spots = self._postit_spots(scene_id) if flags else []
+        cams = self._framings(scene_id, view)
+        sizes = [p.postit_size(note, lines=CORNER_LINES) for note in notes]
+        best = None
+        for k, right in enumerate((True, False)):
+            rects, x, y, column = [], bounds[2] if right else bounds[0], bounds[1], 0.0
+            for w, h in sizes:
+                if rects and y + h > bounds[3]:  # on in a column further in
+                    x, y, column = (x - column - CORNER_GAP, bounds[1], 0.0) if right else (x + column + CORNER_GAP,
+                                                                                            bounds[1], 0.0)
+                rects.append((x - w, y, x, y + h) if right else (x, y, x + w, y + h))
+                y, column = y + h + CORNER_GAP, max(column, w)
+            cost = 0.0
+            for cam in cams:
+                scale, dx, dy = to_frame(cam, view, art)
+                rings = [p.flag_ring((f.box.x0 * scale + dx, f.box.y0 * scale + dy, f.box.x1 * scale + dx,
+                                      f.box.y1 * scale + dy)) for f in flags]
+                near = [_within(_postit_rect(ring, p.postit_size(f.note), *spot), bounds)
+                        for f, ring, spot in zip(flags, rings, spots) if spot is not None]
+                for rect in rects:
+                    cost += art.ink_share(((rect[0] - dx) / scale, (rect[1] - dy) / scale, (rect[2] - dx) / scale,
+                                           (rect[3] - dy) / scale))
+                    cost += sum(_overlap(rect, other) for other in near + rings)
+            if best is None or (round(cost, 2), k) < best[0]:
+                best = ((round(cost, 2), k), rects)
+        return best[1] if best else []
+
+    def _corner_layout(self, scene_id: str) -> tuple[list[str], list[Rect]]:
+        """The scene's corner notes and where each goes, worked out once (_corner_notes(), _place_corner())."""
+        notes = self._corner_notes(scene_id)
+        if scene_id not in self._corners:
+            self._corners[scene_id] = self._place_corner(scene_id, self.view(scene_id), notes) if notes else []
+        return notes, self._corners[scene_id]
+
+    def _corners_drawn(self, canvas: skia.Canvas, scene_id: str, alpha: float) -> None:
+        """The scene's corner notes, fading in with their stage as its flags do. Drawn once as an image, kept for
+        every frame: their soft shadows, drawn afresh, cost about a fifth of a frame's time (Nov 2)."""
+        if alpha <= 0.01:
+            return
+        if scene_id not in self._corner_images:
+            notes, rects = self._corner_layout(scene_id)
+            self._corner_images[scene_id] = self._corner_image(notes, rects) if notes else None
+        drawn = self._corner_images[scene_id]
+        if drawn is not None:
+            image, x, y = drawn
+            canvas.drawImage(image, x, y, skia.SamplingOptions(), skia.Paint(Alphaf=alpha))
+
+    def _corner_image(self, notes: list[str], rects: list[Rect]) -> tuple[skia.Image, float, float]:
+        """Corner notes drawn on a clear frame, cut to their rects and the room their shadows and tilt take."""
+        layout = self.layout
+        surface = skia.Surface(layout.width, layout.height)
+        canvas = surface.getCanvas()
+        canvas.clear(skia.ColorTRANSPARENT)
+        for note, rect in zip(notes, rects):
+            p.draw_postit(canvas, rect, note, 1.0, lines=CORNER_LINES)
+        x0 = max(int(min(r[0] for r in rects)) - 24, 0)
+        y0 = max(int(min(r[1] for r in rects)) - 24, 0)
+        x1 = min(int(max(r[2] for r in rects)) + 24, layout.width)
+        y1 = min(int(max(r[3] for r in rects)) + 32, layout.height)
+        return surface.makeImageSnapshot(skia.IRect.MakeLTRB(x0, y0, x1, y1)), float(x0), float(y0)
 
     def _draw_beat(self, canvas: skia.Canvas, t: float) -> None:
         layout = self.layout
@@ -1706,11 +1800,9 @@ class Renderer:
         caption_alpha = 0.0
         if beat.caption:
             caption_alpha = p.ease((t - plan.caption_in) / CAPTION_FADE_S) * p.ease((plan.caption_out - t) / CAPTION_FADE_S)
-        notes = self.timeline.notices.get(beat.scene, [])
-        tagged = beat.scene in self.timeline.ai_pictures and not notes  # the notice card says it otherwise
-        # The brand is in the picture's bottom right corner, unless the picture has moved over for a notice card
-        # (it is then under the card) or there is a title band (it is in that).
-        branded = not layout.title_h and beat.scene not in self._beside
+        tagged = beat.scene in self.timeline.ai_pictures
+        # The brand is in the picture's bottom right corner, unless there is a title band (it is in that).
+        branded = not layout.title_h
         bounds = self._bounds(beat.scene, view, caption_alpha > 0)
         arrows = self._arrow_points(beat.scene, cam, view)
         places = self._pill_places(beat.scene, cam, view)
@@ -1735,22 +1827,30 @@ class Renderer:
         if beat.scene not in self.timeline.self_labelled:  # a painted picture labels its own parts
             self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points,
                          strength, {m.structure: m for m in beat.meanings})
+        # What the check found wrong in the picture: its flags fade in with its stage as the stage before's fade out,
+        # each with its picture. Corner notes, fixed on the frame, hand over in turn, the stage before's out in the
+        # first half of the fade and this one's in over the second, so no note is written over another; corner notes
+        # the two stages share stay on.
+        before = plan.fade_from if fade < 1.0 else None
+        shared = before is not None and self._corner_layout(before) == self._corner_layout(beat.scene)
+        if before is not None:
+            if before in self.timeline.flags:
+                self._flags(canvas, before, cam, view, 1.0 - fade)
+            if not shared:
+                self._corners_drawn(canvas, before, max(1.0 - 2.0 * fade, 0.0))
         if beat.scene in self.timeline.flags:
-            self._flags(canvas, beat.scene, cam, view, bounds, fade)
+            self._flags(canvas, beat.scene, cam, view, fade)
+        self._corners_drawn(canvas, beat.scene, 1.0 if shared or before is None else max(2.0 * fade - 1.0, 0.0))
         if beat.conversions:
             self._conversions(canvas, beat, view, t, places, strength)
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, view[1] + layout.margin + 8, layout.caption_font,
                            caption_alpha)
-        # Fading in with a stage only where the stage before had none: the same card or tag stays put.
+        # Fading in with a stage only where the stage before had none: the same tag stays put.
         if tagged:
-            before = plan.fade_from in self.timeline.ai_pictures and plan.fade_from not in self.timeline.notices
+            before = plan.fade_from in self.timeline.ai_pictures
             p.draw_ai_tag(canvas, view[0] + layout.margin, view[3] - layout.margin, AI_TAG_FONT,
                           1.0 if before else fade)
-        if notes:  # what a check found still wrong in this AI-made picture, disclosed beside it
-            card, x, y = self._card(beat.scene, view)
-            alpha = 1.0 if plan.fade_from in self.timeline.notices else fade
-            canvas.drawImage(card, x, y, skia.SamplingOptions(), skia.Paint(Alphaf=alpha))
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font, lines=layout.band_lines)
         # The key line fades in and out with its run, and stays put through it while the lyrics go by below. It sits
@@ -1775,8 +1875,8 @@ class Renderer:
         across the top while one shows, and the AI tag's and the brand's strip along the bottom."""
         layout = self.layout
         top = layout.margin + (layout.caption_font * 1.75 + 24 if caption else 0)
-        tagged = scene_id in self.timeline.ai_pictures and not self.timeline.notices.get(scene_id, [])
-        branded = not layout.title_h and scene_id not in self._beside
+        tagged = scene_id in self.timeline.ai_pictures
+        branded = not layout.title_h
         strip = max(AI_TAG_FONT * 1.7 if tagged else 0.0, self.brand[1] if branded else 0.0)
         bottom = layout.margin + (strip + 10 if strip else 0)  # labels keep clear of the tag and the brand
         return (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
@@ -1999,33 +2099,6 @@ class Renderer:
                               self.timeline.palette[conv.structure],
                               p.ease((t - conv.since) / LABEL_IN_S) * pill_fade(rect, self._pill_bounds(beat.scene, view))
                               * (strength or {}).get(conv.structure, 1.0), view, font)
-
-    def _card(self, scene_id: str, view: Rect) -> tuple[skia.Image, float, float]:
-        """The scene's notice card as an image and where it goes: drawn once, as wrapping its notes and blurring
-        its shadow every frame cost an eighth of the frame."""
-        if scene_id not in self._cards:
-            layout, notes = self.layout, self.timeline.notices[scene_id]
-            surface = skia.Surface(layout.width, layout.height)
-            canvas = surface.getCanvas()
-            canvas.clear(skia.ColorTRANSPARENT)
-            if self.portrait:  # across the frame, in the room kept above the picture
-                left, top = layout.margin, view[1] - self._card_h + NOTICE_GAP
-            else:  # beside the picture, level with its top, below the key band
-                left, top = view[2], view[1] + layout.margin + 8
-            bottom = p.draw_notice(canvas, left, top, layout.width - layout.margin, notes[:NOTICE_MAX],
-                                   NOTICE_FONT, more=max(len(notes) - NOTICE_MAX, 0))
-            x0, y0 = max(int(left) - 24, 0), max(int(top) - 24, 0)
-            x1, y1 = layout.width, min(int(bottom) + 32, layout.height)
-            card = surface.makeImageSnapshot(skia.IRect.MakeLTRB(x0, y0, x1, y1))
-            self._cards[scene_id] = (card, float(x0), float(y0))
-        return self._cards[scene_id]
-
-    def _card_height(self, notes: list[str]) -> float:
-        """How tall a card of these notes is across an upright frame: drawn once where nothing shows it."""
-        width = self.layout.width - 2 * self.layout.margin
-        scratch = skia.Surface(int(width) + 1, 1)
-        return p.draw_notice(scratch.getCanvas(), 0, 0, width, notes[:NOTICE_MAX], NOTICE_FONT,
-                             more=max(len(notes) - NOTICE_MAX, 0))
 
     def _turning(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float,
                  ghosts: dict[str, float], spots: dict[str, float], face: bool) -> None:
