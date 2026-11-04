@@ -2256,6 +2256,28 @@ Bastille labelled twice, a plain bakery. The crate label came twice again, for t
 The writer's look that suits a hook set today is kept. In all, six versions of the six scenes cost $2.95 ($2.46 of
 pictures, $0.49 of SAM); every Claude call was answered in the session.
 
+## Nov 4: directions only where something happens
+
+A heartbeat's bundle for noise-cancelling headphones came back from the API with most of its lines undirected and
+was refused, a whole bundle call again (its operator's session wrote it). The brief now asks for an entry only on a
+line that cuts, spotlights or moves something, and for the first chorus alone; a line with none holds (`held`), and
+the writer writes no camera, glow or caption. Two subagent writers, script then bundle, on the new brief:
+
+| | Noise-cancelling headphones (K-pop) | Dramatic irony (English 9) |
+|---|---|---|
+| Lines | 48 sung, 29 spoken | 40 sung, 31 spoken |
+| Entries written | 55 (71%) | 39 (55%) |
+| First chorus / later choruses directed | 4 of 5 / none | 2 of 5 / none |
+| The direction / the whole answer | about 2,000 / 8,500 tokens | about 1,300 / 7,400 tokens |
+| Close-ups, the camera following the spotlight | 51% of lines | 39% of lines |
+
+The 36 stored bundles of Oct 29-30 wrote 74 to 92 entries, about 4,200 tokens of an 11,000-token answer, and closed
+in on 37% of lines. Both bundles were accepted first time, and neither chorus copy was recorded as a problem. What the
+checks left was of the usual kinds: spotlights on a part not named yet (8 in the headphones, repaired), the song's
+style, one key line, a crowded overview. The headphones' writer marked both wave close-ups `to_scale`, so they are
+drawn, not painted. The rule changes what the writer does: kept. To watch: more close-ups where a lesson spotlights
+a part on most lines, as the Nov 3 round found without the camera's rule.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
