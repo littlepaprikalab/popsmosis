@@ -487,30 +487,32 @@ lyrics have them.
 
 ## Direction
 
-`direction` has one entry for every lyric line and narration sentence, in the same order,
-keyed by `line_id`. The picture never moves: plan the particles, the camera and the spotlight
-across the whole video before writing any one line's.
+`direction` is what the video does on a line: the picture on screen, the part lit, and what
+moves. Write an entry, keyed by `line_id`, in the lines' order, only for a line that cuts to
+another picture, spotlights a part or moves something. A line with no entry stays on the
+picture of the line before it, shown whole, with nothing lit or moving. Direct the first
+chorus only: a later chorus line that sings its words is directed as it is. With a script,
+each narration sentence plays over the scene its passage names, so a sentence needs an entry
+only to spotlight a part or move something. The picture never moves: plan the particles and
+the spotlight across the whole video before writing any one line's.
 
 - `scene`: on screen while the line plays; it draws every structure in the line's `names`.
   Stay on a scene for several lines and cut when the content moves on; in the song, keep a
   section on one scene where you can (a picture up for one sung line is gone before the
   viewer finds anything in it).
-- `camera`: `target` a structure ("" for the whole scene); `zoom` 1.0 for the whole scene,
-  about 1.4 to 1.6 for a close-up. Wide on lines that sum up or link steps; close on the
-  part a line is about, for at most three lines, then pull back or move on. Move with the
-  story (along the chain, the way the particles go), not back and forth.
-- `spotlight`: the structure the line is about, kept bright while the others fade, or "".
-  Spotlight the part each step is about while its particles move, the part an analogy's
-  sentence matches as it names it, and the structure the misconception is about on the line
-  that corrects it; none on lines that sum up, so the whole pathway reads at once.
-- A line about no particular structure holds the whole scene ("" and zoom 1.0).
+- `spotlight`: the structure the line is about, kept bright while the others fade, with the
+  camera in close on it; or "" for the whole scene. Spotlight the part each step is about
+  while its particles move, the part an analogy's sentence matches as it names it, and the
+  structure the misconception is about on the line that corrects it; none on lines that sum
+  up or link steps, so the whole pathway reads at once. Move with the story (along the chain,
+  the way the particles go), not back and forth.
 - `particles`: for a line about something that travels (a molecule, a nerve signal, money,
   a letter), the structures it travels between, in order; otherwise []. Only what the facts
   say travels that way moves: never a route made up to keep the dots busy (from a character
   to the audience, from one line of a graph to another). Many topics outside science have
   little or nothing that travels (a writer's device, a graph, a chain of events): their
-  scenes hold still, with [] here, and the camera and the spotlight move from part to part
-  with the lines instead. Across a wall or membrane, the route goes through the opening the
+  scenes hold still, with [] here, and the spotlight moves from part to part with the lines
+  instead. Across a wall or membrane, the route goes through the opening the
   facts name (a channel, a pump, a carrier, a gate): sodium leaking into a cell through the
   leak channel, H⁺ through ATP synthase, water through a dam's gate. Through the wall itself only where the facts say it crosses
   that way (O₂ across the alveolus wall): a route through the membrane drew Na⁺ slipping
@@ -530,11 +532,6 @@ across the whole video before writing any one line's.
   what one structure gives off together (H⁺ and O₂ from Photosystem II to the lumen), or
   two ways at once (the pump's Na⁺ out while its K⁺ comes in), with its own `particles`,
   `carries` and `says` under the same rules; [] on every other line.
-- `glow`: a structure an outside cause switches on in this line (light excites photosystem
-  II, a hormone reaches its receptor). Rare, a handful in a whole lesson, and never to point
-  at what the line is about (that is `spotlight`); "" otherwise.
-- `caption`: almost always ""; at most one short caption per song section, for a term worth
-  seeing written.
 
 Plan the motion like an animator:
 
@@ -554,10 +551,10 @@ Plan the motion like an animator:
   clouds).
 - **In history, only what was carried moves**: goods, grain, money, letters. Never land,
   power, loyalty, votes or ideas (no route from a king to his people), and never people or
-  armies, which are drawn: the camera following the army from its figure to the city is the
+  armies, which are drawn: the spotlight moving from the army's figure to the city is the
   march. In a grave topic (a genocide, slavery), dots marked "people" or "trains" carried
-  across a map make tokens of the dead: goods, ships and money may move, and the camera and
-  the spotlight show where people were taken.
+  across a map make tokens of the dead: goods, ships and money may move, and the spotlight
+  shows where people were taken.
 
 ## What builds up, turns, blocks and changes
 

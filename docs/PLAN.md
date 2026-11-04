@@ -269,16 +269,21 @@ already written.
    opened on the lesson's hook ("Copy each chromosome, split the pair" over a scraped knee).
 6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics. It explains
    what the song only names: every fact, step by step, and every structure drawn.
-7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
-   (`target`, `zoom`), `spotlight`, `particles`, `carries` (what the particles are: "H⁺",
-   "e⁻", "glucose", a plain word such as "price" outside science; "" for none), `caption`.
+7. `direction[]`: by line id, only for a line that cuts to another picture, spotlights a part or
+   moves something: `scene`, `spotlight`, `particles`, `carries` (what the particles are: "H⁺",
+   "e⁻", "glucose", a plain word such as "price" outside science; "" for none), `moves`, `says`
+   and `also`. A line with none holds the picture before it, whole, with nothing lit or moving
+   (`held`, filled in by code), and a later chorus line is directed as the first chorus's. The
+   camera follows the spotlight (studio/steps/timeline.py). Until Nov 4 every line had an entry,
+   with a `camera`, a `glow` and a `caption`, and a missing one refused the bundle: the camera
+   aimed at the spotlit part on 97% of close-ups, and a glow and a caption were on 2% of lines;
+   a bundle written before still plays them.
    Particles go only where the facts say something travels: a scene where nothing does (a
-   graph, a stage) holds still, and the camera and spotlight carry it. No times: code adds those
+   graph, a stage) holds still, and the spotlight carries it. No times: code adds those
    from the alignment. Then `builds_up`: what piles up in which space as the lesson goes
    (`[{"carries": "H⁺", "region": "Thylakoid lumen"}]`), which the video fills and empties,
    `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`), and
-   `blocks`: what stops the particles reaching it (`[{"structure": "Herbicide"}]`). Each
-   direction line may also name a `glow`: a part an outside cause switches on.
+   `blocks`: what stops the particles reaching it (`[{"structure": "Herbicide"}]`).
 8. `tags`: `song[]` and `lesson[]`, 5–7 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
    then the song's genre. Last, so they are written knowing the whole plan. Code cleans them

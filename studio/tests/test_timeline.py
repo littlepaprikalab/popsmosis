@@ -28,6 +28,10 @@ def write_bundle(job, data, timed=None):
     return bundle
 
 
+def line(data, line_id):
+    return next(item for item in [*data["lyrics"], *data["narration"]] if item["id"] == line_id)
+
+
 def direct(data, line_id, **changes):
     d = next(d for d in data["direction"] if d["line_id"] == line_id)
     d.update(changes)
@@ -836,3 +840,61 @@ def test_two_kinds_of_particle_on_one_video_are_never_drawn_alike():
     assert colours["Na⁺"] == MARKER_COLOURS["Na⁺"]  # a common kind keeps its own
     assert colours["glucose"] in OTHER_MARKERS and _rgb_apart(colours["glucose"], colours["Na⁺"]) >= APART
     assert all(_rgb_apart(colours["glucose"], c) >= APART for label, c in colours.items() if label != "glucose")
+
+
+def test_with_no_camera_written_it_moves_in_on_the_spotlit_part_for_at_most_three_lines(job, monkeypatch):
+    """Since Nov 4 the writer writes no camera: the camera follows the spotlight, CLOSE_ZOOM from the whole scene,
+    and pulls back after CLOSE_LINES lines on one part. A scene's first line still shows the whole picture. (Held
+    steadier by _calm(), tested below.)"""
+    monkeypatch.setattr(step, "CALM", False)
+    data = sample_media.bundle().model_dump()
+    for d in data["direction"]:
+        d["camera"] = None
+    for line_id in ("v1-2", "c1-1", "v2-1", "c2-1", "c3-1"):
+        direct(data, line_id, spotlight="Thylakoid")  # named on the hook, so labelled on the overview
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    framed = {i: (song[i].camera.target, song[i].camera.zoom) for i in ("v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1")}
+    assert framed == {
+        "v1-2": (None, 1.0),  # the overview's first line: the whole picture, though it counts as the first of three
+        "c1-1": ("Thylakoid", step.CLOSE_ZOOM), "v2-1": ("Thylakoid", step.CLOSE_ZOOM),
+        "c2-1": (None, 1.0),  # a fourth line on the same part: back to the whole scene
+        "b-1": (None, 1.0),  # nothing spotlit
+        "c3-1": ("Thylakoid", step.CLOSE_ZOOM),  # spotlit again after a line without: in again
+    }
+
+
+def test_the_camera_that_follows_the_spotlight_holds_each_framing_at_least_a_few_seconds(job):
+    """At 3 s a line, a close-up for one line (under STEADY_S) goes to the whole scene, its part still lit, and a
+    one-line pull-back between two close-ups of one part stays close (_calm()). A camera the writer set is left as it
+    is."""
+    data = sample_media.bundle().model_dump()
+    for d in data["direction"]:
+        d["camera"] = None
+    lit = {"v1-2": "Thylakoid", "c1-1": "Thylakoid", "v2-1": "", "c2-1": "Thylakoid", "b-1": "Cytochrome b6f",
+           "c3-1": ""}
+    for line_id, part in lit.items():
+        direct(data, line_id, scene="overview", spotlight=part)
+    line(data, "v2-1")["text"] = "Only cytochrome b6f pumps them in"  # named, so the bridge can light it
+    bundle = Bundle.model_validate(data)
+    timed = sample_media.timings(bundle)
+    timed["song"] = sample_media._timing("song", [(line.id, line.text) for line in bundle.lyrics], 3.0)
+    write_bundle(job, data, timed)
+    song = lines(make(job)["song"])
+    framed = {i: song[i].camera.target for i in lit}
+    assert framed == {
+        "v1-2": None,  # the overview's first line
+        "c1-1": "Thylakoid",
+        "v2-1": "Thylakoid",  # 3 s of the whole between two close-ups on the thylakoid: it stays close
+        "c2-1": "Thylakoid",
+        "b-1": None,  # one 3-second line on the cytochrome: the whole scene, the cytochrome lit
+        "c3-1": None,
+    }
+    assert song["b-1"].spotlight == "Cytochrome b6f"
+    # The camera as written, before Nov 4: a one-line close-up stays the writer's.
+    data = sample_media.bundle().model_dump()
+    direct(data, "b-1", scene="overview", spotlight="Cytochrome b6f",
+           camera={"target": "Cytochrome b6f", "zoom": 1.6})
+    direct(data, "c3-1", scene="overview")
+    write_bundle(job, data, timed)
+    assert lines(make(job)["song"])["b-1"].camera.target == "Cytochrome b6f"

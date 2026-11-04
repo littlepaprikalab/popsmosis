@@ -114,7 +114,7 @@ def broken(change):
         (lambda d: d["lyrics"][0].update(fact_id="f9"), "unknown fact 'f9'"),
         (lambda d: d["scenes"][1]["structures"][0].update(color_hex="#000000"), "Thylakoid has two colours"),
         (lambda d: d["scenes"][0]["structures"][0].update(color_hex="green"), "not #RRGGBB"),
-        (lambda d: d["direction"].pop(), "no direction for n2"),
+        (lambda d: d["direction"].append({**d["direction"][0], "line_id": "x9"}), "unknown or repeated direction for x9"),
         (lambda d: d["direction"][0].update(scene="nowhere"), "unknown scene 'nowhere'"),
         (lambda d: d["narration"][0].update(id="v1-1"), "duplicate line ids: v1-1"),
         (lambda d: d.update(lesson_markdown="x" * 5001), "over 5000"),
@@ -124,6 +124,40 @@ def broken(change):
 def test_bundle_problems_are_caught(change, message):
     with pytest.raises(ValidationError, match=message):
         Bundle.model_validate(broken(change))
+
+
+def test_a_line_with_no_direction_holds_the_picture_before_it():
+    """Since Nov 4 a line the writer left undirected is no reason to refuse the bundle (a whole bundle call again): it
+    plays over the picture of the line before it in its video, whole, with nothing lit or moving, marked held. Lines
+    before any direction take the first one's picture; the direction keeps the lines' order."""
+    data = bundle_data()
+    direction = {d["line_id"]: d for d in data["direction"]}
+    direction["v1-2"].update(scene="hook")
+    direction["n1"].update(scene="synthase")
+    data["direction"] = [direction[i] for i in ("v1-2", "v2-1", "n1")]
+    bundle = Bundle.model_validate(data)
+    assert [(d.line_id, d.scene, d.held) for d in bundle.direction] == [
+        ("v1-1", "hook", True),  # before the song's first direction: its picture
+        ("v1-2", "hook", False),
+        ("c1-1", "hook", True),
+        ("v2-1", "overview", False),
+        ("c2-1", "overview", True), ("b-1", "overview", True), ("c3-1", "overview", True),
+        ("n1", "synthase", False),
+        ("n2", "synthase", True),  # the lesson's own line before: never the song's
+    ]
+    held = next(d for d in bundle.direction if d.held)
+    assert (held.spotlight, held.particles, held.camera, held.also) == ("", [], None, [])
+    assert Bundle.model_validate(bundle.model_dump()) == bundle  # read again, the same
+
+
+def test_the_writer_no_longer_writes_a_camera_a_glow_or_a_caption():
+    """The camera follows the spotlight, and a glow and a caption were on 2% of lines (Nov 4): the writer's schema
+    has none, nor `held`, and a bundle written before with them still reads."""
+    fields = strict_schema(Bundle)["properties"]["direction"]["items"]["properties"]
+    assert not {"camera", "glow", "caption", "held"} & set(fields)
+    assert {"line_id", "scene", "spotlight", "particles", "carries", "moves", "says", "also"} == set(fields)
+    old = Bundle.model_validate(bundle_data())  # the sample is written the old way
+    assert old.direction[0].camera is not None and old.direction[0].caption == ""
 
 
 def test_the_song_sections_follow_the_lyrics():

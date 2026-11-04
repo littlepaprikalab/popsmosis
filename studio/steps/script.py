@@ -193,8 +193,10 @@ def follow(bundle: Bundle, script: Script, job: Path | None = None) -> Bundle:
         # about that picture. What its direction points at there is held to that scene by the code checks.
         drawn = {s.id for s in bundle.scenes}
         over = {n.id: scene for n, (scene, _) in zip(bundle.narration, sentences) if scene in drawn}
-        update["direction"] = [d.model_copy(update={"scene": over[d.line_id]}) if d.line_id in over else d
-                               for d in bundle.direction]
+        # A sentence held for want of a direction (Direction.held) plays over its passage's scene too, and no longer
+        # holds the picture before it when a repair moves that one (checks._hold_scenes()).
+        update["direction"] = [d.model_copy(update={"scene": over[d.line_id], "held": False}) if d.line_id in over
+                               else d for d in bundle.direction]
     if job is not None:
         write(job / RECORD, {"script": script.model_dump(), "kept": kept})
     if not all(v for k, v in kept.items() if k in ("facts", "narration")):
