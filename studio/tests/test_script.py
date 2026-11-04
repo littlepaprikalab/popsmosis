@@ -90,6 +90,19 @@ def test_each_sentence_plays_over_the_scene_its_passage_names_where_the_bundle_d
     assert kept["scenes_as_written"] == 0  # what the writer did, before the scenes were set
 
 
+def test_a_sentence_left_undirected_plays_over_its_passages_scene_and_no_longer_holds(tmp_path):
+    """A narration sentence the writer left undirected (Direction.held) plays over the scene its passage names, as a
+    directed one does, and is no longer held: a repair that moves the sentence before it does not move it."""
+    data = bundle_data()
+    data["direction"] = [d for d in data["direction"] if d["line_id"] != "n2"]
+    moved = script_data(narration=[{"scene": "overview", "lines": ["One."]}, {"scene": "synthase", "lines": ["Two."]}])
+    held = Bundle.model_validate(data)
+    assert next(d for d in held.direction if d.line_id == "n2").held
+    out = script.follow(held, script.Script.model_validate(moved), tmp_path)
+    n2 = next(d for d in out.direction if d.line_id == "n2")
+    assert (n2.scene, n2.held) == ("synthase", False)
+
+
 def test_without_a_script_the_bundle_is_written_as_before(tmp_path):
     write(tmp_path / "request.json", Request(topic="the light reactions"))
     for answer in (brain.BrainError("no answer"), script_data(narration=[{"scene": "elsewhere", "lines": ["Hi."]}])):

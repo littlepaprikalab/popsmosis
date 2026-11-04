@@ -43,6 +43,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
     problems = _no_analogy_scene(data) + _case_off_the_hook(data) + _settle_song_scenes(data) + _direct_choruses(data)
+    _hold_scenes(data)  # last of the repairs that move a line to another picture
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
@@ -1098,6 +1099,26 @@ def _direct_choruses(data: dict) -> list[Problem]:
                 problems.append(Problem(line_id=later["line_id"], rule="motion", repaired=True,
                                         detail=f"directed as {source['line_id']}, {which} same line"))
     return problems
+
+
+def _hold_scenes(data: dict) -> None:
+    """A held line (Direction.held) plays over the picture of the line before it in its video. It was given that
+    picture when the bundle was read, and a repair since may have moved the line before it (a later chorus directed
+    as the first, a scene left out), so each held line takes it again; held lines before any other take the first
+    other line's. Codex's review of Nov 4: with the first chorus on the synthase, the verse before the second on the
+    overview, and the second chorus and the bridge undirected, the chorus went to the synthase and the bridge, held
+    on the overview, cut back to it."""
+    directions = {d["line_id"]: d for d in data["direction"]}
+    drawn = {s["id"] for s in data["scenes"]}
+    for stream in (data["lyrics"], data["narration"]):
+        own = [d for d in (directions.get(line["id"]) for line in stream) if d]
+        before = next((d["scene"] for d in own if not d.get("held") and d["scene"] in drawn), None)
+        for d in own:
+            if d.get("held"):
+                if before is not None:
+                    d["scene"] = before
+            elif d["scene"] in drawn:
+                before = d["scene"]
 
 
 def motion_problems(bundle: Bundle) -> list[Problem]:

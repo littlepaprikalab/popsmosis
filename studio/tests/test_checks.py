@@ -685,6 +685,21 @@ def test_a_chorus_line_left_undirected_takes_the_same_line_where_the_writer_dire
     assert [f for f in found if f[1] == "motion"] == [("c3-1", "motion", True)]  # c3-1 was written, differently
 
 
+def test_a_held_line_holds_the_picture_of_the_line_before_it_as_repaired():
+    """Codex's review, Nov 4: the first chorus on the synthase, the verse before the second on the overview, and the
+    second chorus and the bridge undirected. The chorus takes the first's picture, and the bridge, held, takes it too
+    rather than cut back to the overview."""
+    def change(data):
+        direction(data, "c1-1").update(scene="synthase")
+        data["direction"] = [d for d in data["direction"] if d["line_id"] not in ("c2-1", "b-1")]
+
+    bundle, found, _ = review(change)
+    directed = {d.line_id: d for d in bundle.direction}
+    assert [(i, directed[i].scene, directed[i].held) for i in ("v2-1", "c2-1", "b-1", "c3-1")] == [
+        ("v2-1", "overview", False), ("c2-1", "synthase", False), ("b-1", "synthase", True), ("c3-1", "synthase", False)]
+    assert checks.review(bundle)[0] == bundle  # read again: the same
+
+
 def test_the_questions_key_line_goes_where_each_video_asks_it():
     # Nov 1: the writer put the question on the narration's first sentence, a fact two before the narrator asks it.
     def asked(question_on="n1", step_on="n3"):
