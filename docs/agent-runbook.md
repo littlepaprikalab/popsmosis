@@ -49,7 +49,7 @@ The runner needs these in its environment:
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
 | `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and the song and the narration when Google makes the audio (Lyria and Gemini 3.8 Flash TTS): a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song, 4 cents a narration) |
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
-| `GEMINI_TTS_VOICE` | optional: the narration's voice, when Gemini reads. Default `Sadaltager` |
+| `GEMINI_TTS_VOICE` | optional: the narration's voice, when Gemini reads. Default `en-gb-tutor-12`, a British woman |
 | `STUDIO_VIDEOS` | optional: `lesson` leaves the song out from the start (a lesson written while it is set has no lyrics to write or fact-check; the lesson video alone, no hook clip); `off` makes text-only droplets (no claim, no media steps, no recovery) |
 | `STUDIO_CLAUDE_DRAWS` | optional: what Claude draws as SVG whoever paints the rest. `math` (default): charts, graphs and a math lesson's pictures; `charts`: charts and graphs; `brain`: only on Claude's brain. On a Muse topic it draws them on `POPSMOSIS_ANTHROPIC_API_KEY` |
 | `STUDIO_SESSION_FALLBACK` | optional: `on` (default) has a model call the API fails wait for the teacher's own session to answer it (`studio/session.py`; the skill file's "When the studio asks your session"); `off` fails the call, and the step |
