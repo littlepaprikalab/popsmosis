@@ -62,6 +62,23 @@ def test_the_drawer_is_claude_opus_at_high_whatever_the_brain(monkeypatch):
     assert request["max_tokens"] == brain.CLAUDE["brain"]["max_tokens"] and "fallbacks" not in request
 
 
+def test_the_picture_checker_goes_by_the_brains_provider(monkeypatch):
+    # The owner, Nov 4: Claude Sonnet checks a Claude brain's pictures, Muse Spark a Muse brain's (either Muse).
+    asked = []
+    monkeypatch.setattr(brain, "_ask_claude", lambda role, *a: asked.append(("claude", role)) or ["ok"])
+    monkeypatch.setattr(brain, "_ask_meta", lambda role, *a: asked.append(("meta", role)) or ["ok"])
+    for name in ("claude", "muse-wonder", "muse-spark"):
+        with brain.chosen(name):
+            brain.ask("checker", "Look.", label="art check overview")
+    assert asked == [("claude", "checker"), ("meta", "checker"), ("meta", "checker")]
+    claude = brain.claude_request("checker", "Look.", None, [], None)
+    assert claude["model"] == "claude-sonnet-5-5" and claude["output_config"] == {"effort": "medium"}
+    for name in ("muse-wonder", "muse-spark"):
+        with brain.chosen(name, "low"):
+            meta = brain.meta_request("checker", "Look.", None, [], None)
+        assert meta["model"] == "muse-spark-1.3" and "reasoning" not in meta and "background" not in meta
+
+
 def test_the_drawer_without_an_anthropic_key_says_so(monkeypatch):
     with brain.chosen("muse-spark"), pytest.raises(brain.BrainError, match=r"Claude, drawing a scene as SVG, needs"):
         brain.ask("drawer", "Draw.")

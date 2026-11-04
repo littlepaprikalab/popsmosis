@@ -18,9 +18,9 @@ and SAM 3.1 then finds the structures in either. Claude's brain may instead draw
 SVG. The helper, which boxes a structure SAM missed, is the brain's.
 
 The checker, which looks at each painted picture for a wrong label, a part out of place or a mistake (art.look()),
-is Claude Sonnet 5.5 whatever the brain: on Nov 3 Muse Spark passed an eye with its cornea above the lens instead of
-in front of it (at high effort, 3 times in 3), and so did Muse Wonder at low (3 in 3), while Claude, given the same
-prompt and picture, caught it every time (the owner: "let the image checker be Claude Sonnet regardless of brain").
+goes by the brain's provider too: Claude Sonnet 5.5 for Claude's brain, Muse Spark 1.3 for either Muse brain (the
+owner, Nov 4). From Nov 3 to Nov 4 it was Claude Sonnet whatever the brain, since Muse Spark had passed an eye with
+its cornea above the lens instead of in front of it (at high effort, 3 times in 3) where Claude caught it every time.
 
 The drawer is Claude Opus 5.5 at high effort, whatever the brain: on Muse's brain it draws as SVG the scenes the
 admin's STUDIO_CLAUDE_DRAWS knob gives Claude (charts, and a math lesson's pictures; studio/steps/art.py), since a
@@ -55,7 +55,7 @@ from typing import Sequence
 from pydantic import BaseModel, ValidationError
 
 ROLES = ("brain", "helper", "checker", "judge", "drawer")
-CLAUDE_ONLY = ("checker", "judge", "drawer")  # Claude whatever the brain
+CLAUDE_ONLY = ("judge", "drawer")  # Claude whatever the brain
 
 CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;
@@ -65,7 +65,7 @@ CLAUDE = {
     # Sonnet, not Haiku, since Oct 28: the helper judges each picture's science, and finds the
     # parts SAM missed.
     "helper": {"model": "claude-sonnet-5-5", "effort": "low", "max_tokens": 16000},
-    # Checks each painted picture (art.look()), on every brain.
+    # Checks each painted picture (art.look()) on Claude's brain; a Muse brain's is Muse Spark (META).
     "checker": {"model": "claude-sonnet-5-5", "effort": "medium", "max_tokens": 16000},
     # The scorecard's judge, on every brain. Changing it makes earlier scorecards no longer comparable.
     "judge": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 32000},
@@ -75,6 +75,7 @@ CLAUDE = {
 META = {
     "brain": {"model": "muse-wonder-1.0"},
     "helper": {"model": "muse-spark-1.3"},
+    "checker": {"model": "muse-spark-1.3"},  # on Muse Wonder's brain too
 }
 META_BASE_URL = "https://api.meta.ai/v1"
 META_KEY_VAR = "MODEL_API_KEY"
@@ -290,7 +291,7 @@ def ask(
 ) -> dict:
     """Ask one question; return the answer as a dict.
 
-    role is "brain", "helper", "checker", "judge" or "drawer" (the last three Claude, whatever the brain). With a schema the
+    role is "brain", "helper", "checker", "judge" or "drawer" (the last two Claude, whatever the brain). With a schema the
     answer is that model's fields; without one it is {"text": ...}. images are PNG, JPEG,
     GIF or WebP files shown before the prompt. label names the call in `calls`.
     """
@@ -594,7 +595,7 @@ def claude_texts(message) -> list[str]:
 # after 15 minutes, about what three tries cut at 5 minutes each take (the SDK tries twice more by itself), each
 # perhaps billed with no answer. Polled, no connection stays open while it thinks.
 #
-# The helper's calls (a picture's check, a part's box: 30 to 100 s) are asked and answered in one request, as they
+# The helper's and the checker's calls (a part's box, a picture's check: 30 to 100 s) are asked and answered in one request, as they
 # were on chat completions. In the background about a third of Muse Spark's calls on the lungs' videos stayed queued
 # and never started, while the same calls sent again were answered in 30 s; none of Muse Wonder's did. So a writer's
 # call still queued after META_QUEUED_S has not started, and is cancelled and sent again; one in progress past its
@@ -626,7 +627,7 @@ def meta_request(
     if role == "brain":
         # The effort set on /admin/studio, as for Claude: Meta's API takes the same levels as `reasoning.effort`.
         # Left out, Muse Spark thinks at high and Muse Wonder at max, as Meta echoed on Nov 3, so until then an admin's
-        # effort did nothing on a Muse brain. The helper's calls keep Meta's default.
+        # effort did nothing on a Muse brain. The helper's and the checker's calls keep Meta's default.
         request["reasoning"] = {"effort": claude_brain()[1]}
     if system:
         request["instructions"] = system
