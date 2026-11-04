@@ -122,7 +122,7 @@ The other jobs:
 | Structure masks | SAM 3.1 (`sam-3.1`) on the painted art, with a helper box as the fallback; the SVG art's own groups |
 | Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API, picked on `/admin/studio` with the narration |
 | Narration | ElevenLabs text-to-speech with timestamps; or Gemini 3.8 Flash TTS (`gemini-3.8-flash-tts`), when Google makes the audio |
-| Word timing (song, and a Gemini narration) | Demucs (vocals, for the song) + Meta's MMS forced aligner, both open source, run locally |
+| Word timing (song, and a Gemini narration) | Demucs (vocals, for the song) + Meta's MMS forced aligner, and OpenAI's Whisper (faster-whisper) for the song lines MMS cannot hear, all open source, run locally |
 | Timeline | Code |
 | Video | Code: skia-python draws, ffmpeg encodes |
 

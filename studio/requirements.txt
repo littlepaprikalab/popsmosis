@@ -16,4 +16,5 @@ pillow>=12.3,<13  # the art step's picture checks and the arrows step's gridded 
 torch==2.11.0
 torchaudio==2.11.0
 demucs==4.1.0
+faster-whisper>=1.2.1,<2  # Whisper on CPU: hears a song's lyrics where MMS cannot (studio/steps/timing.py)
 numpy>=2

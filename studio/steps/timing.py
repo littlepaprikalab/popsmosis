@@ -40,13 +40,18 @@ hook cut ending with them. So where lines the aligner did not hear (LOW_SCORE) a
 GAP_S of singing with no line, they are spread over themselves and that singing, each word in proportion to its
 letters (by_the_singing). The report's `spread` and the summary line name them.
 
-A chorus found by its melody: a chorus repeat the aligner did not hear at all may still be placed at a singing pace,
-only somewhere else: Nov 3's Silk Roads song went from the line before its last chorus straight into the chorus, never
-singing the line between, and the aligner put that line where the chorus began and every chorus line one line late.
-A chorus sings the same tune each time, so a repeat the aligner did not hear is found where its vocals' pitch classes
-match the repeat it heard best (between the lines it heard either side), and its lines take that repeat's timing. A
-line the repeat now covers is aligned again in the room left it, or, with no room for its words, is not sung. The
-report's `by_melody` and the summary line name the lines moved.
+Whisper, consulted: MMS is a speech aligner, and it hears no letters in a chorus sung in long notes, nor in a
+line the singer sang again or not at all (Nov 4's Silk Road song: every chorus line under LOW_SCORE, a chorus line
+sung three times, a bridge line skipped, the karaoke 4 to 7 s off). When MMS is unsure of any line, faster-whisper
+(WHISPER_MODEL, on this machine) transcribes the vocals with a time for each word, and the lyrics are matched to what
+it heard (by_whisper), word by word and in order, each word to one it sounds like (WORD_MATCH). The lines MMS heard
+well (KEEP_SCORE) keep MMS's timing, which is finer, and fence in where the others may be found; a line MMS was less
+sure of takes Whisper's timing when Whisper heard enough of its words (FOUND_SHARE), and a line sung again takes the
+time it is heard best (of times heard as well, the first). Whisper's words over no singing (it makes up lyrics over
+silence) are left out. A line neither of them heard, between two lines Whisper heard sung one after the other with
+no room for its words, was not sung: it is marked so, and the song fails as one that does not sing its lyrics, so
+the retry sings it again. Without faster-whisper installed the step goes on without it. The report's `by_whisper`
+and `skipped` name the lines.
 
 The narration as read: a Gemini narration is held to its lines as the song is to its lyrics. When the
 aligner cannot hear more than MISMATCH_SHARE of them, the voice did not read what was written (it
@@ -112,14 +117,25 @@ SINGING_DB = 20.0
 GAP_S = 2.0
 PAUSE_S = 2.0
 SQUEEZED_S = 0.28
-# A chorus repeat found by its melody (by_the_melody): its vocals' pitch classes (CHROMA_HZ, heard CHROMA_WINDOW
-# samples at a time) match the repeat the aligner heard at least MELODY_MATCH where it is sung, and MELODY_GAIN
-# better than where the aligner put it. Nov 3's Silk Roads song: the last chorus matched the first at 0.95 to 0.97
-# where it was sung, and 0.66 to 0.85 a line off, where the aligner had put it.
-MELODY_MATCH = 0.85
-MELODY_GAIN = 0.1
-CHROMA_HZ = (90.0, 1100.0)
-CHROMA_WINDOW = 4096
+# Whisper, consulted (by_whisper): a lyric word and a heard one match when their spellings are WORD_MATCH alike
+# (difflib's ratio; Whisper heard the Nov 4 chorus's "Carry silk far, bring paper home" as "Kerry's still far, ring
+# paper hone"). A line MMS heard at KEEP_SCORE or better keeps its timing, and Whisper's words for it are looked for
+# within ANCHOR_S of it. A line takes Whisper's timing when FOUND_SHARE of its words were heard, with fewer than
+# REPEAT_WORDS heard words between two of them beyond the lyric words between them (more: the line sung again, and
+# the time it is heard best is kept). A heard word is sung when half its frames are within SINGING_DB of the loud
+# singing. A word of a line Whisper found that it misheard is timed by the heard words around the ones it matched (as
+# many as the words to time, and MISHEARD_EXTRA more), or else takes PACE_S at most before or after them.
+WHISPER_MODEL = "small"  # faster-whisper's; int8 on CPU, 30 to 45 s for a three-minute song (Nov 4)
+WORD_MATCH = 0.5
+KEEP_SCORE = 0.5
+ANCHOR_S = 1.0
+FOUND_SHARE = 0.5
+REPEAT_WORDS = 3
+MISHEARD_EXTRA = 2
+PACE_S = 0.3
+SKIP_LYRIC = -0.5  # the match's cost of a lyric word Whisper did not hear
+SKIP_HEARD = -0.3  # and of a word it heard that is not in the lyrics (an ad-lib, a line sung again)
+SKIP_INSIDE = -0.6  # and of one between two words of the same line
 SAMPLE_RATE = 16000
 CHUNK_S = 30  # the aligner hears a longer window this much at a time (_emission)
 CONTEXT_S = 5  # with this much of the audio either side of each piece
@@ -141,6 +157,8 @@ def cpu_turn(job: Path):
 # align(vocals at 16 kHz, a list of normalised words) -> per word (start s, end s, score),
 # in the window's own time. Tests pass their own.
 Aligner = Callable[[object, list[str]], list[tuple[float, float, float]]]
+# hear(vocals at 16 kHz) -> each word Whisper heard, (start s, end s, word), in song time. Tests pass their own.
+Hearer = Callable[[object], list[tuple[float, float, str]]]
 
 
 def run(job: Path, ask=brain.ask) -> str:
@@ -148,6 +166,7 @@ def run(job: Path, ask=brain.ask) -> str:
         return _run(job)
     finally:
         _mms.cache_clear()  # the aligner's 1.2 GB is the step's alone, not the worker's for good
+        _whisper.cache_clear()  # and so is Whisper's
 
 
 def _run(job: Path) -> str:
@@ -362,8 +381,11 @@ def _char_map(text: str, heard: str) -> list[int | None]:
 # --- the song: Demucs, then the MMS aligner, section by section ------------------------------
 
 
-def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=None) -> tuple[Timing, dict]:
-    """The song's Timing and its report. `align` and `vocals` stand in for MMS and Demucs in tests."""
+def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=None,
+                hear: Hearer | None = None) -> tuple[Timing, dict]:
+    """The song's Timing and its report. `align`, `vocals` and `hear` stand in for MMS, Demucs and Whisper in tests;
+    a test that stands in for MMS and not for Whisper has no Whisper."""
+    whisper = hear or (None if align else whisper_hearer())
     plan = json.loads((job / audio_step.plan_path("song")).read_text(encoding="utf-8"))
     length = audio_step.duration(job / media.audio_path("song"))
     # The aligner loads while Demucs runs. The first read of its 1.2 GB on a fresh machine took 100 s here, waiting on
@@ -425,154 +447,248 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
         if score is not None and score > scores[line.line_id]:
             lines[k], scores[line.line_id] = again, score
             realigned.append(line.line_id)
-    runs = repeated_runs([line.line_id for line in lines], texts)
-    placed = by_the_melody(lines, scores, runs, chroma(vocals) if runs and levels is not None else None,
-                           lambda ids, t0, t1: _align_lines(vocals, align, texts, ids, t0, t1, t0, t1), texts,
-                           length=length)
-    spread = by_the_singing(lines, scores, levels, placed=set(placed))
-    timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
     if aligning is not None:
         _log_local(job, "song alignment", MMS_MODEL, aligning)
-    return timing, {**song_report(timing, texts, scores), "realigned": realigned, "by_melody": placed,
-                    "spread": spread}
+    found, missed = [], []
+    unsure = any(s is not None and s < LOW_SCORE for s in scores.values())
+    if unsure and whisper is not None and levels is not None:
+        hearing = time.monotonic()
+        heard = whisper(vocals)
+        if hear is None:
+            _log_local(job, "song lyrics heard", f"whisper-{WHISPER_MODEL}", hearing)
+        found, missed = by_whisper(lines, scores, heard, texts, levels, length)
+    spread = by_the_singing(lines, scores, levels, placed=set(found))
+    timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
+    return timing, {**song_report(timing, texts, scores), "realigned": realigned, "by_whisper": found,
+                    "skipped": missed, "spread": spread}
 
 
-def repeated_runs(order: list[str], texts: dict[str, str]) -> list[list[list[int]]]:
-    """The runs of two or more lines in a row that the song sings again, word for word, later on (a chorus): for
-    each, the indexes in `order` of the lines of each of its repeats, in order."""
-    key = [" ".join(spoken(w) for w, _, _ in words_of(texts[i])) for i in order]
-    runs, used = [], set()
-    for i in range(len(order)):
-        if i in used:
-            continue
-        size = 0
-        for j in range(i + 1, len(order)):
-            n = 0
-            while j + n < len(order) and i + n < j and key[i + n] == key[j + n]:
-                n += 1
-            size = max(size, n)
-        if size < 2:
-            continue
-        starts, free = [i], i + size
-        for j in range(free, len(order) - size + 1):
-            if j >= free and key[j:j + size] == key[i:i + size]:
-                starts.append(j)
-                free = j + size
-        runs.append([list(range(s, s + size)) for s in starts])
-        used.update(k for s in starts for k in range(s, s + size))
-    return runs
-
-
-def chroma(vocals):
-    """The vocals' pitch classes every FRAME_S (from CHROMA_HZ): a row of 12, of unit length, a frame. Frame f hears
-    from f * FRAME_S on."""
+def by_whisper(lines: list[TimedLine], scores: dict[str, float | None], heard: list[tuple[float, float, str]],
+               texts: dict[str, str], levels: list[float], length: float) -> tuple[list[str], list[str]]:
+    """The lyrics matched to the words Whisper heard (the module's docstring), in place: the ids of the lines it timed,
+    and of the lines the singer skipped (marked not sung). The lines MMS heard at KEEP_SCORE keep their timing."""
     import numpy as np
 
-    mono = np.asarray(vocals, dtype=np.float32).reshape(-1)
-    hop, n = int(FRAME_S * SAMPLE_RATE), CHROMA_WINDOW
-    frames = max(0, (len(mono) - n) // hop + 1)
-    freqs = np.fft.rfftfreq(n, 1 / SAMPLE_RATE)
-    band = (freqs >= CHROMA_HZ[0]) & (freqs <= CHROMA_HZ[1])
-    pitch = (np.round(12 * np.log2(freqs[band] / 440.0)) % 12).astype(int)
-    window = np.hanning(n).astype(np.float32)
-    out = np.zeros((frames, 12), dtype=np.float32)
-    for f0 in range(0, frames, 256):  # a few MB at a time
-        f1 = min(frames, f0 + 256)
-        spectrum = np.abs(np.fft.rfft(mono[np.arange(n)[None, :] + hop * np.arange(f0, f1)[:, None]] * window,
-                                      axis=1))[:, band]
-        for k in range(12):
-            out[f0:f1, k] = spectrum[:, pitch == k].sum(axis=1)
-    return out / np.maximum(np.linalg.norm(out, axis=1, keepdims=True), 1e-6)
+    sung = np.asarray(levels) >= -SINGING_DB
 
+    def singing(start: float, end: float) -> bool:  # half the word's frames are sung: not made up over silence
+        frames = sung[int(start / FRAME_S):max(int(start / FRAME_S) + 1, int(np.ceil(end / FRAME_S)))]
+        return bool(frames.size) and frames.mean() >= 0.5
 
-def by_the_melody(lines: list[TimedLine], scores: dict[str, float | None], runs: list[list[list[int]]], notes,
-                  alone: Callable[[list[str], float, float], list[tuple[TimedLine, float | None]]],
-                  texts: dict[str, str], length: float | None = None) -> list[str]:
-    """Each repeat of a chorus the aligner did not hear, found by its melody (the module's docstring), in place; the
-    ids of the lines it moved. `notes` is chroma() of the vocals (None: nothing to go by); `alone` aligns lines alone
-    between two times; `length` is the song's (by default, as far as `notes` reach). The lines a moved repeat now
-    covers are aligned again alone in the room left them, or, with no room for their words, are not sung."""
-    import numpy as np
+    said = sorted((start, end, spoken(word)) for start, end, word in heard
+                  if spoken(word) and end >= start and singing(start, end))
+    if not said:
+        return [], []
 
-    if notes is None:
-        return []
-    length = len(notes) * FRAME_S if length is None else length
-    moved: list[str] = []
+    def kept(k: int) -> bool:  # MMS heard it well: its timing stays
+        score = scores.get(lines[k].line_id)
+        return score is None or score >= KEEP_SCORE
 
-    def heard(k: int) -> bool:
-        return (scores.get(lines[k].line_id) or 0.0) >= LOW_SCORE or lines[k].line_id in moved
-
-    def mean(repeat: list[int]) -> float | None:
-        got = [scores.get(lines[k].line_id) for k in repeat]
-        return None if any(s is None for s in got) or not all(lines[k].sung for k in repeat) else sum(got) / len(got)
-
-    def likeness(a: int, b: int, at: int) -> float:
-        if at < 0 or at + (b - a) > len(notes):
-            return -1.0
-        return float((notes[at:at + b - a] * notes[a:b]).sum() / (b - a))
-
-    for repeats in runs:
-        means = [mean(r) for r in repeats]
-        best = max((m, i) for i, m in enumerate(means) if m is not None) if any(m is not None for m in means) else None
-        if best is None or best[0] < LOW_SCORE:
-            continue  # no repeat the aligner heard to go by
-        ref = repeats[best[1]]
-        # chroma() hears whole windows only, so its frames stop a little short of the song's end.
-        a, b = int(round(lines[ref[0]].start / FRAME_S)), min(len(notes), int(round(lines[ref[-1]].end / FRAME_S)))
-        if b - a < 2:
+    sung_lines = [k for k, line in enumerate(lines) if line.sung]
+    # Each lyric word Whisper may have heard, and where: near MMS's time for a line it keeps, else between those.
+    lyric: list[tuple[int, int, str, float, float]] = []  # (line, word, spelled, from, to)
+    before = 0.0
+    for n, k in enumerate(sung_lines):
+        if kept(k):
+            for i, w in enumerate(lines[k].words):
+                if spoken(w.word):
+                    lyric.append((k, i, spoken(w.word), w.start - ANCHOR_S, w.end + ANCHOR_S))
+            before = lines[k].end
             continue
-        for repeat, m in zip(repeats, means):
-            if repeat is ref or m is None or m >= LOW_SCORE:
-                continue
-            p = repeat[0] - 1
-            while p >= 0 and not heard(p):
-                p -= 1
-            q = repeat[-1] + 1
-            while q < len(lines) and not heard(q):
-                q += 1
-            lo = int(np.ceil((lines[p].end if p >= 0 else 0.0) / FRAME_S))
-            hi = min(int((lines[q].start if q < len(lines) else length) / FRAME_S), len(notes)) - (b - a)
-            if hi < lo:
-                continue
-            match, at = max((likeness(a, b, f), f) for f in range(lo, hi + 1))
-            now = likeness(a, b, int(round(lines[repeat[0]].start / FRAME_S)))
-            if match < MELODY_MATCH or match - now < MELODY_GAIN:
-                continue
-            shift = at * FRAME_S - lines[ref[0]].start
-            if any(len(lines[k].words) != len(lines[r].words) for k, r in zip(repeat, ref)):
-                continue
-            for k, r in zip(repeat, ref):
-                words = [Word(word=w.word, start=round(max(0.0, x.start + shift), 3), end=round(max(0.0, x.end + shift), 3))
-                         for w, x in zip(lines[k].words, lines[r].words)]
-                lines[k] = lines[k].model_copy(update={"start": words[0].start, "end": words[-1].end, "words": words})
-                moved.append(lines[k].line_id)
-            start, end = lines[repeat[0]].start, lines[repeat[-1]].end
-            before = [k for k in range(p + 1, repeat[0]) if lines[k].end > start]
-            after = [k for k in range(repeat[-1] + 1, q) if lines[k].start < end]
-            if before:
-                _make_room(lines, scores, before, lines[before[0] - 1].end if before[0] else 0.0, start, alone, texts)
-            if after:
-                _make_room(lines, scores, after, end,
-                           lines[after[-1] + 1].start if after[-1] + 1 < len(lines) else length, alone, texts)
-    return moved
+        after = next((lines[q].start for q in sung_lines[n + 1:] if kept(q)), length)
+        for i, w in enumerate(lines[k].words):
+            if spoken(w.word):
+                lyric.append((k, i, spoken(w.word), before - ANCHOR_S, after + ANCHOR_S))
+    match = _match_words(lyric, said)
 
+    # The words Whisper heard of each line, as one run: a run REPEAT_WORDS heard words more than the lyric words
+    # between them from the rest is the line sung again (a held note, or words misheard, between two words is not).
+    words_of_line: dict[int, list[tuple[int, int]]] = {}
+    for a, b in sorted(match.items()):
+        words_of_line.setdefault(lyric[a][0], []).append((lyric[a][1], b))
+    for k, got in words_of_line.items():
+        runs = [[got[0]]]
+        for (i, b), (i0, b0) in zip(got[1:], got):
+            if (b - b0) - (i - i0) >= REPEAT_WORDS:
+                runs.append([])
+            runs[-1].append((i, b))
+        words_of_line[k] = max(runs, key=len)  # the first, of runs as long
+    sayable = {k: sum(1 for w in lines[k].words if spoken(w.word)) for k in sung_lines}
+    found = [k for k in sung_lines if not kept(k) and sayable[k]
+             and len(words_of_line.get(k, ())) >= max(1, int(np.ceil(FOUND_SHARE * sayable[k])))]
+    for n, k in enumerate(sung_lines):
+        if k not in found:
+            continue
+        lo = lines[sung_lines[n - 1]].end if n else 0.0
+        hi = next((lines[q].start for q in sung_lines[n + 1:] if kept(q)), length)
+        heard_at = {i: said[b][:2] for i, b in words_of_line[k]}
+        # The line's first and last words Whisper misheard: the heard words next to the ones it matched that no line
+        # took, as many as there are words to time and MISHEARD_EXTRA more (a mishearing has its own count of
+        # words), are where they were sung.
+        (first, b0), (last, b1) = words_of_line[k][0], words_of_line[k][-1]
+        taken = set(match.values())
+        lead = [b for b in range(b0 - 1, max(-1, b0 - 1 - first - MISHEARD_EXTRA), -1) if b not in taken and said[b][0] >= lo]
+        lead = lead[:next((n for n, b in enumerate(lead) if b + n + 1 != b0), len(lead))]
+        tail = [b for b in range(b1 + 1, min(len(said), b1 + len(lines[k].words) - last + MISHEARD_EXTRA)) if b not in taken
+                and said[b][1] <= hi]
+        tail = tail[:next((n for n, b in enumerate(tail) if b - n - 1 != b1), len(tail))]
+        words = _fill(lines[k].words, heard_at, lo, max(lo, hi), said[lead[-1]][0] if lead else None,
+                      said[tail[-1]][1] if tail else None)
+        lines[k] = lines[k].model_copy(update={"start": words[0].start, "end": words[-1].end, "words": words})
 
-def _make_room(lines: list[TimedLine], scores: dict[str, float | None], ks: list[int], t0: float, t1: float,
-               alone, texts: dict[str, str]) -> None:
-    """Lines `ks`, which a repeat found by its melody now covers, aligned again alone between t0 and t1; with no room
-    for their words (under SQUEEZED_S a word), not sung, at no length at t0: the singer went from the line before
-    them straight into the repeat."""
-    ids = [lines[k].line_id for k in ks]
-    if t1 - t0 >= SQUEEZED_S * sum(len(lines[k].words) for k in ks if lines[k].sung):
-        try:
-            for k, (line, score) in zip(ks, alone(ids, t0, t1)):
-                lines[k], scores[line.line_id] = line, score
-            return
-        except (RuntimeError, ValueError):
-            pass
-    for k in ks:
-        lines[k] = _unsung(lines[k].line_id, texts, t0)
+    # A line neither heard, between two lines Whisper heard sung one after the other, with no room for its words.
+    skipped = []
+    for n, k in enumerate(sung_lines):
+        if k in found or kept(k) or (scores.get(lines[k].line_id) or 0.0) >= LOW_SCORE or not sayable[k]:
+            continue
+        p = next((q for q in reversed(sung_lines[:n]) if q in words_of_line), None)
+        q = next((q for q in sung_lines[n + 1:] if q in words_of_line), None)
+        if p is None or q is None:
+            continue
+        between = [m for m in sung_lines if p < m < q]
+        if any(m in found for m in between):
+            continue
+        last, first = words_of_line[p][-1][1], words_of_line[q][0][1]
+        t0, t1 = said[last][1], said[first][0]
+        room = float(sung[int(t0 / FRAME_S):max(int(t0 / FRAME_S), int(t1 / FRAME_S))].sum()) * FRAME_S
+        if first == last + 1 and room < SQUEEZED_S * sum(sayable[m] for m in between):
+            skipped.append(k)
+    for k in skipped:
+        lines[k] = _unsung(lines[k].line_id, texts, lines[k - 1].end if k else 0.0)
         scores[lines[k].line_id] = None
+    _in_order(lines, length)
+    return [lines[k].line_id for k in found], [lines[k].line_id for k in skipped]
+
+
+def _alike(word: str, heard: str) -> float:
+    """How alike two spellings are (difflib's ratio); a word of one or two letters only as itself ("far" is not "a")."""
+    if min(len(word), len(heard)) <= 2:
+        return float(word == heard)
+    return SequenceMatcher(None, word, heard, autojunk=False).ratio()
+
+
+def _match_words(lyric: list[tuple[int, int, str, float, float]], said: list[tuple[float, float, str]]) -> dict[int, int]:
+    """The lyric words matched in order to the words heard (index to index): each pair WORD_MATCH alike, and the
+    heard word's middle where the lyric word may be; the best total, a lyric word not heard costing SKIP_LYRIC and a
+    heard word not in the lyrics SKIP_HEARD, or SKIP_INSIDE between two words of one line, so that a line sung again
+    is matched to one time it is sung rather than to words of each. Of matches as good, the earlier heard words are
+    kept."""
+    n, m = len(lyric), len(said)
+    best = [[0.0] * (m + 1) for _ in range(n + 1)]
+    move = [[0] * (m + 1) for _ in range(n + 1)]  # 0: matched, 1: the lyric word not heard, 2: the heard word extra
+    for j in range(1, m + 1):
+        best[0][j], move[0][j] = best[0][j - 1] + SKIP_HEARD, 2
+    for i in range(1, n + 1):
+        best[i][0], move[i][0] = best[i - 1][0] + SKIP_LYRIC, 1
+        _, _, word, lo, hi = lyric[i - 1]
+        # A heard word between lyric words i - 1 and i (0-based i - 1 and i) of one line.
+        extra = SKIP_INSIDE if i < n and lyric[i][0] == lyric[i - 1][0] else SKIP_HEARD
+        for j in range(1, m + 1):
+            # A heard word left over wins a tie, so that, read back from the end, the earlier words are matched.
+            got, how = best[i][j - 1] + extra, 2
+            start, end, heard = said[j - 1]
+            if lo <= (start + end) / 2 <= hi:
+                alike = _alike(word, heard)
+                if alike >= WORD_MATCH and best[i - 1][j - 1] + 2 * alike - 1 > got + 1e-9:  # summed in another order
+                    got, how = best[i - 1][j - 1] + 2 * alike - 1, 0
+            if best[i - 1][j] + SKIP_LYRIC > got + 1e-9:
+                got, how = best[i - 1][j] + SKIP_LYRIC, 1
+            best[i][j], move[i][j] = got, how
+    match, i, j = {}, n, m
+    while i or j:
+        how = move[i][j]
+        if how == 0:
+            match[i - 1] = j - 1
+            i, j = i - 1, j - 1
+        elif how == 1:
+            i -= 1
+        else:
+            j -= 1
+    return match
+
+
+def _fill(words: list[Word], heard: dict[int, tuple[float, float]], lo: float, hi: float,
+          begin: float | None = None, finish: float | None = None) -> list[Word]:
+    """A line's words timed: those in `heard` (by index) where Whisper heard them, the others shared by their letters
+    between them, or before the first heard from `begin` and after the last to `finish` (where the words it misheard
+    were), else over up to PACE_S a word; all within lo and hi."""
+    n = len(words)
+    times: list[tuple[float, float] | None] = [None] * n
+    at = lo
+    for i in sorted(heard):
+        start = min(max(heard[i][0], at), hi)
+        end = min(max(heard[i][1], start), hi)
+        times[i], at = (start, end), end
+    known = sorted(heard)
+
+    def share(ks: list[int], t0: float, t1: float) -> None:
+        letters = [len(spoken(words[k].word)) for k in ks]
+        total, done = sum(letters), 0
+        t1 = max(t0, t1)
+        for k, count in zip(ks, letters):
+            a = t0 + (t1 - t0) * done / total if total else t0
+            done += count
+            times[k] = (a, t0 + (t1 - t0) * done / total if total else t0)
+
+    if known[0]:
+        first = times[known[0]][0]
+        share(list(range(known[0])), max(lo, first - PACE_S * known[0] if begin is None else begin), first)
+    for a, b in zip(known, known[1:]):
+        if b > a + 1:
+            share(list(range(a + 1, b)), times[a][1], times[b][0])
+    if known[-1] < n - 1:
+        last = times[known[-1]][1]
+        share(list(range(known[-1] + 1, n)), last,
+              min(hi, last + PACE_S * (n - 1 - known[-1]) if finish is None else finish))
+    return [Word(word=w.word, start=round(t[0], 3), end=round(t[1], 3)) for w, t in zip(words, times)]
+
+
+def _in_order(lines: list[TimedLine], length: float) -> None:
+    """Each word, in place, starting no earlier than the one before it ends; a line not sung where the line before it
+    ends."""
+    at = 0.0
+    for k, line in enumerate(lines):
+        if not line.sung:
+            if line.start < at:
+                lines[k] = line.model_copy(update={"start": round(at, 3), "end": round(at, 3), "words": [
+                    Word(word=w.word, start=round(at, 3), end=round(at, 3)) for w in line.words]})
+            continue
+        words = []
+        for w in line.words:
+            start = min(max(w.start, at), length)
+            end = min(max(w.end, start), length)
+            words.append(Word(word=w.word, start=round(start, 3), end=round(end, 3)))
+            at = end
+        if words != line.words:
+            lines[k] = line.model_copy(update={"start": words[0].start, "end": words[-1].end, "words": words})
+
+
+@functools.cache
+def _whisper():
+    """faster-whisper's WHISPER_MODEL on this machine's CPU, loaded once for the step."""
+    from faster_whisper import WhisperModel
+
+    return WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
+
+
+def whisper_hearer() -> Hearer | None:
+    """Whisper as the step hears with it; None when faster-whisper is not installed, and the step goes on without."""
+    try:
+        import faster_whisper  # noqa: F401
+    except ImportError:
+        return None
+
+    def hear(vocals) -> list[tuple[float, float, str]]:
+        import numpy as np
+
+        audio = np.asarray(vocals, dtype=np.float32).reshape(-1)
+        # Temperature 0 alone: the same song is heard the same way each time (the fallback's sampling at higher
+        # temperatures heard the Nov 4 song's second chorus differently run to run).
+        segments, _ = _whisper().transcribe(audio, language="en", word_timestamps=True, vad_filter=False,
+                                            condition_on_previous_text=False, temperature=0.0)
+        return [(w.start, w.end, w.word.strip()) for segment in segments for w in (segment.words or [])]
+
+    return hear
 
 
 def by_the_singing(lines: list[TimedLine], scores: dict[str, float | None], levels: list[float] | None,
@@ -584,7 +700,7 @@ def by_the_singing(lines: list[TimedLine], scores: dict[str, float | None], leve
     end: the aligner crams what it cannot hear right after what it last heard, and finds its place again by the next
     line it hears (the five songs of Nov 1). Singing with no line and no crammed line before it is left: Lyria is
     asked for echoes of the hook, and a line it did not hear but placed at a pace that sings stays where it is.
-    The lines in `placed` (found by the melody) count as heard."""
+    The lines in `placed` (found by Whisper) count as heard."""
     import numpy as np
 
     if levels is None:
@@ -794,9 +910,15 @@ def song_report(timing: Timing, texts: dict[str, str], scores: dict[str, float |
 
 
 def lyric_mismatch(report: dict) -> str | None:
-    """Why the song is not its lyrics (more than MISMATCH_SHARE of its sung lines sung differently), or None."""
+    """Why the song is not its lyrics, or None: the singer skipped a line (Whisper heard the lines either side of it
+    sung one after the other), or more than MISMATCH_SHARE of its sung lines were sung differently (neither MMS nor
+    Whisper heard them)."""
+    if report.get("skipped"):
+        missed = report["skipped"]
+        return f"the song does not sing its lyrics: the singer skipped {', '.join(missed)}"
     scored = [row for row in report.get("lines", []) if row.get("score") is not None and row.get("sung", True)]
-    unsure = [row["line_id"] for row in scored if row["score"] < LOW_SCORE]
+    heard = set(report.get("by_whisper") or ())
+    unsure = [row["line_id"] for row in scored if row["score"] < LOW_SCORE and row["line_id"] not in heard]
     if not scored or len(unsure) <= MISMATCH_SHARE * len(scored):
         return None
     return (f"the song does not sing its lyrics: the aligner could not hear {len(unsure)} of its {len(scored)} lines "
@@ -813,8 +935,10 @@ def song_notes(report: dict) -> str:
         notes.append(f"DRIFT over {DRIFT_S}s: {', '.join(report['drifting'])}")
     if report.get("realigned"):  # a report from before the repair pass has none
         notes.append(f"re-aligned alone: {', '.join(report['realigned'])}")
-    if report.get("by_melody"):  # nor one from before choruses were found by their melody
-        notes.append(f"placed by the chorus melody: {', '.join(report['by_melody'])}")
+    if report.get("by_whisper"):  # nor one from before Whisper was consulted
+        notes.append(f"timed by Whisper: {', '.join(report['by_whisper'])}")
+    if report.get("skipped"):
+        notes.append(f"SKIPPED by the singer: {', '.join(report['skipped'])}")
     if report.get("spread"):  # nor one from before lines were spread over the singing
         notes.append(f"spread over the singing: {', '.join(report['spread'])}")
     if report["unsure"]:

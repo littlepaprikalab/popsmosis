@@ -38,6 +38,16 @@ def no_waits(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_whisper(monkeypatch):
+    """No test loads the real Whisper (0.5 GB, a minute a song) through the step: a test of it passes its own."""
+    if LIVE:
+        return
+    from studio.steps import timing
+
+    monkeypatch.setattr(timing, "whisper_hearer", lambda: None)
+
+
+@pytest.fixture(autouse=True)
 def no_paid_keys(monkeypatch):
     if LIVE:
         return

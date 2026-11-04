@@ -376,13 +376,23 @@ def delivery(styles: list[str]) -> str:
     return f"Rap {' and '.join(parts)}, spoken on the beat, not sung."
 
 
+# Every Lyria song is asked to sing its lines as written (the owner, Nov 4): Nov 4's Silk Road song sang a chorus line
+# three times and skipped a bridge line, and the karaoke could not follow it. The line asks for the lines alone, once
+# each, in order, and nothing of how the words are sung: until round 17 the prompt asked for every word exactly as
+# written with no ad-libs, among asks for diction, and the songs came back recited. Step 6 checks it (a line Whisper
+# hears skipped fails the song).
+AS_WRITTEN = ("Sing each lyric line exactly once, in the order written: repeat a line only where the lyrics write it "
+              "again, and leave none out.")
+
+
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     """Lyria's prompt: the style and the lyrics, section by section (its instructions apart from its lyrics, as
     Google advises), and where each section is planned to fall. Nothing to avoid since Nov 2 (the owner); the
     composition plan, ElevenLabs', still has its list. No length and no timings: the
     singer takes the time the lines need, and step 6 finds them. Until round 17 it also asked for a length, a
     timed structure, every word exactly as written with no ad-libs or repeats, and clear upfront vocals; every
-    instruction asked for diction and none for music, and the songs came back recited."""
+    instruction asked for diction and none for music, and the songs came back recited. Since Nov 4 it asks for each
+    line once, in order (AS_WRITTEN), and nothing of the words."""
     planned = planned_sections(bundle)
     music = bundle.music
     head = []
@@ -390,6 +400,7 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
         head.append(f"Style: {', '.join(style.rstrip(' .') for style in with_diction(music.positive_styles))}.")
     if rapped := delivery(music.positive_styles):
         head.append(rapped)
+    head.append(AS_WRITTEN)
     lyrics = [f"[{p['section'].title()}]\n" + "\n".join(p["lines"]) for p in planned]
     return "\n".join(head) + "\n\nLyrics:\n" + "\n\n".join(lyrics), _placed(planned)
 
