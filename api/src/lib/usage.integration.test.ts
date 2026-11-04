@@ -177,6 +177,22 @@ describe.runIf(RUN)('usage limits', () => {
     expect(await prisma.usageEvent.count({ where: { kind: 'TOPIC' } })).toBe(3);
   });
 
+  it("a burst of 1,000 learners at once is answered, every one: the site's places taken, the rest told it is full", async () => {
+    // Each take that may still get a place holds a pooled connection while it waits on the site's lock: with Prisma's
+    // 2 seconds for a connection, 262 of these were server errors.
+    process.env.TOPICS_PER_DAY = '30';
+    const { SESSION_EXPIRES_IN } = await import('./session.js');
+    const crowd = `${tag}-burst`;
+    await prisma.user.createMany({ data: Array.from({ length: 1000 }, (_, i) => ({ email: `${crowd}-${i}@example.com`, googleId: `${crowd}-${i}`, name: `B${i}` })) });
+    const ids = await prisma.user.findMany({ where: { email: { startsWith: crowd } }, select: { id: true } });
+    const results = await Promise.all(ids.map(({ id }, i) =>
+      ask(`popsmosis_session=${app.jwt.sign({ sub: id }, { expiresIn: SESSION_EXPIRES_IN })}`, `Burst topic number ${i}`)));
+    const statuses = results.map((r) => r.statusCode);
+    expect(statuses.filter((s) => s === 201)).toHaveLength(30);
+    expect(statuses.filter((s) => s === 429)).toHaveLength(970);
+    expect(await prisma.usageEvent.count({ where: { kind: 'TOPIC' } })).toBe(30);
+  }, 60_000);
+
   it("stops new topics once the site's day is used up, whoever asks", async () => {
     process.env.TOPICS_PER_DAY = '3';
     const [cy, di] = [await learner('cy'), await learner('di')];

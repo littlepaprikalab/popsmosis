@@ -123,6 +123,9 @@ const key = generateApiKey();
 const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, update: { apiKeyHash: key.hashed, enabled: true }, create: { name: 'popsmosis-teacher', apiKeyHash: key.hashed } });
 
 await prisma.question.deleteMany({ where: { userId: { in: [ada.id, ben.id, cal.id] } } });
+// Their topic and follow-up counts too (lib/usage.ts), which outlive their requests: a run of the browser tests sends
+// about 20 topics, so a second run within 24 hours would otherwise meet the site's day (TOPICS_PER_DAY, 30).
+await prisma.usageEvent.deleteMany({ where: { userId: { in: [ada.id, ben.id, cal.id] } } });
 
 const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: ATP_ASKED, content: 'ATP synthesis: how do cells actually make ATP?' } });
 const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: atpAfter(7.5), bundle: ATP_BUNDLE, ...bundleTags(ATP_BUNDLE), songStyle: bundleSongStyle(ATP_BUNDLE), factcheck: PASSED, ...SAMPLE_VIDEO, videoUpdatedAt: atpAfter(15.2), ...SAMPLE_HOOK, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.

@@ -51,9 +51,13 @@ export type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
  * a failed transaction rolled back; the callback must not have side effects
  * outside the database.
  */
-export function runTransaction<T>(fn: (tx: TxClient) => Promise<T>): Promise<T> {
+export function runTransaction<T>(
+  fn: (tx: TxClient) => Promise<T>,
+  // Prisma's own waits, when the caller's differ: for a connection (maxWait, 2 s) and for the whole (timeout, 5 s).
+  options?: { maxWait?: number; timeout?: number },
+): Promise<T> {
   return withDbRetry(
-    () => transactionScope.run(true, () => prisma.$transaction((tx) => fn(tx))),
+    () => transactionScope.run(true, () => prisma.$transaction((tx) => fn(tx), options)),
     { onRetry: logRetry },
   );
 }

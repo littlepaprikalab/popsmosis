@@ -12,7 +12,7 @@
  * step, so one learner's requests sent in parallel cannot all pass the same count. A topic also takes the site's lock,
  * after the learner's, so topics from different learners landing in the same instant
  * cannot all pass the site's count either: the ceiling is exact. It is held for a count and an insert, milliseconds,
- * and only by a topic that passed the lock-free look (topicAllowed) first, so once the day is used up nobody waits on
+ * and only by a topic that passed a look at the site's count without it, so once the day is used up nobody waits on
  * it. When the request then fails to be written, its take is given back. Rows older than two days are let go (pruneUsage); an
  * account's go with it.
  *
@@ -34,6 +34,12 @@ const MB = 1024 * 1024;
 const IN_FLIGHT_MS = 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const KEEP_MS = 2 * DAY_MS;
+// How long a topic's take may wait for a pooled connection, and run, in a burst: the takes that may still get a place
+// queue on the site's lock (takeTopic), each holding a connection while it waits, so Prisma's 2 seconds for a
+// connection turned 1 in 4 of 1,000 learners sending at once into a server error. Measured on one instance with 5
+// connections, 1,000 at once are all answered (taken, or told the site is full): in about 3 seconds at a cap of 30,
+// and 5 when every one gets a place.
+const TAKE_WAITS = { maxWait: 15_000, timeout: 15_000 };
 
 function intEnv(raw: string | undefined, fallback: number): number {
   const n = parseInt(raw ?? '', 10);
@@ -123,22 +129,30 @@ async function isAdmin(db: Db, userId: string): Promise<boolean> {
   return (await db.user.findUnique({ where: { id: userId }, select: { role: true } }))?.role === 'ADMIN';
 }
 
+const paused = () => new AppError('RATE_LIMITED', SITE_PAUSED, { retryable: false });
+
 /**
- * Why the caller may not ask for a topic now, or null. A TOPICS_PER_DAY of 0 pauses new topics for everyone, admins
- * too, before anything is counted. There is no value for no ceiling (the owner, Nov 4: it guards the bill, so a slip
- * must not lift it): one that never binds is a high one, up to the knob's 100,000.
+ * Why the site takes no topic now, or null: paused (TOPICS_PER_DAY 0), or everyone's topics together have reached it.
+ * There is no value for no ceiling (the owner, Nov 4: it guards the bill, so a slip must not lift it): one that never
+ * binds is a high one, up to the knob's 100,000.
  */
+async function siteRefusal(db: Db, env: NodeJS.ProcessEnv): Promise<AppError | null> {
+  const { topicsPerDay } = usageLimits(env);
+  if (topicsPerDay === 0) return paused();
+  const all = await db.usageEvent.count({ where: { kind: 'TOPIC', createdAt: { gte: new Date(Date.now() - DAY_MS) } } });
+  return all >= topicsPerDay ? new AppError('RATE_LIMITED', siteFullMessage(topicsPerDay), { retryable: false }) : null;
+}
+
+/** Why the caller may not ask for a topic now, or null: a pause first, before anything is counted, then theirs, then the site's. */
 async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Promise<AppError | null> {
   const { topicsPerUserPerDay, topicsPerDay } = usageLimits(env);
-  if (topicsPerDay === 0) return new AppError('RATE_LIMITED', SITE_PAUSED, { retryable: false });
+  if (topicsPerDay === 0) return paused();
   const since = new Date(Date.now() - DAY_MS);
   const mine = await db.usageEvent.count({ where: { userId, kind: 'TOPIC', createdAt: { gte: since } } });
   if (mine >= topicsPerUserPerDay && !(await isAdmin(db, userId))) {
     return new AppError('RATE_LIMITED', `Max ${topicsPerUserPerDay} topic${topicsPerUserPerDay === 1 ? '' : 's'} per 24 hours`, { retryable: false });
   }
-  const all = await db.usageEvent.count({ where: { kind: 'TOPIC', createdAt: { gte: since } } });
-  if (all >= topicsPerDay) return new AppError('RATE_LIMITED', siteFullMessage(topicsPerDay), { retryable: false });
-  return null;
+  return siteRefusal(db, env);
 }
 
 /**
@@ -238,12 +252,17 @@ export async function filesAllowed(userId: string, bodyLength: number, env: Node
 export async function takeTopic(userId: string, bytes = 0, env: NodeJS.ProcessEnv = process.env): Promise<string> {
   return runTransaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage:${userId}`}))`;
-    // Always after the learner's, never before, so two takes never each hold the lock the other waits on.
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('usage:site'))`;
+    // The learner's own limits, under their lock, and the site's count without its lock: a full site is turned away
+    // here, so in a burst only the takes that may still get a place queue on the site's lock.
     const refusal = (await topicRefusal(tx, userId, env)) ?? (await bytesRefusal(tx, userId, bytes, env));
     if (refusal) throw refusal;
+    // Then the site's count again under its lock, which is what holds: a count and an insert. Always after the
+    // learner's lock, never before, so two takes never each hold the lock the other waits on.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('usage:site'))`;
+    const full = await siteRefusal(tx, env);
+    if (full) throw full;
     return (await tx.usageEvent.create({ data: { userId, kind: 'TOPIC', bytes, filesPending: bytes > 0 }, select: { id: true } })).id;
-  });
+  }, TAKE_WAITS);
 }
 
 /** Take one follow-up, with `bytes` of files, from the caller's allowances: the usage row's id, as takeTopic. */
