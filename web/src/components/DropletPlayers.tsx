@@ -18,9 +18,11 @@ import { countClip, countPlays, useViews, type PlayVideo } from '@/lib/plays';
  * How far each play gets is counted, with nothing about who watched (lib/plays.ts), and each video's views show
  * beside its name, as on YouTube or TikTok; none from an API older than them.
  */
-export function DropletPlayers({ dropletId, video, tags, title, views }: {
+export function DropletPlayers({ dropletId, video, tags, title, views, note }: {
   dropletId: string; video: DropletVideos; tags?: DropletTags; title?: string; views?: DropletViews;
+  note?: string | null; // why the song is missing: on the learner's own card on /learn only, never a public page
 }) {
+  const missing = video.songVideoUrl ? null : (note ?? null);
   const players = [
     { label: 'SONG', kind: 'song' as const, src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)' },
     { label: 'LESSON', kind: 'lesson' as const, src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)' },
@@ -33,8 +35,31 @@ export function DropletPlayers({ dropletId, video, tags, title, views }: {
         <Player key={p.label} dropletId={dropletId} {...p} views={views?.[p.kind]} />
       ))}
     </div>
+    {missing && <SongMissing note={missing} className="mt-1.5" />}
     <TagList tags={allTags(tags)} className="mt-1.5" />
     {video.hookVideoUrl && <HookClip dropletId={dropletId} src={video.hookVideoUrl} title={title} />}
+    </>
+  );
+}
+
+/** Why the droplet has no song, under its videos on the learner's card. */
+function SongMissing({ note, className = '' }: { note: string; className?: string }) {
+  return (
+    <p className={`text-xs ${className}`} style={{ color: 'var(--text-muted)' }} data-testid="videos-missing">
+      <MissingNote text={note} /> The lesson video still teaches all of it.
+    </p>
+  );
+}
+
+/** "The song could not be made: why." with its first part in bold, as the failed videos' line has it. */
+function MissingNote({ text }: { text: string }) {
+  const line = `${text.trim().replace(/[.!?\s]+$/, '')}.`;
+  const colon = line.indexOf(': ');
+  if (colon < 0) return <span className="font-bold" style={{ color: 'var(--accent-red)' }}>{line}</span>;
+  return (
+    <>
+      <span className="font-bold" style={{ color: 'var(--accent-red)' }}>{line.slice(0, colon)}</span>
+      {line.slice(colon)}
     </>
   );
 }
@@ -117,7 +142,7 @@ export function HookClip({ dropletId, src, title }: { dropletId: string; src: st
 export function LessonVideos({ answerId, video, tags, views }: { answerId: string; video: Video | null; tags?: DropletTags; views?: DropletViews }) {
   if (!video) return null;
   if (video.status === 'READY') {
-    return <div className="mt-3"><DropletPlayers dropletId={answerId} video={video} tags={tags} views={views} /></div>;
+    return <div className="mt-3"><DropletPlayers dropletId={answerId} video={video} tags={tags} views={views} note={video.error} /></div>;
   }
   if (video.status === 'RENDERING') {
     return (

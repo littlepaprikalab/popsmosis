@@ -850,6 +850,7 @@ def test_a_song_that_cannot_be_made_is_made_once_more_then_the_lesson_video_is_m
     assert setup.ran.count("audio") == 3  # the song, a new song, then the narration alone
     assert media.lesson_only(job) and anneal.song_failures(job) == 2
     assert "the song failed at audio" in anneal.songless(job)
+    assert anneal.note(job) == "The song could not be made."  # a code of no use to a learner is left out
     assert "the lesson video alone: the song could not be made" in operator_run.summary("q1")
     assert operator_run.read_jsonl(job / "runs.jsonl")[-1]["result"] == "DONE"
 

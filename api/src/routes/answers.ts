@@ -54,7 +54,7 @@ export default async function answerRoutes(app: FastifyInstance) {
   // PATCH /api/answers/:id/video — { status, songVideoUrl?, lessonVideoUrl?,
   // songPosterUrl?, lessonPosterUrl?, hookVideoUrl?, hookPosterUrl?, error?, attempt?, breakdown?, artChecks? }. RENDERING when the media steps
   // start (and again as each video lands), READY when they are done, FAILED with one
-  // line on why. A URL left out keeps the one already saved, so the song can be posted
+  // line on why (READY may say why a video is missing). A URL left out keeps the one already saved, so the song can be posted
   // before the lesson video exists. With the attempt a run holds (routes/videos.ts) it
   // applies only while that attempt is the current render: a run whose render went
   // quiet and was handed to another cannot mark its stale videos READY over the new one.
@@ -80,16 +80,24 @@ export default async function answerRoutes(app: FastifyInstance) {
     if (attempt !== undefined && !(Number.isInteger(attempt) && (attempt as number) > 0)) {
       return sendError(reply, 'VALIDATION_ERROR', 'attempt must be a positive integer');
     }
-    if (status === 'FAILED') {
-      if (typeof error !== 'string' || !error.trim()) return sendError(reply, 'VALIDATION_ERROR', 'error is required when status is FAILED');
+    // FAILED says why with `error`. READY may carry one too: why a video is missing (the song left out after it
+    // failed, the lesson video made alone), shown under the players.
+    if (status === 'FAILED' && (typeof error !== 'string' || !error.trim())) {
+      return sendError(reply, 'VALIDATION_ERROR', 'error is required when status is FAILED');
+    }
+    if (status === 'RENDERING' && error !== undefined) {
+      return sendError(reply, 'VALIDATION_ERROR', 'error is only for status FAILED or READY');
+    }
+    if (status === 'READY' && error !== undefined && (typeof error !== 'string' || !error.trim())) {
+      return sendError(reply, 'VALIDATION_ERROR', 'error must be a non-empty string');
+    }
+    if (typeof error === 'string') {
       if (error.length > VIDEO_ERROR_MAX_LENGTH) return sendError(reply, 'VALIDATION_ERROR', `error must be ${VIDEO_ERROR_MAX_LENGTH} characters or less`);
       const leak = secretError('error', error);
       if (leak) {
         request.log.warn({ agentId: request.agent!.id, answerId: id }, 'agent text refused: it looks like a secret');
         return sendError(reply, 'VALIDATION_ERROR', leak);
       }
-    } else if (error !== undefined) {
-      return sendError(reply, 'VALIDATION_ERROR', 'error is only for status FAILED');
     }
     const { breakdown } = body;
     if (breakdown !== undefined && status !== 'READY') {
@@ -133,7 +141,7 @@ export default async function answerRoutes(app: FastifyInstance) {
         // Only the URLs this request sent: the two videos render in parallel and report
         // separately, and writing back the other's value as read would erase it.
         ...urls,
-        videoError: status === 'FAILED' ? (error as string).trim() : null,
+        videoError: typeof error === 'string' ? error.trim() : null,
         videoUpdatedAt: new Date(),
         // READY carries the videos' whole bill. One sent without it (the studio left it out as too big or
         // unreadable, or a READY by hand) drops the bill so far the progress reports kept: shown as the total,

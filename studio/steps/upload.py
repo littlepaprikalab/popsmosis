@@ -57,7 +57,7 @@ from typing import Callable, Literal, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from studio import brain, jobs, ledger, media, review
+from studio import anneal, brain, jobs, ledger, media, review
 from studio.api import Api, ApiError
 from studio.schemas import Bundle, Locations
 
@@ -235,12 +235,27 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
     # What the art checker found in each picture, with where the picture went, for an admin's review (studio/review.py).
     art_checks = review.art_checks(job, {path: entry.remote for path, entry in progress.files.items()
                                          if entry.bucket == PRIVATE})
-    _retrying("files uploaded, but marking the videos READY failed", lambda: api.set_video(
-        answer, "READY", attempt=attempt,
-        song_video_url=uploaded.song_video_url, lesson_video_url=uploaded.lesson_video_url,
-        song_poster_url=uploaded.song_poster_url, lesson_poster_url=uploaded.lesson_poster_url,
-        hook_video_url=uploaded.hook_video_url, hook_poster_url=uploaded.hook_poster_url,
-        breakdown=breakdown, art_checks=art_checks))
+    # Why the song is missing, when it was left out after failing (studio/anneal.py): shown under the videos.
+    note = anneal.note(job)
+
+    def ready(error: str | None):
+        return api.set_video(
+            answer, "READY", attempt=attempt, error=error,
+            song_video_url=uploaded.song_video_url, lesson_video_url=uploaded.lesson_video_url,
+            song_poster_url=uploaded.song_poster_url, lesson_poster_url=uploaded.lesson_poster_url,
+            hook_video_url=uploaded.hook_video_url, hook_poster_url=uploaded.hook_poster_url,
+            breakdown=breakdown, art_checks=art_checks)
+
+    def ready_with_note():
+        try:
+            return ready(note)
+        except ApiError as e:
+            # An API from before READY took a note refuses it: the videos go READY without it, as they did then.
+            if note is None or e.status != 400 or "error is only for" not in e.message:
+                raise
+            return ready(None)
+
+    _retrying("files uploaded, but marking the videos READY failed", ready_with_note)
     jobs.write(job / UPLOADED, uploaded)  # last: done means READY was sent
 
     kept = len(public) + len(private) - sent

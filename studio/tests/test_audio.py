@@ -783,3 +783,28 @@ def test_a_song_that_fails_is_the_songs_alone_and_the_narration_is_still_made(tm
         audio.run(job)
     assert failed.value.part == part
     assert audio.made(job, "narration") and not audio.made(job, "song")
+
+
+def test_a_song_blocked_and_then_refused_for_credit_says_both_in_fixed_words(job, monkeypatch):
+    # Nov 4: Gemini blocked the prompt, and Eleven Music had 1 credit left of the 1578 a song needs.
+    fake = FakeGemini(answer={"promptFeedback": {"blockReason": "PROHIBITED_CONTENT"}})
+
+    def send(method, url, headers, body):
+        if "/v1/music" in url:
+            return 401, {}, json.dumps({"detail": {"type": "invalid_request", "code": "quota_exceeded",
+                                                   "message": "1 credits remaining"}}).encode()
+        return fake(method, url, headers, body)
+
+    monkeypatch.setattr(audio, "send", send)
+    sing(job, "gemini")
+    with pytest.raises(media.StepFailed) as failed:
+        audio.run(job)
+    assert failed.value.code == ("Google's Lyria music model blocked these lyrics, "
+                                 "and the backup provider, ElevenLabs, is out of credit")
+
+
+def test_an_account_out_of_credit_has_its_own_code_and_an_outage_stays_an_outage():
+    assert audio._code(401, b'{"detail":{"code":"quota_exceeded"}}') == "the ElevenLabs account is out of credit"
+    assert audio._code(402, provider="Google Gemini") == "the Google Gemini account is out of credit"
+    assert audio._code(401, b'{"detail":"invalid api key"}') is None
+    assert audio._code(503, b"quota_exceeded") == audio.OUTAGE

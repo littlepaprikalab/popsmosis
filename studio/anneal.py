@@ -59,6 +59,18 @@ def songless(job: Path) -> str | None:
     return str(dropped.get("why") or "the song could not be made") if isinstance(dropped, dict) else None
 
 
+def note(job: Path) -> str | None:
+    """What the droplet says of its missing song, sent with READY (studio/steps/upload.py) and shown under its videos:
+    the studio's fixed words (the failure's code, never its message, which can quote a provider or the lyrics). None
+    while the job has its song."""
+    dropped = read(job).get("songless")
+    if not isinstance(dropped, dict):
+        return None
+    code = str(dropped.get("code") or "")
+    generic = {"", "step failed", "a studio error"}
+    return "The song could not be made" + ("" if code in generic else f": {code}") + "."
+
+
 def song_failures(job: Path) -> int:
     """How many runs of the videos here the song failed in, with every retry of its own."""
     n = read(job).get("song_failures")

@@ -534,3 +534,34 @@ def test_the_lesson_alone_uploads_and_reports_only_the_lesson_video(job, server)
                      "lessonPosterUrl": f"{MEDIA}/ans1/out/lesson_h.jpg"}
     assert jobs.read(job / upload.UPLOADED, upload.Uploaded).song_video_url is None
     assert line.endswith(f"videos READY: {MEDIA}/ans1/out/lesson_h.mp4")
+
+
+def test_a_song_left_out_says_why_with_ready(job, server):
+    from studio import anneal
+
+    anneal.drop_song(job, "the song failed at audio (x)", "the ElevenLabs account is out of credit")
+    upload.run(job, api=api_for(server))
+    assert server.patches()[-1]["status"] == "READY"
+    assert server.patches()[-1]["error"] == "The song could not be made: the ElevenLabs account is out of credit."
+
+
+def test_an_api_from_before_ready_took_a_note_still_gets_ready_without_it(job, server):
+    from studio import anneal
+
+    anneal.drop_song(job, "the song failed at audio", "")
+    answer = server.__call__
+
+    def older(method, url, headers, body):
+        if method == "PATCH" and "error" in json.loads(body) and json.loads(body)["status"] == "READY":
+            server.calls.append((method, url, headers, body))
+            return 400, b'{"error":{"code":"VALIDATION_ERROR","message":"error is only for status FAILED"}}'
+        return answer(method, url, headers, body)
+
+    upload.run(job, api=Api(API, KEY, send=older))
+    assert [p.get("error") for p in server.patches()][-2:] == ["The song could not be made.", None]
+    assert server.patches()[-1]["status"] == "READY" and (job / upload.UPLOADED).exists()
+
+
+def test_videos_with_their_song_send_no_note(job, server):
+    upload.run(job, api=api_for(server))
+    assert "error" not in server.patches()[-1]

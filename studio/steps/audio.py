@@ -109,9 +109,26 @@ OUTAGE = "the audio provider failed"
 TOOK_TOO_LONG = "the provider took too long"
 
 
-def _code(status: int) -> str | None:
-    """OUTAGE for a status a later try may not meet (busy, a server's fault), else the plain code."""
-    return OUTAGE if status in (0, 408, 429) or status >= 500 else None
+# Fixed words, shown on the droplet when the song is left out (studio/anneal.py, note()): who refused, never what
+# the provider's answer said. An account with too little credit left for what was asked: no try in the run gets past
+# it, only a top-up.
+def no_credit(provider: str) -> str:
+    return f"the {provider} account is out of credit"
+
+
+# Lyria's safety filter blocked the song's words (Blocked).
+BLOCKED = "Google's Lyria music model blocked these lyrics"
+ELEVENLABS = "ElevenLabs"
+
+
+def _code(status: int, body: bytes = b"", provider: str = ELEVENLABS) -> str | None:
+    """OUTAGE for a status a later try may not meet (busy, a server's fault); no_credit(provider) for an account out
+    of credit (ElevenLabs answers 401 quota_exceeded, or 402); else the plain code."""
+    if status in (0, 408, 429) or status >= 500:
+        return OUTAGE
+    if status == 402 or b"quota_exceeded" in body:
+        return no_credit(provider)
+    return None
 
 
 class NoAnswer(media.StepFailed):
@@ -122,6 +139,8 @@ class NoAnswer(media.StepFailed):
 
 class Blocked(media.StepFailed):
     """Gemini will not sing what the song says: its prompt was blocked, or its answer stopped for safety."""
+
+    code = BLOCKED
 
 
 # Why a Gemini answer stops with no song when what it would sing is refused. RECITATION (too close to a known song)
@@ -302,7 +321,16 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
             _make_eleven_song(job, bundle, instead_of={"provider": "gemini", "model_id": gemini_song_model(),
                                                        "reason": str(e)})
         except media.StepFailed as again:
-            raise media.StepFailed(f"{e}, and Eleven Music could not make it instead: {again}") from again
+            # Why neither made it, in fixed words: an outage alone, so that a later try is still allowed for it.
+            if again.code in (OUTAGE, TOOK_TOO_LONG):
+                code = again.code
+            elif again.code == no_credit(ELEVENLABS):
+                code = f"{e.code}, and the backup provider, {ELEVENLABS}, is out of credit"
+            elif again.code == media.StepFailed.code:
+                code = f"{e.code}, and the backup provider, {ELEVENLABS}, could not make it either"
+            else:
+                code = f"{e.code}, and the backup provider, {ELEVENLABS}, failed too: {again.code}"
+            raise media.StepFailed(f"{e}, and Eleven Music could not make it instead: {again}", code=code) from again
         return f"elevenlabs, as {e}"
 
 
@@ -364,7 +392,7 @@ def _make_eleven_song(job: Path, bundle: Bundle, instead_of: dict | None = None)
     if status == 200:
         _log_eleven(job, "song", MUSIC_MODEL, headers, started)
     if status != 200 or not audio:
-        raise media.StepFailed(f"Eleven Music refused the song: {status} {_error(audio)}", code=_code(status))
+        raise media.StepFailed(f"Eleven Music refused the song: {status} {_error(audio)}", code=_code(status, audio))
     # The plan first, then the audio: the audio file is what says the song is made.
     jobs.write(job / plan_path("song"), {
         "source": song_lines(bundle), "provider": "elevenlabs", "model_id": MUSIC_MODEL,
@@ -435,7 +463,8 @@ def _make_gemini_song(job: Path, bundle: Bundle) -> None:
     started = time.monotonic()
     status, headers, answer = _gemini(f"/models/{urllib.parse.quote(model, safe='')}:generateContent", body)
     if status != 200:
-        raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}", code=_code(status))
+        raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}",
+                                 code=_code(status, answer, "Google Gemini"))
     audio, mime_type, said = read_gemini_song(answer)
     _log(job, "song", model, started, GEMINI_SONG_PRICES.get(model))  # a song came back: one song's price
     audio = as_mp3(audio, mime_type)
@@ -550,7 +579,7 @@ def _make_eleven_speech(job: Path, kind: str, lines: list[tuple[str, str]], text
     if status == 200:
         _log_eleven(job, kind, TTS_MODEL, headers, started)
     if status != 200:
-        raise media.StepFailed(f"text-to-speech refused the {kind}: {status} {_error(answer)}", code=_code(status))
+        raise media.StepFailed(f"text-to-speech refused the {kind}: {status} {_error(answer)}", code=_code(status, answer))
     try:
         data = json.loads(answer)
         audio = base64.b64decode(data["audio_base64"])
@@ -585,7 +614,7 @@ def _make_gemini_speech(job: Path, kind: str, lines: list[tuple[str, str]], text
     status, headers, answer = _gemini("/interactions", body)
     if status != 200:
         raise media.StepFailed(f"Gemini's text-to-speech refused the {kind}: {status} {_error(answer)}",
-                               code=_code(status))
+                               code=_code(status, answer, "Google Gemini"))
     audio, mime_type, said = read_gemini_speech(answer, kind)
     audio = as_mp3(audio, mime_type, kind)
     _log(job, kind, model, started, gemini_speech_cost(said.get("usage"), duration_of(audio)))

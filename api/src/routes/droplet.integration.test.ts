@@ -177,6 +177,23 @@ d('droplet endpoints', () => {
     expect(lessonOnly[0].answer.context).toMatchObject({ coreIdea: BUNDLE.core_idea, lyrics: [] });
   });
 
+  it('takes a note with READY on why a video is missing, for the learner\'s card only, never the public pages', async () => {
+    const answerId = (await answer()).json().id;
+    const lesson = 'https://media.popsmosis.com/a/out/lesson_h.mp4';
+    expect((await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson, error: ' ' })).statusCode).toBe(400);
+    const note = 'The song could not be made: Google’s Lyria music model blocked these lyrics, and the backup provider, ElevenLabs, is out of credit.';
+    const ready = await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson, error: note });
+    expect(ready.json()).toMatchObject({ status: 'READY', songVideoUrl: null, lessonVideoUrl: lesson, error: note });
+    const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
+    expect(card.answer.video).toMatchObject({ status: 'READY', error: note });
+    const droplet = (await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).json();
+    expect(droplet.video).toMatchObject({ lessonVideoUrl: lesson });
+    expect(droplet.video).not.toHaveProperty('note');
+    expect(JSON.stringify(droplet)).not.toContain('out of credit');
+    const list = (await app.inject({ method: 'GET', url: '/api/droplets' })).json().data;
+    expect(JSON.stringify(list)).not.toContain('out of credit');
+  });
+
   it('keeps the video status: its own answers only, URLs kept between updates, a reason on failure', async () => {
     const answerId = (await answer()).json().id;
     expect((await video(keyB, answerId, { status: 'RENDERING' })).statusCode).toBe(403);
