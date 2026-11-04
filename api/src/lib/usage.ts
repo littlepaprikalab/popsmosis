@@ -105,7 +105,7 @@ async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Pro
   const since = new Date(Date.now() - DAY_MS);
   const mine = await db.usageEvent.count({ where: { userId, kind: 'TOPIC', createdAt: { gte: since } } });
   if (mine >= topicsPerUserPerDay) {
-    return new AppError('RATE_LIMITED', `Max ${topicsPerUserPerDay} questions per 24 hours`, { retryable: false });
+    return new AppError('RATE_LIMITED', `Max ${topicsPerUserPerDay} topic${topicsPerUserPerDay === 1 ? '' : 's'} per 24 hours`, { retryable: false });
   }
   if (topicsPerDay > 0) {
     const all = await db.usageEvent.count({ where: { kind: 'TOPIC', createdAt: { gte: since } } });

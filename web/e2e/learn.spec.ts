@@ -704,13 +704,20 @@ test.describe('signed in', () => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
     const note = page.getByTestId('topic-allowance');
-    await expect(note).toContainText(`${before.left} of ${before.perDay} topics left.`);
+    const canSend = (left: number, used: boolean) => (used
+      ? `You can send ${left} more of your ${before.perDay} topics.`
+      : `You can send ${left} topic${left === 1 ? '' : 's'}.`);
+    await expect(note).toContainText(canSend(before.left, before.left < before.perDay));
 
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(`E2E ${Date.now()}: why the sky is blue`);
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     // Its place comes back 24 hours from now: tomorrow, by this browser's clock, a minute later at most.
-    await expect(note).toContainText(`${before.left - 1} of ${before.perDay} topics left.`);
-    await expect(note).toContainText(/You get one more (at|tomorrow at) \d/);
+    if (before.left > 1) {
+      await expect(note).toContainText(canSend(before.left - 1, true));
+      await expect(note).toContainText(/Another comes back (at|tomorrow at) \d/);
+    } else {
+      await expect(note).toContainText(`You have used all ${before.perDay} of your topics. You can send another`);
+    }
   });
 
   test('the box says when the next topic comes back once none are left, and when the site is full', async ({ page, context }) => {
@@ -729,7 +736,12 @@ test.describe('signed in', () => {
       return `(at|tomorrow at) (${labels.map(escape).join('|')})`;
     };
     await expect(note).toBeVisible();
-    await expect(note).toHaveText(new RegExp(`^0 of 10 topics left\\. You can send another ${await threeHoursOn()}\\.$`));
+    await expect(note).toHaveText(new RegExp(`^You have used all 10 of your topics\\. You can send another ${await threeHoursOn()}\\.$`));
+
+    // Shown again (back from another tab, or on a computer that slept), the page reads the count again.
+    answer = { ...answer, left: 3 };
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(note).toHaveText(new RegExp(`^You can send 3 more of your 10 topics\\. Another comes back ${await threeHoursOn()}\\.$`));
 
     answer = { ...answer, left: 7, siteFull: true, siteOpensInSeconds: 3 * 3600 };
     await page.reload();

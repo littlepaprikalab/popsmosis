@@ -244,7 +244,7 @@ d('studio settings', () => {
     expect((await ask('Diffusion')).statusCode).toBe(201);
     const refused = await ask('Osmosis');
     expect(refused.statusCode).toBe(429);
-    expect(refused.json().error.message).toBe('Max 1 questions per 24 hours');
+    expect(refused.json().error.message).toBe('Max 1 topic per 24 hours');
     await put(adminCookie, { knobs: { QUESTIONS_PER_USER_PER_DAY: null } });
     expect((await ask('Osmosis')).statusCode).toBe(201);
   });

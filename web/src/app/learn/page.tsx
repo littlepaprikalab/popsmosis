@@ -273,17 +273,22 @@ function ApologyPrompt({ typed, onType, onDone }: { typed: string; onType: (type
  */
 /**
  * How many topics the learner may still ask for, and when the next comes back, in their own time zone. Each topic's
- * place comes back 24 hours after it was sent (api/src/lib/usage.ts), so there is no midnight to count to.
+ * place comes back 24 hours after it was sent (api/src/lib/usage.ts), so there is no midnight to count to. Said as
+ * what the learner can do ("You can send 3 more of your 5 topics"), not as a count ("3 of 5 topics left").
  */
 function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
   const { perDay, left, nextAt, siteFull, siteOpensAt } = allowance;
   const when = (at: number | null) => (at ? clockLabel(at) : 'soon');
+  const topics = (n: number) => `${n} topic${n === 1 ? '' : 's'}`;
   let text: string;
   if (siteFull) text = `Popsmosis has made all the droplets it can for now. It takes topics again ${when(siteOpensAt)}.`;
   else if (perDay === 0) text = 'New topics are paused for now.';
-  else if (left === 0) text = `0 of ${perDay} topics left. You can send another ${when(nextAt)}.`;
-  else if (!nextAt) text = `${left} of ${perDay} topics left. Each comes back 24 hours after you send it.`;
-  else text = `${left} of ${perDay} topics left. You get one more ${clockLabel(nextAt)}.`;
+  else if (left === 0) {
+    text = `You have used ${perDay === 1 ? 'your topic' : `all ${perDay} of your topics`}. You can send another ${when(nextAt)}.`;
+  }
+  // None sent in the last 24 hours, so all of them are there.
+  else if (!nextAt) text = `You can send ${topics(left)}. Each comes back 24 hours after you send it.`;
+  else text = `You can send ${left} more of your ${topics(perDay)}. Another comes back ${clockLabel(nextAt)}.`;
   const none = siteFull || left === 0;
   return (
     <p className="text-xs mt-1" aria-live="polite" data-testid="topic-allowance"
@@ -627,6 +632,14 @@ function LearnContent() {
     const timer = setTimeout(readAllowance, Math.max(0, opensAt - Date.now()) + 1000);
     return () => clearTimeout(timer);
   }, [opensAt, readAllowance]);
+  // And whenever the page is shown again: that timer runs late by as long as the computer slept, and a topic sent
+  // from another tab, or a limit changed on the Studio page, moves the count without this page hearing of it.
+  useEffect(() => {
+    if (!user) return;
+    const onShow = () => { if (document.visibilityState === 'visible') readAllowance(); };
+    document.addEventListener('visibilitychange', onShow);
+    return () => document.removeEventListener('visibilitychange', onShow);
+  }, [user, readAllowance]);
 
   // Ask the cheap status endpoint; when something newer exists, show the banner.
   // Localized refresh: only the topics that are waiting on the teacher.
