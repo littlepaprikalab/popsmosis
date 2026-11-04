@@ -586,12 +586,14 @@ TEXTBOOK_STYLE = "clean textbook style"  # ...and a graph's or a chart's in any 
 # The hook and every scene that is not a diagram are painted in the droplet's look, the writer's pick for its topic
 # (Bundle.look, Nov 3). Code adds it, and after it the light and the colours the locate step needs: it finds each
 # part by its colour, and "cinematic light" made every picture dark, the background near-black and the clergy's
-# purple 0.3% of the picture (docs/test-rounds.md, Nov 3). Words that take the colour or the light away are struck.
+# purple 0.3% of the picture (docs/test-rounds.md, Nov 3). Words that take the colour or the light away are struck:
+# a Renaissance fresco came back pale and lost half the tomb's parts (Nov 4).
 LOOK_LIGHT = ("bright and evenly lit with no deep shadows, real depth, each thing the lesson names painted solidly in "
               "its own colour, clear in front")
 RISKY_LOOK = re.compile(r"\b(?:sepia|black[- ]and[- ]white|monochrom\w*|gr[ae]yscale|noir|engrav\w*|etch\w*|woodcut\w*"
                         r"|charcoal|silhouett\w*|photo\w*|hyper-?real\w*|dark\w*|moody|cinematic|dramatic|shadow\w*"
-                        r"|chiaroscuro|candlelit|dim|dimly|muted|desaturated|faded|aged|night\w*)\b", re.I)
+                        r"|chiaroscuro|candlelit|dim|dimly|muted|desaturated|faded|aged|night\w*|fresco\w*|tempera|pastel\w*"
+                        r"|old[- ]masters?)\b", re.I)
 # A biology picture is asked for in the Campbell textbook look, the owner's choice (Nov 2): "the images are much better
 # looking". A style, not a figure of theirs. Added here at paint time, never in the bundle: when the brief had the
 # writer name the book, the fact-check struck it from every picture as a claim (eed1ff6). Biology is the course's, or,

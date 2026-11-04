@@ -171,11 +171,14 @@ one diagram:
 - For a younger audience, two or three structures a scene, the finer parts left out.
 
 `look`: how the hook and every scene that is not a diagram are painted, one look for the
-whole droplet. Take it from the topic's own world, the way an art director would: the art
-of its time and place, or of the world it is about ("an Ancient Egyptian wall-painting
-illustration" for the pyramids, "a 1930s national-park travel-poster illustration" for
-erosion). A general style that would suit any topic (flat vector, gouache, watercolour) is
-the last choice. A medium and a feel an illustrator knows, in a few words ending in
+whole droplet. Take it from the topic's own world, the way an art director would: a kind of
+picture its time and place, or the world it is about, is known for ("a 1930s national-park
+travel-poster illustration" for erosion, "a 1950s diner-menu illustration" for nutrition).
+The hook is set in the learner's world today, so the look must suit a scene of today too: a
+poster, a print, a mural, a label, never a fresco or an old master's painting, which dresses
+today's people in the past and whose faded colours lose the parts. A general style that
+would suit any topic (flat vector, gouache, watercolour) is the last choice. A medium and a
+feel an illustrator knows, in a few words ending in
 "illustration". Code adds it to each of those scenes with bright, even light and each part in its own colour,
 since the video finds each part by its colour: never sepia, black and white, monochrome,
 noir, an engraving, charcoal, silhouettes, a photograph or dark, moody light, which code

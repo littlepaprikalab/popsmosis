@@ -842,6 +842,8 @@ def test_the_hook_and_a_story_scene_are_painted_in_the_droplets_look_with_light_
     ("An aged sepia engraving, dark and moody", ""),
     ("a dramatic, cinematic oil painting in the style of Jacques-Louis David", "oil painting illustration"),
     ("black and white charcoal illustration", ""),
+    ("an Italian Renaissance fresco illustration", "Italian Renaissance illustration"),  # Nov 4: pale, parts lost
+    ("soft pastel old-master illustration", "soft illustration"),
     ("", ""),
 ])
 def test_a_look_loses_what_takes_the_colour_or_the_light_away(look, kept):
