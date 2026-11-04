@@ -376,6 +376,40 @@ test.describe('the Droplets tab, signed out', () => {
     expect(list.status()).toBe(200);
     expect(JSON.stringify(await list.json())).not.toMatch(/Ben|ben@example|how do cells/);
   });
+
+  test("the heading's drop stands over a hidden O with the same room each side; high contrast shows a plain O", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/droplets');
+    const heading = page.getByRole('heading', { name: 'DROPLETS' });
+    await expect(heading).toHaveText('DROPLETS');
+    // Where the R, the drop's box, the O and the P sit on the line, in px.
+    const line = () => heading.evaluate((h) => {
+      const [dr, plets] = [...h.childNodes].filter((n): n is Text => n instanceof Text && n.data.trim() !== '');
+      const char = (text: Text, i: number) => {
+        const range = document.createRange();
+        range.setStart(text, i);
+        range.setEnd(text, i + 1);
+        return range.getBoundingClientRect();
+      };
+      const svg = h.querySelector('svg')!;
+      const o = h.querySelector('span')!.getBoundingClientRect();
+      return { r: char(dr, dr.data.length - 1).right, drop: svg.getBoundingClientRect().left, o, p: char(plets, 0).left, overflow: getComputedStyle(svg).overflow };
+    });
+
+    const at = await line();
+    expect(Math.abs(at.drop - at.o.left)).toBeLessThan(0.5);
+    expect(at.o.left - at.r).toBeGreaterThan(1);
+    expect(Math.abs((at.o.left - at.r) - (at.p - at.o.right))).toBeLessThan(0.5);
+    // The drop is drawn bigger than its box: without this it would be cut off.
+    expect(at.overflow).toBe('visible');
+
+    // High contrast shows every letter: the drop hides, and the plain O takes no room of its own.
+    await page.emulateMedia({ forcedColors: 'active' });
+    await expect(heading.locator('svg')).toBeHidden();
+    const plain = await line();
+    expect(Math.abs(plain.o.left - plain.r)).toBeLessThan(0.5);
+    expect(Math.abs(plain.p - plain.o.right)).toBeLessThan(0.5);
+  });
 });
 
 // A studio's bill as it sends one (studio/ledger.py), small enough to read in a test.

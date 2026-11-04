@@ -242,18 +242,19 @@ function Droplets() {
  *
  * The heading around it never wraps, since the drop is a place the word could break, and
  * carries the word as a label, since some screen readers read it in pieces around the drop.
- * In high-contrast mode, which shows every letter, the drop hides and the plain O shows.
+ * In high-contrast mode, which shows every letter, the drop hides and the plain O shows,
+ * without the drop's room, so it is spaced like the other letters.
  */
 function DropO() {
   return (
     <>
-      <svg aria-hidden="true" viewBox="14 7 36 48" className="animate-drop-fall relative inline overflow-visible forced-colors:hidden"
-        style={{ width: '1ch', marginLeft: '0.12em', marginRight: '-1ch', height: '0.8em', verticalAlign: '-0.03em', top: '-0.26em', color: 'var(--accent-brand)' }}>
+      <svg aria-hidden="true" viewBox="14 7 36 48" className="animate-drop-fall relative inline overflow-visible ml-[0.12em] forced-colors:hidden"
+        style={{ width: '1ch', marginRight: '-1ch', height: '0.8em', verticalAlign: '-0.03em', top: '-0.26em', color: 'var(--accent-brand)' }}>
         <path d="M32 12.5C32 12.5 20.3 28 20.3 38a11.7 11.7 0 0 0 23.4 0C43.7 28 32 12.5 32 12.5Z"
           transform="translate(32 38) rotate(25) scale(1.5) translate(-32 -38)"
           fill="none" stroke="currentColor" strokeWidth="4.4" strokeLinejoin="round" />
       </svg>
-      <span className="text-transparent" style={{ marginRight: '0.12em' }}>O</span>
+      <span className="text-transparent mr-[0.12em] forced-colors:mr-0">O</span>
     </>
   );
 }
