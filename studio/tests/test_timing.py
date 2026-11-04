@@ -731,7 +731,7 @@ def test_a_line_whisper_heard_too_little_of_is_left_to_mms():
     assert found == [] and skipped == [] and lines == before
 
 
-def test_a_line_the_singer_skipped_is_not_sung_and_fails_the_song():
+def test_a_line_the_singer_skipped_is_not_sung_and_the_song_goes_on():
     """Nov 4: "That contact came with a deadly bill" never sung, the line after it straight after the one before."""
     texts = {"a": "Markets shut down, the camels stand still", "b": "That contact came with a deadly bill",
              "c": "Paper still moves west, but the cost is clear"}
@@ -746,7 +746,8 @@ def test_a_line_the_singer_skipped_is_not_sung_and_fails_the_song():
     Timing(audio="audio/song.mp3", duration=5.0, lines=lines)
     report = {"lines": [{"line_id": i, "score": scores[i], **({} if line.sung else {"sung": False})}
                         for i, line in zip(texts, lines)], "skipped": skipped}
-    assert timing.lyric_mismatch(report) == "the song does not sing its lyrics: the singer skipped b"
+    assert timing.lyric_mismatch(report) is None  # the owner, Nov 4: a skipped line does not fail the song
+    assert "SKIPPED by the singer: b" in timing.song_notes({**report, "drift": [], "drifting": [], "unsure": []})
 
 
 def test_a_line_neither_heard_but_with_room_to_be_sung_is_not_called_skipped():
@@ -939,3 +940,4 @@ def _even_song(bundle):
                        or [Word(word="la", start=i * 2.0, end=i * 2.0 + 1.5)])
              for i, line in enumerate(bundle.lyrics)]
     return Timing(audio=media.audio_path("song"), duration=len(lines) * 2.0, lines=lines)
+
