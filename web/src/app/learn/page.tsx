@@ -282,6 +282,11 @@ function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
   const topics = (n: number) => `${n} topic${n === 1 ? '' : 's'}`;
   let text: string;
   if (siteFull) text = `Popsmosis has made all the droplets it can for now. It takes topics again ${when(siteOpensAt)}.`;
+  // An admin is not held to the learners' limit (api/src/lib/usage.ts), and is told what learners are held to.
+  else if (left === null) {
+    text = `As an admin, you have no topic limit. ${perDay === 0
+      ? 'New topics are paused for learners.' : `Learners can send ${topics(perDay)} in any 24 hours.`}`;
+  }
   else if (perDay === 0) text = 'New topics are paused for now.';
   else if (left === 0) {
     text = `You have used ${perDay === 1 ? 'your topic' : `all ${perDay} of your topics`}. You can send another ${when(nextAt)}.`;
@@ -627,6 +632,9 @@ function LearnContent() {
     readAllowance();
   }, [authLoading, user, readAllowance]);
   const opensAt = allowance && (allowance.siteFull ? allowance.siteOpensAt : allowance.nextAt);
+  // None left, by the learner's own limit or the site's: Submit stays grey, as the box says. The API refuses such a
+  // topic anyway; this is so the button does not look as if it would send. An admin has no limit of their own.
+  const outOfTopics = !!allowance && (allowance.siteFull || allowance.left === 0);
   useEffect(() => {
     if (!opensAt) return;
     const timer = setTimeout(readAllowance, Math.max(0, opensAt - Date.now()) + 1000);
@@ -762,7 +770,7 @@ function LearnContent() {
 
   const handleAsk = async () => {
     const content = newQuestion.trim();
-    if (content.length < QUESTION_MIN) return;
+    if (content.length < QUESTION_MIN || outOfTopics) return;
     if (!user) { setAskSignIn(true); return; }
     try {
       await guard(async () => {
@@ -862,7 +870,7 @@ function LearnContent() {
 
   if (unreachable) return <ServerUnavailable onRetry={retry} />;
 
-  const canAsk = newQuestion.trim().length >= QUESTION_MIN && !submitting;
+  const canAsk = newQuestion.trim().length >= QUESTION_MIN && !submitting && !outOfTopics;
 
   return (
     <PageContainer className="py-6">

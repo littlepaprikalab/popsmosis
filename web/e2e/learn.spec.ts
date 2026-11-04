@@ -737,11 +737,25 @@ test.describe('signed in', () => {
     };
     await expect(note).toBeVisible();
     await expect(note).toHaveText(new RegExp(`^You have used all 10 of your topics\\. You can send another ${await threeHoursOn()}\\.$`));
+    // None left, Submit stays grey with a topic typed, and Ctrl+Enter sends nothing either.
+    let sent = 0;
+    await page.route('**/api/questions', (route) => {
+      if (route.request().method() === 'POST') sent += 1;
+      return route.continue();
+    });
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    await box.fill('Why the sky is blue');
+    const submit = page.getByRole('button', { name: 'SUBMIT' });
+    await expect(submit).toBeDisabled();
+    await box.press('Control+Enter');
 
     // Shown again (back from another tab, or on a computer that slept), the page reads the count again.
     answer = { ...answer, left: 3 };
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await expect(note).toHaveText(new RegExp(`^You can send 3 more of your 10 topics\\. Another comes back ${await threeHoursOn()}\\.$`));
+    await expect(submit).toBeEnabled();
+    expect(sent).toBe(0);
+    await box.fill('');
 
     answer = { ...answer, left: 7, siteFull: true, siteOpensInSeconds: 3 * 3600 };
     await page.reload();
@@ -945,6 +959,16 @@ test.describe('signed in', () => {
 });
 
 test.describe('admin', () => {
+  test('an admin is told they have no topic limit, and what learners are held to', async ({ page, context, request }) => {
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const allowance = await (await request.get(apiUrl('/api/questions/allowance'), { headers: asAda })).json();
+    expect(allowance).toMatchObject({ left: null, nextInSeconds: null });
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+    await expect(page.getByTestId('topic-allowance'))
+      .toHaveText(`As an admin, you have no topic limit. Learners can send ${allowance.perDay} topics in any 24 hours.`);
+  });
+
   test('lists agents, creates one with a key shown once, and can disable it', async ({ page, context, request }) => {
     await signIn(context, S.users.ada);
     await page.goto('/admin/agents');

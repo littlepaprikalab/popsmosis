@@ -1,6 +1,6 @@
 /**
  * The limits on what learners may ask for: topics a day each, follow-ups an hour each, and topics a day across the
- * whole site. A topic costs about $0.70 to $1 of model spend and a follow-up a run of the teacher, and anyone with a
+ * whole site. Admins have no topic limit of their own (isAdmin), but count toward the site's. A topic costs about $0.70 to $1 of model spend and a follow-up a run of the teacher, and anyone with a
  * Google account can sign up, so these are what bound the bill.
  *
  * Counted from usage_events, never from the requests themselves: taking a request back or deleting it (or a
@@ -99,12 +99,21 @@ async function bytesRefusal(db: Db, userId: string, bytes: number, env: NodeJS.P
 
 type Db = typeof prisma | TxClient;
 
+/**
+ * Admins test the site, so they have no topic limit of their own (the owner, Nov 4). Their topics are still taken,
+ * so they count toward the site's TOPICS_PER_DAY, and that ceiling holds them as it holds everyone. Read from the
+ * account, so a role given or taken away counts from the next request.
+ */
+async function isAdmin(db: Db, userId: string): Promise<boolean> {
+  return (await db.user.findUnique({ where: { id: userId }, select: { role: true } }))?.role === 'ADMIN';
+}
+
 /** Why the caller may not ask for a topic now, or null. */
 async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Promise<AppError | null> {
   const { topicsPerUserPerDay, topicsPerDay } = usageLimits(env);
   const since = new Date(Date.now() - DAY_MS);
   const mine = await db.usageEvent.count({ where: { userId, kind: 'TOPIC', createdAt: { gte: since } } });
-  if (mine >= topicsPerUserPerDay) {
+  if (mine >= topicsPerUserPerDay && !(await isAdmin(db, userId))) {
     return new AppError('RATE_LIMITED', `Max ${topicsPerUserPerDay} topic${topicsPerUserPerDay === 1 ? '' : 's'} per 24 hours`, { retryable: false });
   }
   if (topicsPerDay > 0) {
@@ -122,10 +131,11 @@ async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Pro
  * learner is. So the times are seconds from now, which the page turns into a time on its own clock and in the
  * learner's own time zone.
  *
- * - `left`: how many the learner may ask for now, by their own limit.
+ * - `perDay`: the learners' limit, an admin's too, though it does not hold them.
+ * - `left`: how many the learner may ask for now, by their own limit. Null for an admin, who has none of their own.
  * - `nextInSeconds`: with some left, until one more comes back (the oldest take in the window turns 24 hours old);
  *   with none left, until they may ask again, which is more than one coming back when an admin lowered the limit.
- *   Null when nothing is coming back: none used, or a limit of 0.
+ *   Null when nothing is coming back: none used, a limit of 0, or an admin.
  * - `siteFull`: every learner's topics together have reached TOPICS_PER_DAY, whatever this learner has left, and
  *   `siteOpensInSeconds` is until the site takes one again.
  *
@@ -133,7 +143,7 @@ async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Pro
  */
 export interface TopicAllowance {
   perDay: number;
-  left: number;
+  left: number | null;
   nextInSeconds: number | null;
   siteFull: boolean;
   siteOpensInSeconds: number | null;
@@ -153,9 +163,13 @@ export async function topicAllowance(userId: string, env: NodeJS.ProcessEnv = pr
     return take ? Math.max(0, Math.ceil((take.createdAt.getTime() + DAY_MS - now) / 1000)) : null;
   };
 
-  const used = await prisma.usageEvent.count({ where: { userId, kind: 'TOPIC', createdAt: { gte: since } } });
-  const left = Math.max(0, perDay - used);
-  const nextInSeconds = await placeBackIn({ userId }, left > 0 ? 0 : used - perDay);
+  let left: number | null = null;
+  let nextInSeconds: number | null = null;
+  if (!(await isAdmin(prisma, userId))) {
+    const used = await prisma.usageEvent.count({ where: { userId, kind: 'TOPIC', createdAt: { gte: since } } });
+    left = Math.max(0, perDay - used);
+    nextInSeconds = await placeBackIn({ userId }, left > 0 ? 0 : used - perDay);
+  }
 
   let siteFull = false;
   let siteOpensInSeconds: number | null = null;

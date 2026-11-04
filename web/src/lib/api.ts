@@ -372,7 +372,7 @@ function onLocalClock<T extends { data: Question[] }>(page: T): T {
  */
 export interface TopicAllowance {
   perDay: number; // topics in any 24 hours
-  left: number; // what the learner may ask for now, by their own limit
+  left: number | null; // what the learner may ask for now, by their own limit; null: an admin, who has none
   nextAt: number | null; // with some left, when one more comes back; with none, when they may ask again; null: none coming
   siteFull: boolean; // every learner's topics together reached the site's day, whatever this one has left
   siteOpensAt: number | null; // siteFull: when the site takes topics again

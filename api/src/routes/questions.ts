@@ -98,8 +98,12 @@ export default async function questionRoutes(app: FastifyInstance) {
   });
 
   // GET /api/questions/allowance — how many topics the viewer may still ask for, and when the next comes back
-  // (lib/usage.ts): the Learn page shows it in the topic box. Admins have the same limit as everyone.
-  app.get('/api/questions/allowance', { preHandler: [requireUser] }, async (request) => topicAllowance(request.viewer!.id));
+  // (lib/usage.ts): the Learn page shows it in the topic box. An admin has no limit of their own: `left` is null.
+  // Never kept by a cache: a count read before a topic was sent would go on saying what was left before it.
+  app.get('/api/questions/allowance', { preHandler: [requireUser] }, async (request, reply) => {
+    reply.header('cache-control', 'private, no-store');
+    return topicAllowance(request.viewer!.id);
+  });
 
   // GET /api/questions/brains — anyone: { open }, whether a topic may be sent to a brain of its own (lib/brains.ts)
   // now. Not while an admin has the default brain make every topic (lib/studio-settings.ts, defaultOnly): the Learn
