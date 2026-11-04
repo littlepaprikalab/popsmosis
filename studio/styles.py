@@ -31,9 +31,9 @@ SONG_STYLES = (
     "K-pop with rapped verses traded between male group vocals, a catchy sung pre-chorus, a big catchy sung "
     "chorus, punchy synth bass, crisp claps, 110 bpm",
     "laid-back R&B with smooth rapped verses, warm electric piano, deep round bass, soft finger snaps, smooth sung "
-    "chorus with stacked harmonies, 100 bpm",
-    "indie-pop with rapped verses, warm male vocal, strummed acoustic guitar, handclaps, stacked harmonies on the "
-    "sung chorus, bright and breezy, 110 bpm",
+    "chorus, 100 bpm",
+    "indie-pop with rapped verses, warm male vocal, strummed acoustic guitar, handclaps, a sung chorus, bright and "
+    "breezy, 110 bpm",
     "Latin pop with a light dembow groove, rapped verses, clear male vocal, plucked guitar, handclaps, catchy sung "
     "chorus, 100 bpm",
     "dance-pop with a four-on-the-floor beat, rapped verses, energetic female vocal, bright plucked synths, "
