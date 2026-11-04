@@ -337,8 +337,11 @@ function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
   let text: string;
   // Everyone's topics together reached the site's day (TOPICS_PER_DAY): said as a limit shared by everyone, so the
   // learner knows it is not their own, with its number and when topics open again. An admin is told where to raise it.
-  // An API older than this page sends no number: said without one.
-  if (siteFull) {
+  // An API older than this page sends no number: said without one. A limit of 0 is an admin's pause, with no time.
+  if (siteFull && sitePerDay === 0) {
+    text = 'Popsmosis has paused new topics for now. This is for everyone, not just you. '
+      + (left === null ? 'You can resume them on the Studio page.' : 'Please check back later.');
+  } else if (siteFull) {
     const limit = sitePerDay ? `of ${sitePerDay} new topic${sitePerDay === 1 ? '' : 's'}` : 'for new topics';
     text = `Popsmosis has reached its daily limit ${limit}. The limit is shared by everyone, not just you. `
       + `New topics open again ${when(siteOpensAt)}.${left === null ? ' You can raise the limit on the Studio page.' : ''}`;

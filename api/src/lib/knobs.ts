@@ -28,6 +28,7 @@ export const KNOBS = {
   // The API: what learners may ask for (lib/usage.ts, lib/engagement.ts).
   QUESTIONS_PER_USER_PER_DAY: { where: 'api', kind: 'int', default: 10, min: 0, max: 1000 },
   // Each topic makes one droplet, its lesson and its videos, so this caps the videos made in a day: 30 (the owner, Nov 4).
+  // 0 pauses new topics for everyone; there is no value for no ceiling, only a high one (lib/usage.ts).
   TOPICS_PER_DAY: { where: 'api', kind: 'int', default: 30, min: 0, max: 100_000 },
   REPLIES_PER_USER_PER_HOUR: { where: 'api', kind: 'int', default: 30, min: 0, max: 1000 },
   DROPLET_COMMENTS_PER_USER_PER_HOUR: { where: 'api', kind: 'int', default: 30, min: 1, max: 1000 },

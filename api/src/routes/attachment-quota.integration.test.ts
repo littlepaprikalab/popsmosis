@@ -40,7 +40,7 @@ d('attachment quota and retention', () => {
 
   beforeEach(async () => {
     process.env.QUESTIONS_PER_USER_PER_DAY = '100';
-    process.env.TOPICS_PER_DAY = '0';
+    process.env.TOPICS_PER_DAY = '100000';
     const user = await prisma.user.create({ data: { email: `${tag}-${Math.random()}@example.com`, googleId: `${tag}-${Math.random()}`, name: 'Quinn' } });
     userId = user.id;
     const { SESSION_EXPIRES_IN } = await import('./../lib/session.js');

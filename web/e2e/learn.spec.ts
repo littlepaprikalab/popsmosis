@@ -816,6 +816,15 @@ test.describe('signed in', () => {
     await page.reload();
     await expect(note).toHaveText(new RegExp('^Popsmosis has reached its daily limit for new topics\\. The limit is shared by everyone, '
       + `not just you\\. New topics open again ${await threeHoursOn()}\\.$`));
+
+    // A limit of 0 is an admin's pause: no time it opens. An admin is told where to resume them.
+    answer = { ...answer, sitePerDay: 0, siteOpensInSeconds: null };
+    await page.reload();
+    await expect(note).toHaveText('Popsmosis has paused new topics for now. This is for everyone, not just you. Please check back later.');
+    await expect(page.getByRole('button', { name: 'SUBMIT' })).toBeDisabled();
+    answer = { ...answer, left: null };
+    await page.reload();
+    await expect(note).toHaveText('Popsmosis has paused new topics for now. This is for everyone, not just you. You can resume them on the Studio page.');
   });
 
   test('a count past its time is read again, and one that cannot be read does not keep Submit grey', async ({ page, context }) => {

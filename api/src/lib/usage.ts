@@ -9,8 +9,8 @@
  * Each take is its own short transaction, apart from writing the request: a request may carry 8 MB of files, and an
  * interactive transaction holding a pooled connection (and the learner's lock) for that long would hit Prisma's
  * 5-second limit and starve the pool. A transaction-scoped advisory lock per learner makes count-then-insert one
- * step, so one learner's requests sent in parallel cannot all pass the same count. A topic also takes the site's lock
- * while TOPICS_PER_DAY is set, after the learner's, so topics from different learners landing in the same instant
+ * step, so one learner's requests sent in parallel cannot all pass the same count. A topic also takes the site's lock,
+ * after the learner's, so topics from different learners landing in the same instant
  * cannot all pass the site's count either: the ceiling is exact. It is held for a count and an insert, milliseconds,
  * and only by a topic that passed the lock-free look (topicAllowed) first, so once the day is used up nobody waits on
  * it. When the request then fails to be written, its take is given back. Rows older than two days are let go (pruneUsage); an
@@ -44,7 +44,7 @@ export function usageLimits(env: NodeJS.ProcessEnv = process.env) {
   return {
     topicsPerUserPerDay: intEnv(knob('QUESTIONS_PER_USER_PER_DAY', env), 10),
     // Site-wide, everyone's topics together: the ceiling on a day's model spend, and on the videos made in a day, as
-    // each topic makes one droplet's. 0: no ceiling. Here and in lib/knobs.ts.
+    // each topic makes one droplet's. 0 pauses new topics for everyone, admins too. Here and in lib/knobs.ts.
     topicsPerDay: intEnv(knob('TOPICS_PER_DAY', env), 30),
     repliesPerUserPerHour: intEnv(knob('REPLIES_PER_USER_PER_HOUR', env), 30),
     // Files, in MB. 0: no limit. A phone's photo of notes is 2 to 4 MB. Generous for the hackathon; lower them
@@ -111,6 +111,9 @@ export function siteFullMessage(limit: number): string {
     + 'The limit is shared by everyone, not just you. Please try again later.';
 }
 
+/** Why a learner may not send a topic while TOPICS_PER_DAY is 0: an admin paused them, until they say otherwise. */
+export const SITE_PAUSED = 'Popsmosis has paused new topics for now. This is for everyone, not just you. Please try again later.';
+
 /**
  * Admins test the site, so they have no topic limit of their own (the owner, Nov 4). Their topics are still taken,
  * so they count toward the site's TOPICS_PER_DAY, and that ceiling holds them as it holds everyone. Read from the
@@ -120,20 +123,21 @@ async function isAdmin(db: Db, userId: string): Promise<boolean> {
   return (await db.user.findUnique({ where: { id: userId }, select: { role: true } }))?.role === 'ADMIN';
 }
 
-/** Why the caller may not ask for a topic now, or null. */
+/**
+ * Why the caller may not ask for a topic now, or null. A TOPICS_PER_DAY of 0 pauses new topics for everyone, admins
+ * too, before anything is counted. There is no value for no ceiling (the owner, Nov 4: it guards the bill, so a slip
+ * must not lift it): one that never binds is a high one, up to the knob's 100,000.
+ */
 async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Promise<AppError | null> {
   const { topicsPerUserPerDay, topicsPerDay } = usageLimits(env);
+  if (topicsPerDay === 0) return new AppError('RATE_LIMITED', SITE_PAUSED, { retryable: false });
   const since = new Date(Date.now() - DAY_MS);
   const mine = await db.usageEvent.count({ where: { userId, kind: 'TOPIC', createdAt: { gte: since } } });
   if (mine >= topicsPerUserPerDay && !(await isAdmin(db, userId))) {
     return new AppError('RATE_LIMITED', `Max ${topicsPerUserPerDay} topic${topicsPerUserPerDay === 1 ? '' : 's'} per 24 hours`, { retryable: false });
   }
-  if (topicsPerDay > 0) {
-    const all = await db.usageEvent.count({ where: { kind: 'TOPIC', createdAt: { gte: since } } });
-    if (all >= topicsPerDay) {
-      return new AppError('RATE_LIMITED', siteFullMessage(topicsPerDay), { retryable: false });
-    }
-  }
+  const all = await db.usageEvent.count({ where: { kind: 'TOPIC', createdAt: { gte: since } } });
+  if (all >= topicsPerDay) return new AppError('RATE_LIMITED', siteFullMessage(topicsPerDay), { retryable: false });
   return null;
 }
 
@@ -149,8 +153,9 @@ async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Pro
  *   with none left, until they may ask again, which is more than one coming back when an admin lowered the limit.
  *   Null when nothing is coming back: none used, a limit of 0, or an admin.
  * - `siteFull`: every learner's topics together have reached TOPICS_PER_DAY, whatever this learner has left, and
- *   `siteOpensInSeconds` is until the site takes one again.
- * - `sitePerDay`: that limit, TOPICS_PER_DAY, for the page to say; 0: no ceiling.
+ *   `siteOpensInSeconds` is until the site takes one again. Paused (TOPICS_PER_DAY 0), it is full with no time: an
+ *   admin decides when it opens.
+ * - `sitePerDay`: that limit, TOPICS_PER_DAY, for the page to say; 0: new topics are paused.
  *
  * Lock-free, like topicAllowed: a look, never what holds.
  */
@@ -187,7 +192,8 @@ export async function topicAllowance(userId: string, env: NodeJS.ProcessEnv = pr
 
   let siteFull = false;
   let siteOpensInSeconds: number | null = null;
-  if (topicsPerDay > 0) {
+  if (topicsPerDay === 0) siteFull = true; // paused
+  else {
     const all = await prisma.usageEvent.count({ where: { kind: 'TOPIC', createdAt: { gte: since } } });
     siteFull = all >= topicsPerDay;
     if (siteFull) siteOpensInSeconds = await placeBackIn({}, all - topicsPerDay);
@@ -233,7 +239,7 @@ export async function takeTopic(userId: string, bytes = 0, env: NodeJS.ProcessEn
   return runTransaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage:${userId}`}))`;
     // Always after the learner's, never before, so two takes never each hold the lock the other waits on.
-    if (usageLimits(env).topicsPerDay > 0) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('usage:site'))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('usage:site'))`;
     const refusal = (await topicRefusal(tx, userId, env)) ?? (await bytesRefusal(tx, userId, bytes, env));
     if (refusal) throw refusal;
     return (await tx.usageEvent.create({ data: { userId, kind: 'TOPIC', bytes, filesPending: bytes > 0 }, select: { id: true } })).id;

@@ -121,8 +121,11 @@ describe.runIf(RUN)('usage limits', () => {
     const full = await allowance();
     expect(full).toMatchObject({ left: 7, siteFull: true, sitePerDay: 4 });
     expect(inHours(full.siteOpensInSeconds)).toBeCloseTo(1, 1); // the other learner's, 23 hours ago
-    process.env.TOPICS_PER_DAY = '0';
+    process.env.TOPICS_PER_DAY = '100000';
     expect(await allowance()).toMatchObject({ siteFull: false, siteOpensInSeconds: null });
+    // 0 is an admin's pause: full, with no time it opens.
+    process.env.TOPICS_PER_DAY = '0';
+    expect(await allowance()).toMatchObject({ left: 7, siteFull: true, siteOpensInSeconds: null, sitePerDay: 0 });
 
     expect((await app.inject({ method: 'GET', url: '/api/questions/allowance' })).statusCode).toBe(401);
   });
@@ -150,7 +153,7 @@ describe.runIf(RUN)('usage limits', () => {
     expect(await allowance()).toMatchObject({ left: null, siteFull: true });
 
     // The role taken away, the learners' limit holds them from the next request.
-    process.env.TOPICS_PER_DAY = '0';
+    process.env.TOPICS_PER_DAY = '100000';
     await prisma.user.update({ where: { id: ola.id }, data: { role: 'USER' } });
     expect((await ask(ola.cookie)).statusCode).toBe(429);
     expect(await allowance()).toMatchObject({ perDay: 1, left: 0 });
@@ -185,8 +188,25 @@ describe.runIf(RUN)('usage limits', () => {
     expect(over.json().error.message)
       .toBe('Popsmosis has reached its daily limit of 3 new topics. The limit is shared by everyone, not just you. Please try again later.');
 
-    process.env.TOPICS_PER_DAY = '0'; // 0: no ceiling
+    process.env.TOPICS_PER_DAY = '100000'; // no value lifts it; a high one never binds
     expect((await ask(di.cookie)).statusCode).toBe(201);
+  });
+
+  it('pauses new topics for everyone at 0, admins too, and says so', async () => {
+    process.env.TOPICS_PER_DAY = '0';
+    const rae = await learner('rae');
+    const pam = await learner('pam');
+    await prisma.user.update({ where: { id: pam.id }, data: { role: 'ADMIN' } });
+    for (const who of [rae, pam]) {
+      const paused = await ask(who.cookie);
+      expect(paused.statusCode).toBe(429);
+      expect(paused.json().error.message)
+        .toBe('Popsmosis has paused new topics for now. This is for everyone, not just you. Please try again later.');
+    }
+    expect(await prisma.usageEvent.count({ where: { kind: 'TOPIC' } })).toBe(0);
+
+    process.env.TOPICS_PER_DAY = '5'; // resumed
+    expect((await ask(rae.cookie)).statusCode).toBe(201);
   });
 
   it('turns away a learner at the limit before reading what they sent', async () => {
