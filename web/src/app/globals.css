@@ -114,6 +114,11 @@ html {
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+/* A droplet card's videos, a row swiped sideways from one to the other, with no scrollbar. A playing video's timeline
+   keeps a sideways drag for itself, so dragging it back to rewind does not swipe the card to the next video. */
+.swipe-row { scrollbar-width: none; }
+.swipe-row::-webkit-scrollbar { display: none; }
+.swipe-row video::-webkit-media-controls-timeline { touch-action: pan-y; }
 
 /* Animations */
 @keyframes fadeIn {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, dropletHeading, isUnreachable, DropletCard } from '@/lib/api';
@@ -16,7 +16,7 @@ import { MadeWith } from '@/components/MadeWith';
 import { ClipFeed } from '@/components/ClipFeed';
 import { DropletComments } from '@/components/DropletComments';
 import { ChatBubbleLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { PlayIcon } from '@heroicons/react/24/solid';
+import { AcademicCapIcon, MusicalNoteIcon, PlayIcon } from '@heroicons/react/24/solid';
 import { countPlays, useViews } from '@/lib/plays';
 import { viewsLabel } from '@/components/ViewCount';
 
@@ -27,7 +27,7 @@ const CARD_COMMENTS = 2;
 
 /**
  * The public Droplets tab (docs/PLAN.md, section 10): every finished droplet, for
- * anyone, signed in or not. A card plays its song (or its lesson) in place, shows the
+ * anyone, signed in or not. A card plays its song and its lesson in place, a swipe or a tab apart, shows the
  * title the studio gave it, a few lines of the lesson, its first hashtags, the makers of
  * the models that made it, and its newest comments, which open in place to all of them;
  * never who asked, or how they asked it.
@@ -253,7 +253,7 @@ function DropO() {
 }
 
 /**
- * One droplet on the list. The video plays here, so watching takes no trip to its page;
+ * One droplet on the list. The videos play here, so watching takes no trip to its page;
  * the title and "Full page" go there. The like button, the tags and the comments sit
  * beside the links, not inside them: a button or a link within a link is not valid HTML,
  * and a click on it would open the droplet too.
@@ -263,18 +263,25 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const href = `/droplets/${d.id}`;
   const heading = dropletHeading(d);
-  // The song if it has one: it is the hook. Its own still, else the other video's.
-  const song = !!d.video.songVideoUrl;
-  const src = d.video.songVideoUrl || d.video.lessonVideoUrl;
-  const poster = (song ? d.video.songPosterUrl : d.video.lessonPosterUrl) || d.video.songPosterUrl || d.video.lessonPosterUrl;
-  // The views of the video the card plays, as YouTube puts them under a title.
-  const views = useViews(d.views?.[song ? 'song' : 'lesson'] ?? 0);
+  // The song first, as it is the hook, then the lesson, each with its own still. A card with one video may show the
+  // other's still rather than none; with both, the song's picture never stands in under the Lesson tab.
+  const slides = ([
+    { kind: 'song', src: d.video.songVideoUrl, poster: d.video.songPosterUrl },
+    { kind: 'lesson', src: d.video.lessonVideoUrl, poster: d.video.lessonPosterUrl },
+  ] as const).filter((s): s is Slide => !!s.src)
+    .map((s, _, all) => (all.length > 1 ? s : { ...s, poster: s.poster || d.video.songPosterUrl || d.video.lessonPosterUrl }));
+  const [shown, setShown] = useState<CardKind>(slides[0]?.kind ?? 'song');
+  // The views of the video on show, as YouTube puts them under a title.
+  const songViews = useViews(d.views?.song ?? 0);
+  const lessonViews = useViews(d.views?.lesson ?? 0);
+  const views = shown === 'song' ? songViews : lessonViews;
   return (
     <article data-testid="droplet-card"
       className="flex flex-col rounded-lg overflow-hidden animate-fade-in"
       style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', animationDelay: `${Math.min(index, 12) * 60}ms` }}>
-      {src ? (
-        <CardVideo dropletId={d.id} src={src} poster={poster} kind={song ? 'song' : 'lesson'} heading={heading} onStart={views.onStart} />
+      {slides.length > 0 ? (
+        <CardVideos dropletId={d.id} heading={heading} slides={slides} shown={shown} onShow={setShown}
+          onStart={{ song: songViews.onStart, lesson: lessonViews.onStart }} />
       ) : (
         <Link href={href} className="aspect-video flex items-center justify-center" style={{ background: 'var(--bg-tertiary)' }}>
           <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>▶ Watch</span>
@@ -288,7 +295,7 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
         <p className="text-xs line-clamp-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{d.excerpt}</p>
         <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>
           {/* An API older than the views sends none: leave them out rather than show zero. */}
-          {src && d.views && <><span data-testid="view-count">{viewsLabel(views.views)}</span> · </>}
+          {slides.length > 0 && d.views && <><span data-testid="view-count">{viewsLabel(views.views)}</span> · </>}
           {timeAgo(d.createdAt)}
         </p>
       </Link>
@@ -319,23 +326,118 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
   );
 }
 
+type CardKind = 'song' | 'lesson';
+type Slide = { kind: CardKind; src: string; poster: string | null };
+
+// Each video's name and colour, as its player on the droplet's page has them (components/DropletPlayers.tsx).
+const SLIDE = {
+  song: { label: 'Song', color: 'var(--accent-red)', Icon: MusicalNoteIcon },
+  lesson: { label: 'Lesson', color: 'var(--accent-blue)', Icon: AcademicCapIcon },
+} as const;
+
+/**
+ * A card's videos, side by side in a row one video wide, the song first. A finger (or a trackpad) swipes from one to
+ * the other, snapping to each, and the tabs under the row go to either: they also say which one is on show, with a
+ * bar under it that follows a swipe as it goes. The tab lights up once the other video is more than half in. The
+ * video slid away pauses, and keeps its place for when it comes back. The one out of view is inert, so the keyboard
+ * and a screen reader meet only the one on show; the tabs take the arrow keys, as tabs do.
+ * A droplet with one video shows it alone, with its name under it.
+ */
+function CardVideos({ dropletId, heading, slides, shown, onShow, onStart }: {
+  dropletId: string; heading: string; slides: Slide[]; shown: CardKind; onShow: (kind: CardKind) => void;
+  onStart: Record<CardKind, (counted: Promise<boolean>) => void>;
+}) {
+  const row = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLSpanElement>(null);
+  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const id = useId();
+  const many = slides.length > 1;
+  const showing = SLIDE[shown];
+
+  const onScroll = () => {
+    const el = row.current;
+    if (!el || !el.clientWidth) return;
+    const at = el.scrollLeft / el.clientWidth;
+    if (bar.current) bar.current.style.transform = `translateX(${at * 100}%)`;
+    const kind = slides[Math.round(at)]?.kind;
+    if (kind && kind !== shown) onShow(kind);
+  };
+  const go = (i: number) => {
+    const el = row.current;
+    if (!el) return;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollTo({ left: i * el.clientWidth, behavior: still ? 'auto' : 'smooth' });
+  };
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const now = slides.findIndex((s) => s.kind === shown);
+    const to = { ArrowLeft: now - 1, ArrowRight: now + 1, Home: 0, End: slides.length - 1 }[e.key];
+    if (to === undefined || to < 0 || to >= slides.length) return;
+    e.preventDefault();
+    tabs.current[to]?.focus();
+    go(to);
+  };
+
+  return (
+    <div>
+      {/* overscroll-x-contain: a swipe past the last video does not turn into the browser's swipe back. */}
+      <div ref={row} onScroll={many ? onScroll : undefined} data-testid="card-videos"
+        className="flex overflow-x-auto overscroll-x-contain snap-x snap-mandatory swipe-row">
+        {slides.map((s) => (
+          <div key={s.kind} className="w-full shrink-0 snap-start snap-always" data-testid={`card-${s.kind}`}
+            {...(many && { role: 'tabpanel', id: `${id}-${s.kind}`, 'aria-labelledby': `${id}-${s.kind}-tab`, inert: s.kind !== shown })}>
+            <CardVideo dropletId={dropletId} src={s.src} poster={s.poster} kind={s.kind} heading={heading}
+              onStart={onStart[s.kind]} active={s.kind === shown} />
+          </div>
+        ))}
+      </div>
+      {many ? (
+        <div role="tablist" aria-label={`${heading}: videos`} onKeyDown={onKeyDown} className="relative flex"
+          style={{ borderBottom: '1px solid var(--border)' }}>
+          {slides.map((s, i) => {
+            const on = s.kind === shown;
+            const { label, color, Icon } = SLIDE[s.kind];
+            return (
+              <button key={s.kind} ref={(el) => { tabs.current[i] = el; }} type="button" role="tab" id={`${id}-${s.kind}-tab`}
+                aria-selected={on} aria-controls={`${id}-${s.kind}`} tabIndex={on ? 0 : -1} onClick={() => go(i)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 text-[10px] uppercase tracking-wider font-bold transition-colors"
+                style={{ color: on ? color : 'var(--text-muted)' }}>
+                <Icon className="w-3.5 h-3.5" aria-hidden /> {label}
+              </button>
+            );
+          })}
+          {/* High contrast paints every background the page's own colour: the bar keeps the system's highlight. */}
+          <span ref={bar} aria-hidden className="absolute top-0 left-0 h-0.5 transition-colors forced-colors:[forced-color-adjust:none] forced-colors:bg-[Highlight]!"
+            style={{ width: `${100 / slides.length}%`, background: showing.color }} />
+        </div>
+      ) : (
+        <p className="flex items-center justify-center gap-1.5 py-2 text-[10px] uppercase tracking-wider font-bold"
+          style={{ color: showing.color, borderBottom: '1px solid var(--border)' }} data-testid="card-video-name">
+          <showing.Icon className="w-3.5 h-3.5" aria-hidden /> {showing.label}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /**
  * A card's video: its still with a big play button, which plays it right there; the
  * player's own controls take over once it starts. A click on a <video> that has not
  * loaded yet does nothing in Chrome, and its own play button is small, so the still
  * is the button. Until then the still is a lazy <img>: a <video>'s poster loads at once,
  * for every card on the page, and preload="none" keeps the video itself from loading.
- * How far it plays is counted as on the droplet's page (lib/plays.ts).
+ * How far it plays is counted as on the droplet's page (lib/plays.ts). It pauses when
+ * it is swiped out of view (`active` false).
  */
-function CardVideo({ dropletId, src, poster, kind, heading, onStart }: {
-  dropletId: string; src: string; poster: string | null; kind: 'song' | 'lesson'; heading: string;
-  onStart: (counted: Promise<boolean>) => void;
+function CardVideo({ dropletId, src, poster, kind, heading, onStart, active }: {
+  dropletId: string; src: string; poster: string | null; kind: CardKind; heading: string;
+  onStart: (counted: Promise<boolean>) => void; active: boolean;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
   const pressed = useRef(false);
   // The button goes once it is pressed: hand the keyboard to the player, to pause it with.
   useEffect(() => { if (started && pressed.current) video.current?.focus(); }, [started]);
+  useEffect(() => { if (!active) video.current?.pause(); }, [active]);
   return (
     <div className="relative aspect-video" style={{ background: '#000' }}>
       <video
