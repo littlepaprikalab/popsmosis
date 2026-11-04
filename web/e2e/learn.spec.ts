@@ -906,7 +906,8 @@ test.describe('studio settings', () => {
       await expect(page.getByTestId('brain-picks-off')).toContainText('every topic goes to the default brain, Claude Opus 5.5');
       await expect(page.getByTestId('brain-picker')).toHaveCount(0);
 
-      // A learner's has no picker and says nothing of it, and the pick remembered on their browser is not sent.
+      // A learner's has no picker and says nothing of it, and the pick remembered on their browser is not sent. The
+      // send is stopped on its way, so it spends none of Ben's day; the API dropping a pick is the API's test.
       const ben = await browser.newContext();
       await signIn(ben, S.users.ben);
       const learner = await ben.newPage();
@@ -916,17 +917,17 @@ test.describe('studio settings', () => {
       await expect(box).toBeVisible();
       await expect(learner.getByTestId('brain-picker')).toHaveCount(0);
       await expect(learner.getByTestId('brain-picks-off')).toHaveCount(0);
-      const text = `E2E ${Date.now()}: osmosis, while the default makes every topic`;
-      await box.fill(text);
+      let sent: Record<string, unknown> | null = null;
+      await learner.route(apiUrl('/api/questions'), (route) => {
+        if (route.request().method() !== 'POST') return route.continue();
+        sent = route.request().postDataJSON();
+        return route.abort();
+      });
+      await box.fill(`E2E ${Date.now()}: osmosis, while the default makes every topic`);
       await learner.getByRole('button', { name: 'SUBMIT' }).click();
-      const card = learner.getByTestId('question-card').filter({ hasText: text }).first();
-      await expect(card).toBeVisible();
-      await expect(card.getByTestId('topic-brain')).toHaveCount(0);
-      const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
-      const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
-      const sent = own.data.find((q: { content: string }) => q.content === text);
-      expect(sent.brain).toBeNull();
-      expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).status()).toBe(204);
+      await expect.poll(() => sent).not.toBeNull();
+      expect(sent).not.toHaveProperty('brain');
+      await learner.unroute(apiUrl('/api/questions'));
 
       // Off again, the picker is back, with the learner's remembered pick.
       await settings({ defaultOnly: false });
