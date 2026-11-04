@@ -37,8 +37,10 @@ OUTAGE = {
     "the API did not answer", "the API failed", "the model call failed",
     "Gemini failed", "Meta's API failed", "the audio provider failed",
 }
+# A picture SAM found too few of the parts of: painted again, once a job, and located again (studio/anneal.py).
+REPAINT = "too few of a picture's parts were found"
 # Made again at once, once: what the step deletes when it fails, so a second try makes it afresh.
-AGAIN = {"the song did not sing its lyrics", "the narration did not read its lines"}
+AGAIN = {"the song did not sing its lyrics", "the narration did not read its lines", REPAINT}
 # What a later sweep, on another machine, may still get past: besides those, a run that was cut off or timed out, a
 # provider that took too long (not asked again here: it may still be making, and charging for, what was asked), and a
 # session that did not answer (its operator may be gone).

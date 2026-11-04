@@ -37,8 +37,12 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 # 2. Python: the studio, with the media steps' PyTorch (CPU), torchaudio, Demucs and skia.
+# Tried again after a pause: on Nov 4 the stamp was still Nov 1's, so every install since Nov 2 had failed at session
+# start (a network not ready yet, most likely: the same install ran in 5 s from the session), and faster-whisper,
+# added that day, was missing while the packages cached before it hid the failure.
 if changed pip studio/requirements.txt; then
-  if python -m pip install -q -r studio/requirements.txt; then mark pip studio/requirements.txt
+  if python -m pip install -q -r studio/requirements.txt \
+      || { sleep 15; python -m pip install -q -r studio/requirements.txt; }; then mark pip studio/requirements.txt
   else log "pip could not install studio/requirements.txt; the studio will not run"
   fi
 fi

@@ -70,6 +70,7 @@ MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "arrows", "render
 VIDEOS = ("song", "lesson")
 HOOK, HOOK_LAYOUT = "hook", "v"  # the hook cut: the song's pre-chorus and first chorus, upright, to share
 TIMED = ("song", "narration")  # the audio files, each with its Timing
+SONG_VIDEOS = ("song", HOOK)  # the videos made from the song: without it, the lesson video is made alone
 # Who makes the audio when no setting says (api/src/lib/studio-settings.ts, DEFAULT_SONG): Lyria sings, Gemini TTS
 # reads. The audio step makes it and the videos' check of the keys asks for its key, so both read it from here.
 DEFAULT_SONG_PROVIDER = "gemini"
@@ -100,8 +101,12 @@ LESSON_ONLY = "lesson"  # STUDIO_VIDEOS's value for the lesson video alone
 
 def lesson_only(job: Path | None = None) -> bool:
     """Whether the videos are the lesson's alone: STUDIO_VIDEOS is `lesson`, on /admin/studio or in the environment,
-    or the job's bundle has no song to make (written while it was)."""
-    return knobs.env("STUDIO_VIDEOS").strip().lower() == LESSON_ONLY or (job is not None and not sung(job))
+    the job's bundle has no song to make (written while it was), or the song could not be made and the videos went
+    on without it (studio/anneal.py)."""
+    from studio import anneal  # it reads no step, and nothing it imports imports this module
+
+    return knobs.env("STUDIO_VIDEOS").strip().lower() == LESSON_ONLY or (
+        job is not None and (not sung(job) or anneal.songless(job) is not None))
 
 
 def sung(job: Path) -> bool:
@@ -163,11 +168,33 @@ class StepFailed(Exception):
     message can quote a line, a picture's writing or a provider's answer, all of them made from what a learner sent."""
 
     code = "step failed"
+    # "song": what failed is the song's own (its audio, its timing, its video or hook cut), so the videos can go on
+    # without it and still make the lesson video (studio/anneal.py); "" when it is not the song's alone.
+    part = ""
 
-    def __init__(self, message: str = "", code: str | None = None):
+    def __init__(self, message: str = "", code: str | None = None, part: str | None = None):
         super().__init__(message)
         if code:
             self.code = code
+        if part:
+            self.part = part
+
+
+@contextlib.contextmanager
+def video_part(video: str):
+    """A failure inside, while one video is built, is the song's when that video is the song's or its hook cut
+    (StepFailed.part): the videos can then go on to make the lesson video alone (studio/anneal.py). A failure of the
+    lesson video's is left as it was."""
+    try:
+        yield
+    except StepFailed as e:
+        if video in SONG_VIDEOS:
+            e.part = "song"
+        raise
+    except Exception as e:
+        if video not in SONG_VIDEOS:
+            raise
+        raise StepFailed(f"the {video} video: {type(e).__name__}: {e}", part="song") from e
 
 
 def slug(name: str) -> str:

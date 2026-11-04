@@ -50,7 +50,8 @@ sure of takes Whisper's timing when Whisper heard enough of its words (FOUND_SHA
 time it is heard best (of times heard as well, the first). Whisper's words over no singing (it makes up lyrics over
 silence) are left out. A line neither of them heard, between two lines Whisper heard sung one after the other with
 no room for its words, was not sung: it is marked so, and the song fails as one that does not sing its lyrics, so
-the retry sings it again. Without faster-whisper installed the step goes on without it. The report's `by_whisper`
+the retry sings it again. Without faster-whisper installed, or with a Whisper that will not load or run (its model
+not downloaded, out of memory), the step goes on without it. The report's `by_whisper`
 and `skipped` name the lines.
 
 The narration as read: a Gemini narration is held to its lines as the song is to its lyrics. When the
@@ -75,6 +76,7 @@ import json
 import re
 import statistics
 import subprocess
+import sys
 import time
 import unicodedata
 import wave
@@ -88,6 +90,7 @@ from studio.schemas import TOLERANCE_S, Bundle, TimedLine, Timing, Word, timing_
 from studio.steps import audio as audio_step
 
 REPORT = "timing/song_report.json"
+SONG_UNTIMED = "the song could not be timed"  # its aligner or Demucs failed on it (studio/anneal.py)
 
 
 def speech_report(kind: str) -> str:
@@ -198,19 +201,25 @@ def _run(job: Path) -> str:
                                                             if report is not None else ""))
     if not with_song:
         return "no song (the lesson video alone); " + ", ".join(parts)
+    # Whatever goes wrong from here is the song's alone, with the narration timed: the videos can go on without the
+    # song and make the lesson video (studio/anneal.py).
     try:
         with cpu_turn(job):
             timing, report = song_timing(job, bundle)
-    except (ValueError, RuntimeError) as e:  # a timing out of order, or an aligner that could not fit the words
-        raise media.StepFailed(f"the song could not be aligned: {e}") from e
-    _check(timing, [line.id for line in bundle.lyrics], "song")
+        _check(timing, [line.id for line in bundle.lyrics], "song")
+    except media.StepFailed as e:
+        e.part = "song"
+        raise
+    except Exception as e:  # a timing out of order, an aligner that could not fit the words, or a bug in either
+        raise media.StepFailed(f"the song could not be aligned: {type(e).__name__}: {e}", code=SONG_UNTIMED,
+                               part="song") from e
     jobs.write(job / REPORT, report)  # kept either way: `show` and the summary say what was heard
     mismatch = lyric_mismatch(report)
     if mismatch:
         # Made again on the retry (the audio step makes only what is missing), never timed and published as it is.
         (job / media.audio_path("song")).unlink(missing_ok=True)
         raise media.StepFailed(f"{mismatch}; the song is deleted, so the retry sings it again",
-                               code="the song did not sing its lyrics")
+                               code="the song did not sing its lyrics", part="song")
     jobs.write(job / media.timing_path("song"), timing)
     return f"song {len(timing.lines)} lines in {timing.duration:.1f}s, {song_notes(report)}; " + ", ".join(parts)
 
@@ -453,10 +462,16 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     unsure = any(s is not None and s < LOW_SCORE for s in scores.values())
     if unsure and whisper is not None and levels is not None:
         hearing = time.monotonic()
-        heard = whisper(vocals)
-        if hear is None:
-            _log_local(job, "song lyrics heard", f"whisper-{WHISPER_MODEL}", hearing)
-        found, missed, fitted = by_whisper(lines, scores, heard, texts, levels, length)
+        try:
+            heard = whisper(vocals)
+        except Exception as e:  # noqa: BLE001 (Whisper only helps: one that will not load or run is gone without)
+            print(f"timing: Whisper could not hear the song, so it is timed without it: {type(e).__name__}: {e}",
+                  file=sys.stderr)
+            heard = None
+        if heard is not None:
+            if hear is None:
+                _log_local(job, "song lyrics heard", f"whisper-{WHISPER_MODEL}", hearing)
+            found, missed, fitted = by_whisper(lines, scores, heard, texts, levels, length)
     spread = fitted + [i for i in by_the_singing(lines, scores, levels, placed=set(found)) if i not in fitted]
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
     return timing, {**song_report(timing, texts, scores), "realigned": realigned, "by_whisper": found,

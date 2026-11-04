@@ -832,3 +832,44 @@ def test_a_line_whisper_found_is_not_cut_short_by_a_line_before_it_that_neither_
     assert c.start == 5.0 and c.end == pytest.approx(7.8, abs=0.1)  # where it was heard, not cut to 8.0
     assert 2.0 <= b.start < b.end <= c.start  # between the lines placed either side
     Timing(audio="audio/song.mp3", duration=14.0, lines=lines)
+
+
+def test_a_whisper_that_will_not_load_or_run_leaves_the_song_timed_without_it(made, capsys):
+    """Whisper only helps: a model it cannot download or load (rate-limited, out of memory) never fails the step."""
+    bundle = sample_media.bundle()
+
+    def broken(vocals):
+        raise RuntimeError("model.bin: 429 Too Many Requests")
+
+    timed, report = timing.song_timing(made, bundle, align=even_aligner([], score=0.1), vocals=_sung(30.1),
+                                       hear=broken)
+    assert report["by_whisper"] == [] and [line.line_id for line in timed.lines] == [line.id for line in bundle.lyrics]
+    assert "Whisper could not hear the song, so it is timed without it: RuntimeError" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("raised", [IndexError("list index out of range"), ValueError("words out of order")])
+def test_whatever_fails_in_the_songs_timing_is_the_songs_alone_with_the_narration_timed(made, monkeypatch, raised):
+    def fails(*args, **kwargs):
+        raise raised
+
+    monkeypatch.setattr(timing, "song_timing", fails)
+    with pytest.raises(media.StepFailed) as failed:
+        timing.run(made)
+    assert failed.value.part == "song" and failed.value.code == timing.SONG_UNTIMED
+    assert (made / media.timing_path("narration")).exists()  # the lesson video's voice is timed
+
+
+def test_a_song_that_does_not_sing_its_lyrics_is_the_songs_alone(made, monkeypatch):
+    monkeypatch.setattr(timing, "lyric_mismatch", lambda report: "the song does not sing its lyrics")
+    monkeypatch.setattr(timing, "song_timing", lambda job, bundle: (_even_song(bundle), {"lines": []}))
+    with pytest.raises(media.StepFailed) as failed:
+        timing.run(made)
+    assert failed.value.part == "song" and failed.value.code == "the song did not sing its lyrics"
+
+
+def _even_song(bundle):
+    lines = [TimedLine(line_id=line.id, start=i * 2.0, end=i * 2.0 + 1.5,
+                       words=[Word(word=w, start=i * 2.0, end=i * 2.0 + 1.5) for w, _, _ in words_of(line.text)[:1]]
+                       or [Word(word="la", start=i * 2.0, end=i * 2.0 + 1.5)])
+             for i, line in enumerate(bundle.lyrics)]
+    return Timing(audio=media.audio_path("song"), duration=len(lines) * 2.0, lines=lines)

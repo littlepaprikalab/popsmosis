@@ -35,6 +35,12 @@ import { knob } from './knobs.js';
 // forward without a code change.
 const DEFAULT_FIRE_BETA_HEADER = 'experimental-cc-routine-2026-04-01';
 const FIRE_TIMEOUT_MS = 10_000;
+// A fire that failed in a way a moment may mend (unreachable, timed out, 429, 5xx) is sent once more after this
+// long, on a timer of its own: a topic whose wake was lost would otherwise wait for the next scheduled sweep, or for
+// the next topic when the routine has no schedule. One more fire at most, so an outage never becomes a loop; one that
+// timed out but did reach the trigger wakes a second run, which finds its topic leased and stops (over-firing is the
+// safe direction, as below).
+export const FIRE_RETRY_MS = 30_000;
 // At least as long as a run takes end to end, or the trailing fire is guaranteed
 // to wake a second session while the first is still working — which then mostly
 // collects 409s from the one-answer-per-question guard, and leaves the
@@ -157,10 +163,11 @@ export class RoutineTrigger {
     await this.fire(reason, log);
   }
 
-  private async fire(reason: string, log: FireLogger): Promise<void> {
+  private async fire(reason: string, log: FireLogger, again = true): Promise<void> {
     this.lastFiredAt = Date.now();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FIRE_TIMEOUT_MS);
+    let mendable = false;
     try {
       const response = await fetch(this.url, {
         method: 'POST',
@@ -178,15 +185,27 @@ export class RoutineTrigger {
         signal: controller.signal,
       });
       if (!response.ok) {
+        // A refused token or a bad request stays refused: only a busy or failing trigger is asked again.
+        mendable = response.status === 429 || response.status >= 500;
         log.warn({ status: response.status }, 'routine fire rejected');
         return;
       }
       log.info({ reason }, 'routine fired');
     } catch (err) {
+      mendable = true;
       log.warn({ err }, 'routine fire failed');
     } finally {
       clearTimeout(timeout);
+      if (mendable && again) this.fireAgainLater(reason, log);
     }
+  }
+
+  private fireAgainLater(reason: string, log: FireLogger): void {
+    const timer = setTimeout(() => {
+      this.inFlight = this.fire(reason, log, false).catch(() => {});
+    }, FIRE_RETRY_MS);
+    // Like a trailing wake, a retry not yet due never holds the process open on SIGTERM.
+    timer.unref();
   }
 }
 

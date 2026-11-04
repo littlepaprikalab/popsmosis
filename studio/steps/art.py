@@ -981,6 +981,8 @@ def refusal(tried: dict) -> str | None:
     the same try was then painted afresh."""
     if tried.get("declined"):
         return str(tried["declined"])
+    if tried.get("unreadable"):
+        return str(tried["unreadable"])
     if tried.get("redraw_failed"):
         return None
     found = (tried.get("misplaced") or []) + (tried.get("wrong") or [])
@@ -995,7 +997,10 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
     how many pictures were asked for. A process's later stage is redrawn from its first stage's picture
     (`reference`), so the stages share their framing, by a painter that can redraw (Muse Image); if it will
     not, or the painter cannot, it is painted afresh. If the painter then fails for good (not a picture it would not
-    make), this try and the scene's next are asked of the other painter when it may paint here (fallback()).
+    make), this try and the scene's next are asked of the other painter when it may paint here (fallback()). A picture
+    that is not an image is a try that failed; when every try came back so, the other painter is asked once more,
+    from the scene's own words, before the scene fails the step. A picture the painter declined is never asked of
+    the other.
     `instead_of_svg` says why a scene to be drawn as SVG is painted instead (drawn())."""
     own = by = painter_of(job)
     if not by.redraws:
@@ -1005,7 +1010,9 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
     best, problems, n, tries = None, [], 0, []
     fell_back: dict = {}  # the painter the scene fell back from, why, and on which try
     words = scene  # what the next try is painted from: the scene's own words, then a rewrite of them (rewrite())
-    for n in range(1, MAX_PAINTS + 1):
+    last = MAX_PAINTS  # and one more, by the other painter, when none of these came back as a picture (below)
+    while n < last:
+        n += 1
         told = problems if words is scene else []  # a rewrite says what to change itself
         prompt = paint_prompt(bundle, words, told, redrawn=reference is not None and not styled,
                               styled=reference is not None and styled)
@@ -1030,10 +1037,26 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
                 else:
                     raise
                 prompt = paint_prompt(bundle, words, told)
-        if picture is None:
+        pixels = None
+        if picture is not None:
+            try:
+                pixels = fit(picture)
+            except media.StepFailed as e:  # a broken image is a try that failed, never the step (studio/anneal.py)
+                problems = [f"{e}; paint it again"]
+                tries.append({"try": n, "unreadable": str(e)})
+        if pixels is None:
+            # Every try came back as something that is not an image: once more, by the other painter, before the
+            # scene can fail the step (studio/anneal.py). Never after a try was declined: a picture one painter would
+            # not make is not asked of the other.
+            if (n == last and best is None and not fell_back and not any("declined" in t for t in tries)
+                    and (other := fallback(by)) is not None):
+                print(f"art: {scene.id}: {by.title} sent no picture that could be read in {n} tries, painted with "
+                      f"{other.title} instead", file=sys.stderr)
+                fell_back = {"painter": by.name, "why": f"no picture that could be read in {n} tries", "try": n + 1}
+                by, reference, words, last = other, None, scene, last + 1
             continue
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
-        path.write_bytes(svg.png(fit(picture)))
+        path.write_bytes(svg.png(pixels))
         named = f"{scene.id}" + (f" try {n}" if n > 1 else "")
         check, flagged, pinned = look(job, bundle, scene, ask, f"art check {named}", path)
         painting = Painting(path, prompt, n, check, flags=flagged, pinned=pinned, by=by)
@@ -1041,7 +1064,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         if best is None or painting.score() < best.score():
             best = painting
         problems = painting.problems()
-        if n == MAX_PAINTS:
+        if n >= last:
             break
         # The writer's role looks at every first picture, and the scene is painted again only when it asks for
         # changes (the owner, Nov 2): the check missed the airplane wing's slabs, and a second painting of a good
@@ -1057,7 +1080,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         elif not problems:
             break
     if best is None:
-        raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_PAINTS} tries: {problems[0]}"
+        raise media.StepFailed(f"scene {scene.id}: no usable picture in {n} tries: {problems[0]}"
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
     best.refused = [why for tried in tries if tried["try"] != best.attempt and (why := refusal(tried))]
@@ -1422,6 +1445,13 @@ def review(job: Path) -> list[dict]:
 def _painting(job: Path, scene: Scene) -> Path:
     """art/<scene>.json: what the painted picture of the scene was made from."""
     return job / media.check_path(scene.id)
+
+
+def paint_again(job: Path, scene: Scene) -> None:
+    """Have the step paint the scene again when it next runs, and only it (and what is painted from it): its record
+    goes, so its picture is no longer one painted for it (_painted()). The locate step asks for it when SAM finds too
+    few of the scene's parts in its picture (studio/anneal.py)."""
+    _painting(job, scene).unlink(missing_ok=True)
 
 
 def _painted(job: Path, bundle: Bundle, scene: Scene) -> bool:

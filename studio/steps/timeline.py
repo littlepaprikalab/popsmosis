@@ -170,33 +170,20 @@ def run(job: Path, ask=None) -> str:
         "song": [line.id for line in bundle.lyrics],
         "narration": [n.id for n in bundle.narration],
     }
-    problems = [f"{kind}: {p}" for kind in timed for p in timing_problems(timed[kind], expected[kind])]
+    problems = [(kind, f"{kind}: {p}") for kind in timed for p in timing_problems(timed[kind], expected[kind])]
     if problems:
-        raise StepFailed("the timings do not match the bundle: " + "; ".join(problems))
+        raise StepFailed("the timings do not match the bundle: " + "; ".join(p for _, p in problems),
+                         part="song" if all(kind == "song" for kind, _ in problems) else None)
 
     timelines = {}
     notices, flags, self_labelled = art.notices(job, bundle), art.flags(job, bundle), art.self_labelled(job, bundle)
     for video in media.videos(job):
-        try:
-            timeline = build(video, bundle, timed, locations)
-            shown = {beat.scene for beat in timeline.beats}
-            timeline.notices = {scene: notes for scene, notes in notices.items() if scene in shown}
-            # Every picture here is AI-made, painted or drawn: each is tagged so, mistakes found or not.
-            timeline.ai_pictures = [scene.id for scene in bundle.scenes if scene.id in shown]
-            # A painted picture labels its own parts, and its wrong labels are flagged on it.
-            timeline.self_labelled = [scene for scene in self_labelled if scene in shown]
-            timeline.unwashed = [scene.id for scene in bundle.scenes if scene.id in timeline.self_labelled
-                                 and not art.is_diagram(scene)]
-            timeline.flags = {scene: boxes for scene, boxes in flags.items() if scene in shown}
-        except ValidationError as e:
-            raise StepFailed(f"the {video} timeline does not validate: {e}") from e
-        problems = timeline_problems(timeline, locations)
-        if problems:
-            raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
-        timelines[video] = timeline
+        with media.video_part(video):  # the song's failing is the song's alone (studio/anneal.py)
+            timelines[video] = _timeline(video, bundle, timed, locations, notices, flags, self_labelled)
     for video, timeline in timelines.items():
         write(job / media.timeline_path(video), timeline)
-    hook = hook_cut(bundle, timelines["song"]) if "song" in timelines else None
+    with media.video_part(media.HOOK):
+        hook = hook_cut(bundle, timelines["song"]) if "song" in timelines else None
     if hook is not None:
         write(job / media.timeline_path(media.HOOK), hook)
     else:
@@ -204,6 +191,28 @@ def run(job: Path, ask=None) -> str:
     return "; ".join(
         f"{video} {t.duration:.1f} s, {len(t.beats)} beats, {sum(len(b.reveal) for b in t.beats)} reveals"
         for video, t in timelines.items()) + (f"; hook cut {hook.duration:.1f} s" if hook else "")
+
+
+def _timeline(video: str, bundle, timed: dict, locations: Locations, notices: dict, flags: dict,
+              self_labelled: list[str]) -> Timeline:
+    """One video's timeline, checked against the locations."""
+    try:
+        timeline = build(video, bundle, timed, locations)
+        shown = {beat.scene for beat in timeline.beats}
+        timeline.notices = {scene: notes for scene, notes in notices.items() if scene in shown}
+        # Every picture here is AI-made, painted or drawn: each is tagged so, mistakes found or not.
+        timeline.ai_pictures = [scene.id for scene in bundle.scenes if scene.id in shown]
+        # A painted picture labels its own parts, and its wrong labels are flagged on it.
+        timeline.self_labelled = [scene for scene in self_labelled if scene in shown]
+        timeline.unwashed = [scene.id for scene in bundle.scenes if scene.id in timeline.self_labelled
+                             and not art.is_diagram(scene)]
+        timeline.flags = {scene: boxes for scene, boxes in flags.items() if scene in shown}
+    except ValidationError as e:
+        raise StepFailed(f"the {video} timeline does not validate: {e}") from e
+    problems = timeline_problems(timeline, locations)
+    if problems:
+        raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
+    return timeline
 
 
 HOOK_LEAD_S = 0.3  # the hook cut starts this long before its first sung word

@@ -59,7 +59,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain, jobs, knobs, ledger, media, retry, session
+from studio import anneal, brain, jobs, knobs, ledger, media, retry, session
 from studio.api import Api, ApiError
 from studio.run import (BRAIN_FILE, DEFERRED, DONE, FAILED, RENEW_S, STOPPED, Stop, api_outcome, default_brain,
                         failure_code, job_chosen, job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run,
@@ -182,6 +182,7 @@ class Record:
         self.running: dict[str, float] = {}  # step -> the time.monotonic() it started at
         self.first: dict[str, float] = {}  # step -> when its first try in this run started, for the time limit
         self.failed: set[str] = set()  # steps whose last try in this run failed
+        self.parts: dict[str, str] = {}  # step -> whose its last failure was ("song": the song's alone; StepFailed.part)
         self.lock = threading.Lock()
         self.reporting = threading.Lock()  # one report at a time, so an older one never lands after a newer
         self.reporter = ledger.Reporter()
@@ -199,13 +200,19 @@ class Record:
             self.failed.discard(step)
             self._save()
 
+    def restart_clock(self, steps: tuple[str, ...]) -> None:
+        """The steps' time limit counts from their next try: a deliberate new try (studio/anneal.py), not a hang."""
+        with self.lock:
+            for step in steps:
+                self.first.pop(step, None)
+
     def watched(self) -> dict[str, float]:
         """The steps running now, each from its first try in this run: the time limit is the step's, its tries and
         the waits between them together (studio/retry.py)."""
         with self.lock:
             return {step: self.first.get(step, since) for step, since in self.running.items()}
 
-    def end(self, step: str, seconds: float, result: str, reason: str = "", code: str = "") -> None:
+    def end(self, step: str, seconds: float, result: str, reason: str = "", code: str = "", part: str = "") -> None:
         """reason: the line the step ended on. A done step's is kept with the run too (an art step names the
         pictures it refused), so `summary` can tell the operator what went wrong inside a step that passed. code: a
         step that did not succeed says why in fixed words (studio/run.py, failure_code)."""
@@ -214,6 +221,7 @@ class Record:
             del self.running[step]
             if result == FAILED:
                 self.failed.add(step)
+            self.parts[step] = part if result == FAILED else ""
             self.steps.append({"step": step, "seconds": seconds, "result": result,
                                **({"detail": one_line(reason)} if reason and result == DONE else {}),
                                **({"code": code} if code and result != DONE else {})})
@@ -300,9 +308,16 @@ def _videos(job: Path, api: Api | None, ask, session_answers: bool = False) -> t
 
 
 def _make(job: Path, api: Api | None, ask, record: Record, tail: tuple[str, ...]) -> tuple[str, str, str]:
-    """The branches side by side, then the tail; (DONE | FAILED | STOPPED, step, reason)."""
+    """The branches side by side, then the tail; (DONE | FAILED | STOPPED, step, reason). When the song's own part of
+    them fails (the song's audio, timing or videos), it is made once more where that may help, and then the videos go
+    on without it, as the lesson video alone (studio/anneal.py), rather than fail for it."""
     with ThreadPoolExecutor(len(BRANCHES)) as pool:
         branches = list(pool.map(lambda steps: _run_steps(job, steps, api, ask, record), BRANCHES))
+    song = BRANCHES.index(("audio", "timing"))
+    pictures = branches[1 - song][0] == DONE  # with the art failed too the run fails anyway: no new song for it
+    while pictures and branches[song][0] == FAILED and _song_rung(job, record, branches[song][1]):
+        record.restart_clock(BRANCHES[song])  # a new song, or the narration alone: a new try, not the old one's hang
+        branches[song] = (*_run_steps(job, BRANCHES[song], api, ask, record)[:3], True)
     ran = any(branch[3] for branch in branches)
     unfinished = [branch for branch in branches if branch[0] != DONE]
     if unfinished:
@@ -310,9 +325,64 @@ def _make(job: Path, api: Api | None, ask, record: Record, tail: tuple[str, ...]
         result, step, reason, _ = min(unfinished, key=lambda b: (b[0] != STOPPED, media.MEDIA_STEPS.index(b[1])))
         return result, step, reason
     result, step, reason, tail_ran = _run_steps(job, tail, api, ask, record, fresh=ran)
+    if result == FAILED and _song_rung(job, record, step, again=False):
+        # The song's video or hook cut could not be built: the lesson video alone, from the first step it needs.
+        result, step, reason, more = _run_steps(job, tail, api, ask, record)
+        tail_ran = tail_ran or more
     if result == DONE and not (ran or tail_ran):
         reason = "the videos were already made"
     return result, step, reason
+
+
+# A song failure a later sweep may get past (studio/retry.py): not asked again here, as an outage is not.
+SONG_TRANSIENT = {"the provider took too long", "interrupted", "timed out"}
+
+
+def _song_rung(job: Path, record: Record, step: str, again: bool = True) -> str | None:
+    """What the videos do now that `step` failed on the song alone (StepFailed.part, and its files to be sure): "again",
+    the song made once more, from a new one (the first time it fails on this machine, with the step's own retries
+    spent); "drop", the lesson video alone (studio/anneal.py); or None, to fail as before: not the song's alone, an
+    outage while the API allows a later attempt (a later sweep may well get the song), or a job with no song left.
+    `again` False: what failed is the song's video, which a new song would not change."""
+    if media.lesson_only(job) or record.parts.get(step) != "song" or not _narration_ready(job, step):
+        return None
+    code = next((s.get("code", "") for s in reversed(record.steps) if s["step"] == step and s["result"] == FAILED), "")
+    if retry.outage(code) or code in SONG_TRANSIENT:
+        if held_attempt(job) is None or attempts_left(job):
+            return None
+        why = f"the song failed on the last attempt at the videos ({code})"
+    elif again and anneal.song_failures(job) == 0:
+        anneal.note_song_failure(job, code)
+        _forget_song(job)
+        print(f"{step}: the song failed ({code}), so it is made once more from a new one", file=sys.stderr)
+        return "again"
+    else:
+        anneal.note_song_failure(job, code)
+        why = f"the song failed at {step} ({code or 'a studio error'})"
+    anneal.drop_song(job, why, code)
+    print(f"{step}: {why}, so the videos go on without it: the lesson video alone (studio/anneal.py)", file=sys.stderr)
+    return "drop"
+
+
+def _narration_ready(job: Path, step: str) -> bool:
+    """Whether the lesson video's voice is made (and timed, when the timing step failed): the song is then all that
+    failed. A failure after the timing step is the song's by its part alone."""
+    from studio.steps import audio as audio_step
+
+    if step == "audio":
+        return audio_step.made(job, "narration")
+    if step == "timing":
+        return (job / media.timing_path("narration")).exists()
+    return True
+
+
+def _forget_song(job: Path) -> None:
+    """The song, its plan and its vocals gone, so the audio step makes a new one and the timing step times it."""
+    from studio.steps import audio as audio_step
+    from studio.steps import timing as timing_step
+
+    for path in (media.audio_path("song"), audio_step.plan_path("song"), timing_step.VOCALS):
+        (job / path).unlink(missing_ok=True)
 
 
 @contextlib.contextmanager
@@ -384,7 +454,7 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: 
         step = steps[i]
         record.begin(step)
         clock = time.monotonic()
-        code = ""
+        code, part = "", ""
         try:
             with ledger.at_step(step):
                 if api is not None:  # a local job (`make`) has no claim to renew, and no page to tell
@@ -397,13 +467,14 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: 
         except (media.StepFailed, brain.BrainError) as e:
             # A claim that failed is the API's failure, not the step's: its cause says which.
             result, reason, code = FAILED, str(e), failure_code(e.__cause__ if isinstance(e.__cause__, ApiError) else e)
+            part = getattr(e, "part", "") if not isinstance(e.__cause__, ApiError) else ""
         except ApiError as e:
             (result, reason), code = api_outcome(e), failure_code(e)
         except Exception as e:  # a bug, or a step not built: the run still ends with its one line
             traceback.print_exc(file=sys.stderr)
             result, reason, code = FAILED, f"{type(e).__name__}: {e}", failure_code(e)
         ran = True
-        record.end(step, round(time.monotonic() - clock, 1), result, one_line(reason), code)
+        record.end(step, round(time.monotonic() - clock, 1), result, one_line(reason), code, part)
         # Done or failed, the page hears it now: the other branch may run on for minutes. The upload's READY
         # already carried the last bill, and a run that was stopped has nothing to report.
         if api is not None and (result == FAILED or (result == DONE and step != "upload")):

@@ -12,7 +12,8 @@ counters.json, so "fail twice" holds across a run and its retry:
 
     {"brain": {"<label or prefix, or *>": {"fault": "error|overloaded|refused|truncated|invalid|nokey|kill|hang|
                                                      wrong|unsupported", "times": 2}},
-     "steps": {"<media step>": {"fault": "fail|kill|hang|slow", "times": 1, "code": "the song provider failed"}}}
+     "steps": {"<media step>": {"fault": "fail|kill|hang|slow", "times": 1, "code": "the song provider failed",
+                                "part": "song"}}}     # part: the song's alone, as the real steps say (studio/anneal.py)
 
     error, overloaded   the API did not answer (a BrainError, as anthropic.APIError becomes one)
     refused, truncated  the model declined, or ran out of tokens
@@ -173,8 +174,11 @@ def _fake_step(name: str):
     marker = f".sim-{name}.done"
 
     def run(job: Path, ask=None) -> str:
-        fault = take("steps", name)
-        rule = ((json.loads((SIM / "faults.json").read_text()).get("steps") or {}).get(name) or {}) if fault else {}
+        rule = (json.loads((SIM / "faults.json").read_text()).get("steps") or {}).get(name) or {}
+        # A fault of the song's alone ("part": "song") has nothing left to break once the videos went on without it.
+        fault = None if rule.get("part") == "song" and media.lesson_only(job) else take("steps", name)
+        if name in ("audio", "timing"):
+            _narration(job, name)  # the lesson video's voice, made (and timed) beside the song, as the real steps do
         if fault == "kill":
             _die()
         if fault == "hang":
@@ -182,7 +186,9 @@ def _fake_step(name: str):
         if fault == "slow":
             time.sleep(SLOW_S)
         if fault == "fail":
-            raise media.StepFailed(f"{name}: simulated failure", code=rule.get("code") or "step failed")
+            failed = media.StepFailed(f"{name}: simulated failure", code=rule.get("code") or "step failed")
+            failed.part = rule.get("part") or ""
+            raise failed
         (job / marker).unlink(missing_ok=True)
         if name == "art" and ask is not None:
             for scene in jobs.read(job / "bundle.json", Bundle).scenes:
@@ -198,3 +204,21 @@ def _fake_step(name: str):
         return f"{name} made (simulated)"
 
     return SimpleNamespace(run=run, is_done=lambda job: (job / marker).exists())
+
+
+def _narration(job: Path, step: str) -> None:
+    """What the real audio and timing steps leave of the narration, which studio/videos.py looks for before it lets
+    the song go: the narration made from the bundle's lines, or its timing written."""
+    from studio import jobs, media
+    from studio.schemas import Bundle
+    from studio.steps import audio
+
+    if step == "audio":
+        bundle = jobs.read(job / "bundle.json", Bundle)
+        (job / "audio").mkdir(exist_ok=True)
+        (job / media.audio_path("narration")).write_bytes(b"sim narration")
+        jobs.write(job / audio.plan_path("narration"),
+                   {"source": [[i, t] for i, t in audio.speech_lines(bundle, "narration")]})
+    else:
+        (job / "timing").mkdir(exist_ok=True)
+        (job / media.timing_path("narration")).write_text("{}")

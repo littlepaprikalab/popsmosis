@@ -1090,3 +1090,33 @@ def test_a_rerun_keeps_a_scene_gemini_painted_when_muse_image_failed(job, monkey
     bundle = checks.load(job / "bundle.json")
     monkeypatch.setattr(art, "painter", lambda job: "gemini")  # switched: Gemini's picture alone is Gemini's art
     assert [art._painted(job, bundle, scene) for scene in bundle.scenes] == [False, False, True]
+
+
+def test_a_picture_that_is_not_an_image_is_a_try_that_failed_not_the_step(job, monkeypatch, painted):
+    from studio.tests.test_muse import picture
+
+    FakeMuse(pictures={"synthase": [b"<html>gateway timeout</html>", picture()]}).install(monkeypatch)
+    google = FakeGemini().install(monkeypatch)
+    art.run(job, FakeHelper())
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["model"] == muse.IMAGE_MODEL and made["try"] == 2  # the next try, by the same painter
+    assert "not an image" in made["tries"][0]["unreadable"]
+    assert google.painted == []
+
+
+def test_when_no_try_comes_back_as_an_image_the_other_painter_paints_it_once(job, monkeypatch, painted):
+    FakeMuse(pictures={"synthase": [b"not an image"]}).install(monkeypatch)
+    google = FakeGemini().install(monkeypatch)
+    art.run(job, FakeHelper())
+    assert [label for label, _ in google.painted] == ["art synthase try 3"]
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["model"] == gemini.MODEL and made["try"] == 3
+    assert made["fell_back_from"] == {"painter": "muse", "why": "no picture that could be read in 2 tries", "try": 3}
+    assert art.is_done(job)
+
+
+def test_a_picture_no_painter_sends_as_an_image_still_fails_the_step(job, monkeypatch, painted):
+    FakeMuse(pictures={"synthase": [b"not an image"]}).install(monkeypatch)
+    FakeGemini(pictures={"synthase": [b"nor this"]}).install(monkeypatch)
+    with pytest.raises(media.StepFailed, match="scene synthase: no usable picture in 3 tries"):
+        art.run(job, FakeHelper())

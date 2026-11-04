@@ -113,6 +113,69 @@ now wakes a run of its own at once (`POPSMOSIS_ROUTINE_EVERY_TOPIC`, on), each o
 side by side; replies stay debounced. Each wake-up is one of the routine's metered runs, bounded by the API's limits on
 topics a day.
 
+## Nov 4: failures that come back the same on every try
+
+The Calvin cycle (Nov 4, 05:52 UTC) posted its lesson, then lost its videos: on the regeneration scene SAM 3.1 found 2
+of the 5 structures the plan named, the locate step failed, the operator's one retry located the same picture and
+failed the same way, and the videos were given up. The Nov 3 work made the pipeline outlast outages, kills and
+hangs, and its simulation stood in for the media steps, so a failure that repeats identically on every try was never
+put through it. This sweep followed a topic from the API's trigger to its READY videos, looked for every such
+failure, and gave each a lesser way that still ends in a droplet (`studio/anneal.py`): the videos take the next rung
+of its ladder instead of failing.
+
+### The way through, and where it could die
+
+| Point | What fails | Before | Now |
+|---|---|---|---|
+| API → routine | the trigger answers 429 or 5xx, times out, or cannot be reached | logged; the topic waits for the next sweep (or the next topic, when the routine has no schedule) | fired once more 30 s later (`api/src/lib/routine.ts`); a refused token is not retried |
+| Session start | the hook's `pip install` fails | logged only: the stamp was still Nov 1's, so every install since Nov 2 had failed, and faster-whisper (added Nov 4) was missing | tried again after 15 s (`.claude/hooks/session-start.sh`); Whisper is optional to the step anyway |
+| Lesson | API outage, brain outage or refusal, a kill or a hang | waited out, answered in session, deferred (Nov 3) | unchanged |
+| Lesson | the fact audit or the fact-check refuses the lesson twice | given up | unchanged: the gate |
+| art | a painter outage | the other painter (Nov 3) | unchanged |
+| art | a picture that is not an image | the step failed | a try that failed; if every try is so, the other painter paints it once |
+| art | a picture the painter declines on every try | the step failed | unchanged: a declined picture is never asked of the other painter |
+| locate | fewer than half a scene's structures found | the step failed, the same on the retry: **videos given up** (the Calvin cycle) | the scene painted again, once a job; then kept with what was found (a painted picture labels its own parts) |
+| timing | Whisper will not load or run (model not downloaded, rate-limited, out of memory) | the step failed as "a studio error", never retried | the song timed without it |
+| audio, timing | the song refused, never timed, or not singing its lyrics, every time | the step failed: **videos given up** | a new song, once a job; then the lesson video alone |
+| audio | the song's provider down past every attempt | **videos given up** | waited out and deferred, as before; on the API's last attempt, the lesson video alone |
+| timeline, arrows, render | the song's video or hook cut cannot be built | the step failed: **videos given up** | the lesson video alone |
+| audio, timing | the narration cannot be made or read | given up | unchanged: no lesson video without its voice |
+| upload | storage or the READY patch down | waited out (Nov 3) | unchanged |
+
+"The lesson video alone" is the state an admin's `STUDIO_VIDEOS=lesson` already makes mid-flight: the lesson keeps its
+lyrics, the droplet is READY with its lesson video, and the API drops the song's tags. A step says a failure is the
+song's alone with `StepFailed.part`, and `studio/videos.py` also checks the narration is made (and timed) before it
+lets the song go; the spend ceiling never counts as the song's. The job keeps what it let go of in `anneal.json`, so
+the operator's retry starts on the rung the last run reached, and `summary` says it ("Made without what failed: ...").
+
+### Simulated, before and after
+
+Six new scenarios (`python tools/sim/scenarios.py song- narration-`) fail the same way on every try. On the code
+before this sweep, and after it, with every paid key unset:
+
+| Scenario | Before | After | Heartbeats after |
+|---|---|---|---|
+| `song-refused-always` | lesson only | **droplet, lesson video alone** | 1 |
+| `song-untimed-always` | lesson only | **droplet, lesson video alone** | 1 |
+| `song-drifts-always` | lesson only | **droplet, lesson video alone** | 1 |
+| `song-outage-always` | lesson only | **droplet, lesson video alone** | 2 |
+| `song-video-fails-always` | lesson only | **droplet, lesson video alone** | 1 |
+| `narration-fails-always` | lesson only | lesson only | 1 |
+
+The 43 scenarios before them end as they did. The simulation's media steps are stand-ins, so the steps' own rungs
+are tested on their real code (`studio/tests`): the Calvin cycle's case with the real art and locate steps and SAM
+stood in for (`test_videos.py`: a scene painted again once, then kept with what was found; and a repaint that shows
+its parts, located in full), a Whisper that raises, the song's failures in the audio and timing steps, and a picture
+that is not an image.
+
+### What still ends without a droplet
+
+- **The gates**: a lesson the fact audit or the fact-check refuses twice, and the spend ceiling, as the admin set it.
+- **The narration**: a lesson video cannot be made without its voice. Gemini TTS or ElevenLabs refusing it on every
+  try gives the videos up, as before.
+- **A picture every try of which the painter declined**: by design, never sent to the other painter.
+- **The brain's key missing with the session fallback off**, and a bundle that dies or hangs on every run: as on Nov 3.
+
 ## What the simulation does not cover
 
 The providers' own behaviour (the stand-ins fail when told to), the quality of what the brain writes, and the media

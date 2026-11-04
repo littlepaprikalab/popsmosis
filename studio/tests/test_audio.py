@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from studio import checks, jobs, knobs, media, styles
+from studio import checks, jobs, knobs, ledger, media, styles
 from studio.steps import audio
 from studio.tests import sample_media
 
@@ -759,3 +759,27 @@ def test_a_song_sent_as_an_mp3_is_kept_frame_for_frame(tmp_path):
     assert 0 <= skipped < 3000
     assert np.array_equal(before[skipped:skipped + len(after)], after)  # the same frames: nothing encoded again
     assert np.abs(after).max() > 1.0  # its peaks as sent: the render holds the mix under full scale
+
+
+@pytest.mark.parametrize("raised, part", [(media.StepFailed("Eleven Music refused the song: 400 bad"), "song"),
+                                          (KeyError("composition_plan"), "song"),
+                                          (ledger.OverCeiling("past the topic's ceiling"), "")])
+def test_a_song_that_fails_is_the_songs_alone_and_the_narration_is_still_made(tmp_path, monkeypatch, raised, part):
+    """The videos can go on with the lesson video alone when the song cannot be made (studio/anneal.py); not past the
+    spend ceiling, which would stop the lesson video's own paid calls too."""
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.setattr(audio, "send", FakeEleven())
+    monkeypatch.setattr(audio, "duration", lambda path: 30.0)
+    job = tmp_path / "sample"
+    job.mkdir()
+    jobs.write(job / "bundle.json", sample_media.bundle())
+    sing(job, "elevenlabs")
+
+    def fails(*args):
+        raise raised
+
+    monkeypatch.setattr(audio, "_make_song", fails)
+    with pytest.raises(media.StepFailed) as failed:
+        audio.run(job)
+    assert failed.value.part == part
+    assert audio.made(job, "narration") and not audio.made(job, "song")
