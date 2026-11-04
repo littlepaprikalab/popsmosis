@@ -260,6 +260,15 @@ def find(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
     """A structure's mask on the art, where it is, and how it was found ("sam" or "sam-box"); None
     when SAM cannot find enough of it to point a label at."""
     colours = colours or Colours(picture, scene)
+    if colours.is_paper[colours.names.index(structure.name)]:
+        # A space that fills the view is the background: SAM traces things, not what is behind them, and found
+        # nothing for the repainted Calvin close-ups' "orange wash" or "orange region" (Nov 4), while the helper's box
+        # was the whole picture, which tells SAM nothing. It is the pixels in its colour.
+        whole = Box(x0=0, y0=0, x1=media.ART_WIDTH, y1=media.ART_HEIGHT)
+        mask = colours.own(structure, whole)
+        found = svg.locate(mask) if mask.sum() >= OWN_PIXELS_MIN else None
+        if found is not None:
+            return mask, found, "helper"
     label = f"locate {scene.id} {structure.name}"
     for n, phrase in enumerate(phrases(structure)):
         sure = [m for m in muse.segment(job, label + (f" try {n + 1}" if n else ""), picture, phrase=phrase)
@@ -361,6 +370,26 @@ def distance(pixels: np.ndarray, refs: np.ndarray) -> np.ndarray:
     return np.sqrt((lightness / 2) ** 2 + (duller / (1 + 0.045 * chroma)) ** 2 + hue_squared)
 
 
+# A part the picture's words make a space: what fills it, a wash, its background (the brief has a space asked for as "an
+# even wash of its own colour", prompts/bundle.md), or one named as a space is.
+SPACE_WORDS = re.compile(r"\b(?:fill(?:s|ing|ed)?|wash|background|behind)\b", re.I)
+SPACE_NAMES = re.compile(r"\b(?:stroma|matrix|cytoplasm|cytosol|lumen|space|fluid|plasma|sky|air|atmosphere|sea|ocean"
+                         r"|water|background)\b", re.I)
+
+
+def is_space(scene: Scene, structure: Structure) -> bool:
+    """Whether the scene shows the part as a space: named as one, or tagged (schemas.PART_TAG) in words that say so,
+    in its clause of the picture's words."""
+    if any(SPACE_NAMES.search(name) for name in (structure.name, *structure.aliases)):
+        return True
+    names = {n.casefold() for n in (structure.name, *structure.aliases)}
+    for clause in re.split(r"[,;:.]", scene.image_prompt):
+        tags = [t.strip().casefold() for t in re.findall(r"\[\[([^\[\]]*)\]\]", clause)]
+        if names & set(tags) and SPACE_WORDS.search(clause):
+            return True
+    return False
+
+
 class Colours:
     """Which structure each pixel of a scene's art is coloured as: the nearest of the scene's
     structure colours and the art's background (white, or the dark slate Muse Image paints), when it is
@@ -385,11 +414,13 @@ class Colours:
         self.pixels = _lab(rgb)
         self.words = hue_codes(rgb)
         words = hue_codes(np.array(refs))
-        # The part the background is: the one in the background's colour word, the word the painter was told. Not one
-        # merely near its colour: to distance() the white page is a paler yellow, cyan or grey, and the repainted
-        # Calvin overview's ATP, G3P and sugar took all of it (Nov 4). Nor only one near it: the repainted
+        # The part the background is: a space (is_space()) in the background's colour word, the word the painter was
+        # told. Not one merely near its colour: to distance() the white page is a paler yellow, cyan or grey, and the
+        # repainted Calvin overview's ATP, G3P and sugar took all of it (Nov 4). Nor only one near it: the repainted
         # fixation close-up's stroma, peach in the bundle and "orange" to the painter, was painted a deeper orange.
-        self.is_paper = words == words[-1]
+        # Nor any part in its word: white oxygen spheres on a white page are not the page.
+        self.is_paper = np.append(words[:-1] == words[-1], True) & np.append(
+            [is_space(scene, s) for s in scene.structures], True)
         # A part's word is its own when no other part, nor the background unless the part is it, has it.
         self.word = [int(w) if (words[:-1] == w).sum() == 1 and (w != words[-1] or self.is_paper[i]) else -1
                      for i, w in enumerate(words[:-1])]

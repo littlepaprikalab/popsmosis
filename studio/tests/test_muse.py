@@ -807,6 +807,47 @@ def test_a_part_in_its_colour_word_and_a_space_that_is_the_background_count_as_t
     assert not shared.fits(g3p_at, g3p)
 
 
+def test_a_space_that_is_the_background_is_found_by_its_colour_without_sam(tmp_path, monkeypatch):
+    # Nov 4: SAM found nothing for the repainted Calvin close-ups' stroma ("orange wash", "orange region"), and the
+    # helper's box was the whole picture, so it was never located.
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), (254, 158, 48), np.uint8)  # a deeper orange than peach
+    rod = disc(900, 500, 120)
+    pixels[rod] = (135, 60, 230)
+    path = tmp_path / "art.png"
+    path.write_bytes(svg.png(pixels))
+    stroma, rubp = (Structure(name="stroma", aliases=[], sam_phrase="orange wash", color_hex="#F4845F"),
+                    Structure(name="RuBP", aliases=[], sam_phrase="purple bar", color_hex="#8338EC"))
+    scene = Scene(id="recycle-detail", image_prompt="RuBP in the stroma.", structures=[stroma, rubp])
+
+    def no_sam(*a, **k):
+        raise AssertionError("SAM is not asked for the background")
+    monkeypatch.setattr(muse, "segment", no_sam)
+    mask, found, by = locate.find(tmp_path, scene, stroma, path, ask=None)
+    assert by == "helper" and (mask == ~rod).all()
+
+
+def test_a_white_part_on_a_white_page_is_not_the_page(tmp_path):
+    # Review of #146: oxygen #F0F0F0 is "white" as the page is, but it is spheres on the page, not the page.
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), (250, 250, 250), np.uint8)
+    oxygen_at = disc(700, 500, 60)
+    pixels[oxygen_at] = (232, 236, 240)
+    pixels[oxygen_at & disc(690, 490, 20)] = (200, 205, 212)
+    path = tmp_path / "art.png"
+    path.write_bytes(svg.png(pixels))
+    oxygen, stroma = (Structure(name="oxygen", aliases=[], sam_phrase="white spheres", color_hex="#F0F0F0"),
+                      Structure(name="stroma", aliases=[], sam_phrase="white wash", color_hex="#F7F7F7"))
+    scene = Scene(id="detail", image_prompt="Oxygen [[oxygen]] in the centre; the stroma [[stroma]] around it.",
+                  structures=[oxygen, stroma])
+    colours = locate.Colours(path, scene)
+    assert list(colours.is_paper) == [False, True, True]  # the stroma is named as a space; the last is the page
+    page = ~oxygen_at
+    assert not colours.fits(page, oxygen) and colours.fits(oxygen_at, oxygen)
+    assert locate.is_space(Scene(id="x", image_prompt="the fluid [[Fluid]] filling the view; a ball [[Ball]] in it.",
+                                 structures=[]), Structure(name="Ball", aliases=[], sam_phrase="b", color_hex="#000000")) is False
+    assert locate.is_space(Scene(id="x", image_prompt="the interior [[Inside]] filling it evenly, a ball.",
+                                 structures=[]), Structure(name="Inside", aliases=[], sam_phrase="b", color_hex="#000000"))
+
+
 def test_a_white_page_is_no_pale_part(tmp_path):
     # To distance() a white page is a paler yellow, cyan or grey: on the repainted Calvin overview (Nov 4) ATP, G3P
     # and sugar would each have taken the whole page. Only a part in the page's own colour word is the page.

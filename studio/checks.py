@@ -369,7 +369,10 @@ def colour_word(color_hex: str) -> str:
 # everyday colour word, maybe with a shade before it or a second hue after it.
 _HUE_WORDS = "red|orange|brown|yellow|green|blue|purple|pink|grey|gray"
 _COLOUR_WORDS = (_HUE_WORDS + "|gold|golden|amber|lime|olive|teal|cyan|turquoise|aqua|navy|indigo|violet|lavender"
-                 "|magenta|coral|salmon|crimson|scarlet|maroon|silver|white|black|tan|beige")
+                 "|magenta|coral|salmon|crimson|scarlet|maroon|silver|white|black|tan|beige"
+                 # Nov 4: the Calvin cycle's "mint drops" and "peach wash" kept their words, unknown here, while the
+                 # parts were painted cyan and orange, so SAM and the art check asked for mint and peach.
+                 "|mint|peach|cream|ivory|khaki|lilac|mauve|emerald|ochre")
 COLOUR_NAME = re.compile(rf"\b(?:(?:light|dark|pale|bright|deep|soft|vivid)[\s-]+)?(?:{_COLOUR_WORDS})"
                          rf"(?:[\s-]+(?:{_HUE_WORDS}))?\b", re.I)
 

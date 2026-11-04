@@ -1000,6 +1000,7 @@ def test_sam_is_asked_for_each_colour_in_the_word_the_picture_is_painted_in():
     assert phrased("pale lime blob", "coral wedge") == (["green blob", "orange wedge"],
                                                         [("structures", "colours", True)])
     assert phrased("green blob", "man in orange") == (["green blob", "man in orange"], [])  # as it is painted
+    assert phrased("mint drops", "peach wash")[0] == ["green drops", "orange wash"]  # Nov 4
     assert phrased("the thylakoid", "red light") == (["the thylakoid", "orange light"],  # only the colour word
                                                      [("structures", "colours", True)])
 
