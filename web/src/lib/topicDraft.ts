@@ -7,6 +7,7 @@
 const DRAFT_KEY = 'popsmosis:topic-draft';
 // Set when Submit, pressed signed out, sent them to sign in: back on the page, it says the topic is waiting.
 const SIGN_IN_KEY = 'popsmosis:topic-sign-in';
+const STYLE_KEY = 'popsmosis:topic-style-draft'; // the song style typed beside it
 
 function read(key: string): string | null {
   try { return sessionStorage.getItem(key); } catch { return null; }
@@ -22,6 +23,8 @@ function write(key: string, value: string | null) {
 export const topicDraft = {
   read: () => read(DRAFT_KEY),
   write: (value: string) => write(DRAFT_KEY, value.trim() ? value : null),
+  readStyle: () => read(STYLE_KEY),
+  writeStyle: (value: string) => write(STYLE_KEY, value.trim() ? value : null),
   /** Submit asked for a sign-in: remember it, for the page to say so when they are back. */
   markSignIn: () => write(SIGN_IN_KEY, '1'),
   /** Whether they are back from a sign-in Submit asked for; true only once. */
@@ -30,5 +33,5 @@ export const topicDraft = {
     if (marked) write(SIGN_IN_KEY, null);
     return marked;
   },
-  clear: () => { write(DRAFT_KEY, null); write(SIGN_IN_KEY, null); },
+  clear: () => { write(DRAFT_KEY, null); write(STYLE_KEY, null); write(SIGN_IN_KEY, null); },
 };

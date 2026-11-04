@@ -41,5 +41,5 @@ export async function detachQuestions(tx: TxClient, questionIds: string[]): Prom
   await tx.attachment.deleteMany({ where: { questionId: { in: questionIds } } });
   // A follow-up's files go with it (attachments cascade on replyId).
   await tx.reply.deleteMany({ where: { answer: { questionId: { in: questionIds } } } });
-  await tx.question.updateMany({ where: { id: { in: questionIds } }, data: { userId: null, content: '' } });
+  await tx.question.updateMany({ where: { id: { in: questionIds } }, data: { userId: null, content: '', songStyle: null } });
 }

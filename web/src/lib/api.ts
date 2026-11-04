@@ -422,6 +422,9 @@ export interface Question {
   failedReason: string | null; // FAILED: why the teacher gave up
   // The brain picked for it on /learn (lib/brains.ts); null: the default. Absent from an API older than this page.
   brain?: Brain | null;
+  // The song style the learner asked for, in their words; null: none, and the studio picked one. Absent from an
+  // API older than this page.
+  songStyle?: string | null;
   attachments: Attachment[];
   createdAt: string;
   user: PublicUser | null; // null once the learner took it back: only an admin still sees it, with content ''
@@ -631,9 +634,13 @@ export const api = {
   getQuestion: (id: string) => request<Question>(`/questions/${id}`).then(localClock),
   getQuestionsByIds: (ids: string[]) =>
     request<{ data: Question[]; nextCursor: null }>(`/questions?ids=${encodeURIComponent(ids.join(','))}`).then(onLocalClock),
-  // brain: the sender's pick for the topic (lib/brains.ts); left out, the default brain makes it.
-  askQuestion: (content: string, brain?: Brain | null) =>
-    request<Question>('/questions', { method: 'POST', body: JSON.stringify(brain ? { content, brain } : { content }) }).then(localClock),
+  // brain: the sender's pick for the topic (lib/brains.ts); left out, the default brain makes it. songStyle: the
+  // style they want the song in, in their words; left out, the studio's rotation picks one.
+  askQuestion: (content: string, brain?: Brain | null, songStyle?: string | null) =>
+    request<Question>('/questions', {
+      method: 'POST',
+      body: JSON.stringify({ content, ...(brain ? { brain } : {}), ...(songStyle ? { songStyle } : {}) }),
+    }).then(localClock),
   // everything: a topic with a lesson goes whole, the lesson, its videos, likes and comments too; without it, the
   // request is taken back and the lesson stays on the Droplets tab. A topic with no lesson goes whole either way.
   // Its own route, so an API from before it answers 404 ('Route not found') and deletes nothing (isMissingRoute).

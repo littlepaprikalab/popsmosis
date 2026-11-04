@@ -201,6 +201,21 @@ def test_a_style_line_in_the_question_is_the_songs_style(jobs_root):
     assert (request.topic, request.song_style) == ("ATP synthesis for AP Bio", "K-pop with hip-hop verses, 98 bpm")
 
 
+def test_the_style_field_is_the_songs_style_and_wins_over_a_style_line(jobs_root):
+    question = {**QUESTION, "attachments": [], "songStyle": "  K-pop with\trapped verses ",
+                "content": "Noise cancelling headphones\nStyle: jazz"}
+    assert operator_run.run("q1", api=FakeApi(question), ask=FakeBrain())[0] == "DONE"
+    request = jobs.read(jobs_root / "q1" / "request.json", Request)
+    assert (request.topic, request.song_style) == ("Noise cancelling headphones", "K-pop with rapped verses")
+
+
+def test_a_question_without_the_style_field_still_reads_its_style_line(jobs_root):
+    question = {**QUESTION, "attachments": [], "songStyle": None, "content": "Mitosis\nStyle: lo-fi"}
+    assert operator_run.run("q1", api=FakeApi(question), ask=FakeBrain())[0] == "DONE"
+    request = jobs.read(jobs_root / "q1" / "request.json", Request)
+    assert (request.topic, request.song_style) == ("Mitosis", "lo-fi")
+
+
 @pytest.mark.parametrize("content, split", [
     ("Song style: pop-punk, 150 bpm\nmitosis", ("mitosis", "pop-punk, 150 bpm")),
     ("ATP synthesis  for my\nAP Bio exam", ("ATP synthesis for my AP Bio exam", "")),

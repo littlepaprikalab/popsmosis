@@ -251,6 +251,32 @@ d('question / answer / reply flow', () => {
     await prisma.question.delete({ where: { id: picked.json().id } });
   });
 
+  it('keeps the song style the sender asked for, in its own field, and hands it to the studio with the claim', async () => {
+    const tooLong = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} style too long`, songStyle: 'k'.repeat(201) } });
+    expect(tooLong.statusCode).toBe(400);
+    const notText = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} style not text`, songStyle: 7 } });
+    expect(notText.statusCode).toBe(400);
+    const pii = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} style with an email`, songStyle: 'pop, ask ada@example.com' } });
+    expect(pii.statusCode).toBe(400);
+    expect(await prisma.question.count({ where: { content: { startsWith: `${tag} style ` } } })).toBe(0);
+
+    // One line, its spaces collapsed; the topic stays as typed.
+    const styled = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} styled topic`, songStyle: '  K-pop with\n rapped   verses ' } });
+    expect(styled.statusCode).toBe(201);
+    expect(styled.json()).toMatchObject({ content: `${tag} styled topic`, songStyle: 'K-pop with rapped verses' });
+    const claim = await app.inject({ method: 'POST', url: `/api/questions/${styled.json().id}/claim`, headers: asAgent(agentKey) });
+    expect(claim.statusCode).toBe(200);
+    expect(claim.json().songStyle).toBe('K-pop with rapped verses');
+    await prisma.question.delete({ where: { id: styled.json().id } });
+
+    // Blank or left out, there is none: the studio's rotation picks.
+    const blank = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} blank style`, songStyle: '   ' } });
+    expect(blank.json().songStyle).toBeNull();
+    await prisma.question.delete({ where: { id: blank.json().id } });
+    const own = await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(cookieA) });
+    expect(own.json().songStyle).toBeNull();
+  });
+
   it('threads: the asker follows up, agent owes a response, agent replies once', async () => {
     const empty = await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent(agentKey) });
     expect(empty.json().data).toEqual([]);

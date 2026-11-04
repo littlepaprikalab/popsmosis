@@ -104,6 +104,7 @@ type QuestionRow = {
   runs: number;
   progress: unknown;
   brain: string | null;
+  songStyle?: string | null; // optional only so a row selected without it still fits
   user: { id: string; name: string | null; avatarUrl: string | null } | null;
   answers: AnswerRow[];
   attachments: AttachmentRow[];
@@ -197,6 +198,8 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new D
     failedReason: q.status === 'FAILED' ? q.failedReason : null,
     // The brain picked for it on /learn (lib/brains.ts); null: the default. The studio reads it from the claim.
     brain: q.brain,
+    // The song style the learner asked for on /learn, in their words; null: none, and the studio's rotation picks.
+    songStyle: q.songStyle ?? null,
     attachments: q.attachments.map(serializeAttachment),
     createdAt: q.createdAt.toISOString(),
     user: q.user,
