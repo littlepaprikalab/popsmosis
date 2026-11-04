@@ -139,7 +139,7 @@ class FakeHelper:
             clean = "\n- misplaced: " not in prompt and "\n- wrong: " not in prompt
             part = re.search(r"each to be tagged once:\n- (.+?) \(", prompt).group(1)  # its first part, tagged
             return {"text": art.KEEP if clean else f"Rewritten {scene} [[{part}]] after its picture went wrong."}
-        assert role == ("checker" if schema is art.PictureCheck else "helper")  # the checker is Claude, any brain
+        assert role == ("checker" if schema is art.PictureCheck else "helper")  # Muse Spark, as the helper (brain.META)
         if schema is art.PictureCheck:
             assert system == art.CHECK_PROMPT and "The lesson's facts:\n- f1: " in prompt
             from PIL import Image

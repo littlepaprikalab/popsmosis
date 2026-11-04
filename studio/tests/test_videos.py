@@ -424,7 +424,7 @@ def meta_job(setup, monkeypatch):
         check found nothing wrong in."""
         answering = fake.helper if role in ("helper", "checker") or system == art.REWRITE_PROMPT else fake.artist
         answer = answering(role, prompt, schema, images, system=system, label=label)
-        model = {"helper": "muse-spark-1.3", "checker": "claude-sonnet-5-5"}.get(role, "claude-opus-5-5")
+        model = "muse-spark-1.3" if role in ("helper", "checker") else "claude-opus-5-5"
         brain._record(brain.Call(label, role, model, 1000, 100, brain.cost(model, 1000, 100), 0.1, "stop"))
         return answer
 
@@ -449,8 +449,9 @@ def test_on_meta_the_run_paints_the_art_then_sam_locates_it_and_bills_both(meta_
     steps = {s["step"]: s for s in ledger.breakdown(job, "videos")["steps"]}
     art_models = {m["model"]: m for m in steps["art"]["models"]}
     assert art_models["muse-image-1.0"]["calls"] == 3 and art_models["muse-image-1.0"]["costUsd"] == pytest.approx(0.03)
-    # Each picture checked by Claude Sonnet, whatever the brain (studio/brain.py's checker)
-    assert art_models["claude-sonnet-5-5"]["calls"] == 3 and art_models["claude-sonnet-5-5"]["costUsd"] > 0
+    # Each picture checked by Muse Spark, the checker of a Muse brain (studio/brain.py)
+    assert art_models["muse-spark-1.3"]["calls"] == 3 and art_models["muse-spark-1.3"]["costUsd"] > 0
+    assert "claude-sonnet-5-5" not in art_models
     locate_models = {m["model"]: m for m in steps["locate"]["models"]}
     assert locate_models["sam-3.1"] == {**locate_models["sam-3.1"], "calls": 4, "costUsd": pytest.approx(0.01)}
     assert locate_models["muse-spark-1.3"]["calls"] == 3  # the helper's look at where each scene's labels are pinned
