@@ -58,7 +58,7 @@ export const KNOBS = {
     rule: 'a Lyria model id: lowercase letters, digits, dots and hyphens',
   },
   GEMINI_TTS_VOICE: {
-    where: 'studio', kind: 'text', default: 'Sadaltager', pattern: /^[A-Za-z0-9_-]{1,64}$/,
+    where: 'studio', kind: 'text', default: 'en-gb-tutor-12', pattern: /^[A-Za-z0-9_-]{1,64}$/,
     rule: 'a Gemini voice name: letters, digits, hyphens and underscores',
   },
   ELEVENLABS_USD_PER_1K_CREDITS: { where: 'studio', kind: 'number', default: null, min: 0, max: 100 },

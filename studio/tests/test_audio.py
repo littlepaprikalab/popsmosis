@@ -673,11 +673,11 @@ def test_gemini_reads_the_narration_in_one_call_and_keeps_no_timings(job, monkey
         "input": [{"type": "user_input", "content": [{"type": "text", "text": text, "annotations": [
             {"type": "speech_metadata", "style": audio.GEMINI_TTS_STYLE}]}]}],
         "response_format": {"type": "audio"},
-        "generation_config": {"speech_config": [{"voice": "Sadaltager"}]},
+        "generation_config": {"speech_config": [{"voice": "en-gb-tutor-12"}]},
         "store": False,
     }
     plan = json.loads((job / audio.plan_path("narration")).read_text())
-    assert plan["provider"] == "gemini" and plan["voice"] == "Sadaltager" and plan["model_id"] == "gemini-3.8-flash-tts"
+    assert plan["provider"] == "gemini" and plan["voice"] == "en-gb-tutor-12" and plan["model_id"] == "gemini-3.8-flash-tts"
     assert plan["text"] == text and plan["lines"] == spans and plan["interaction_id"] == "int42"
     assert plan["mime_type"] == "audio/wav" and "alignment" not in plan  # step 6 aligns it
     assert (job / "audio/narration.mp3").read_bytes() == b"RIFF speech"  # as_mp3 is stood in for

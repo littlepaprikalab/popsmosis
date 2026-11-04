@@ -76,7 +76,10 @@ TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "Xb7hH8MSUJpSbSDYk0k2"  # Alice: a clear, engaging British educator
 GEMINI_TTS_MODEL = "gemini-3.8-flash-tts"  # on the Interactions API (ai.google.dev/gemini-api/docs/speech-generation)
-DEFAULT_GEMINI_VOICE = "Sadaltager"  # one of Gemini's prebuilt voices: "Knowledgeable"
+# A British woman from Gemini's voice library (GET /v1beta/voices, en-GB, female), chosen Nov 4: "deep, velvety, and
+# unhurried", a southern English accent. The 30 classic voices (Sadaltager, Kore...) all speak General American,
+# and Google's docs set an accent by the voice, not in the style.
+DEFAULT_GEMINI_VOICE = "en-gb-tutor-12"
 # How the narration is read: Gemini reads the text as written and takes its delivery from a style kept apart from it.
 GEMINI_TTS_STYLE = "a warm, clear teacher explaining to a student, at an easy, steady pace"
 # USD per million tokens, text in and audio out, from each date (Gemini API pricing); 25 audio tokens a second.
