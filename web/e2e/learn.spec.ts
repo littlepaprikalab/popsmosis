@@ -763,6 +763,28 @@ test.describe('signed in', () => {
     await expect(note).toHaveText(new RegExp(`^Popsmosis has made all the droplets it can for now\\. It takes topics again ${await threeHoursOn()}\\.$`));
   });
 
+  test('a count past its time is read again, and one that cannot be read does not keep Submit grey', async ({ page, context }) => {
+    let up = true;
+    await page.route('**/api/questions/allowance', (route) => (up
+      ? route.fulfill({ json: { perDay: 10, left: 0, nextInSeconds: 2, siteFull: false, siteOpensInSeconds: null } })
+      : route.fulfill({ status: 500, json: { error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } } })));
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const note = page.getByTestId('topic-allowance');
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    const submit = page.getByRole('button', { name: 'SUBMIT' });
+    await expect(note).toContainText('You have used all 10 of your topics.');
+    await box.fill('Why the sky is blue');
+    await expect(submit).toBeDisabled();
+
+    // Its time come, the page reads the count again by the clock, and finds the API down: the old count goes, and
+    // Submit is the API's to judge.
+    up = false;
+    await expect(note).toHaveCount(0, { timeout: 15_000 });
+    await expect(submit).toBeEnabled();
+    await box.fill('');
+  });
+
   test('a learner picks the brain too, and is not told whose key pays', async ({ page, context }) => {
     await page.addInitScript(() => window.localStorage.setItem('popsmosis.brain', 'muse-wonder')); // an admin's, on this browser
     await signIn(context, S.users.ben);

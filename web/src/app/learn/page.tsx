@@ -621,11 +621,14 @@ function LearnContent() {
   };
 
   // What the learner has left of their topics, shown in the box: read on sign-in, after each send, and again when
-  // the next place comes back (or the site takes topics again), so it never goes on saying none are left.
+  // the next place comes back (or the site takes topics again), so it never goes on saying none are left. A count
+  // that cannot be read is dropped, not kept: an old one saying none are left would hold Submit grey after a place
+  // came back. Without one the box says nothing of it, and the API judges the send, as it always does.
   const [allowance, setAllowance] = useState<TopicAllowance | null>(null);
-  const readAllowance = useCallback(() => {
-    api.getTopicAllowance().then(setAllowance).catch(() => {}); // without it the box just says nothing of it
-  }, []);
+  const readAllowance = useCallback(
+    () => api.getTopicAllowance().then(setAllowance).catch(() => setAllowance(null)),
+    [],
+  );
   useEffect(() => {
     if (authLoading) return;
     if (!user) { setAllowance(null); return; }
@@ -635,13 +638,20 @@ function LearnContent() {
   // None left, by the learner's own limit or the site's: Submit stays grey, as the box says. The API refuses such a
   // topic anyway; this is so the button does not look as if it would send. An admin has no limit of their own.
   const outOfTopics = !!allowance && (allowance.siteFull || allowance.left === 0);
+  // The time it names is watched by the clock every few seconds, not by one long timer: a timer runs late by as long
+  // as the computer slept, and the count it holds would keep Submit grey all that while. One read at a time.
   useEffect(() => {
     if (!opensAt) return;
-    const timer = setTimeout(readAllowance, Math.max(0, opensAt - Date.now()) + 1000);
-    return () => clearTimeout(timer);
+    let reading = false;
+    const timer = setInterval(() => {
+      if (reading || Date.now() < opensAt + 1000) return;
+      reading = true;
+      readAllowance().finally(() => { reading = false; });
+    }, 5_000);
+    return () => clearInterval(timer);
   }, [opensAt, readAllowance]);
-  // And whenever the page is shown again: that timer runs late by as long as the computer slept, and a topic sent
-  // from another tab, or a limit changed on the Studio page, moves the count without this page hearing of it.
+  // And whenever the page is shown again: a topic sent from another tab, or a limit changed on the Studio page,
+  // moves the count without this page hearing of it.
   useEffect(() => {
     if (!user) return;
     const onShow = () => { if (document.visibilityState === 'visible') readAllowance(); };
