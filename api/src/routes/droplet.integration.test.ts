@@ -177,7 +177,7 @@ d('droplet endpoints', () => {
     expect(lessonOnly[0].answer.context).toMatchObject({ coreIdea: BUNDLE.core_idea, lyrics: [] });
   });
 
-  it('takes a note with READY on why a video is missing, and shows it on the card and the Droplets tab', async () => {
+  it('takes a note with READY on why a video is missing, for the learner\'s card only, never the public pages', async () => {
     const answerId = (await answer()).json().id;
     const lesson = 'https://media.popsmosis.com/a/out/lesson_h.mp4';
     expect((await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson, error: ' ' })).statusCode).toBe(400);
@@ -187,9 +187,11 @@ d('droplet endpoints', () => {
     const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
     expect(card.answer.video).toMatchObject({ status: 'READY', error: note });
     const droplet = (await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).json();
-    expect(droplet.video).toMatchObject({ lessonVideoUrl: lesson, note });
+    expect(droplet.video).toMatchObject({ lessonVideoUrl: lesson });
+    expect(droplet.video).not.toHaveProperty('note');
+    expect(JSON.stringify(droplet)).not.toContain('out of credit');
     const list = (await app.inject({ method: 'GET', url: '/api/droplets' })).json().data;
-    expect(list.find((d: { id: string }) => d.id === answerId).video).toMatchObject({ note });
+    expect(JSON.stringify(list)).not.toContain('out of credit');
   });
 
   it('keeps the video status: its own answers only, URLs kept between updates, a reason on failure', async () => {

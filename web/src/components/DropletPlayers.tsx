@@ -20,9 +20,9 @@ import { countClip, countPlays, useViews, type PlayVideo } from '@/lib/plays';
  */
 export function DropletPlayers({ dropletId, video, tags, title, views, note }: {
   dropletId: string; video: DropletVideos; tags?: DropletTags; title?: string; views?: DropletViews;
-  note?: string | null; // why a video is missing; the droplet's own `video.note` when not given
+  note?: string | null; // why the song is missing: on the learner's own card on /learn only, never a public page
 }) {
-  const missing = video.songVideoUrl ? null : (note ?? video.note ?? null);
+  const missing = video.songVideoUrl ? null : (note ?? null);
   const players = [
     { label: 'SONG', kind: 'song' as const, src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)' },
     { label: 'LESSON', kind: 'lesson' as const, src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)' },
@@ -42,8 +42,8 @@ export function DropletPlayers({ dropletId, video, tags, title, views, note }: {
   );
 }
 
-/** Why the droplet has no song, under its videos here and on its card on the Droplets tab. */
-export function SongMissing({ note, className = '' }: { note: string; className?: string }) {
+/** Why the droplet has no song, under its videos on the learner's card. */
+function SongMissing({ note, className = '' }: { note: string; className?: string }) {
   return (
     <p className={`text-xs ${className}`} style={{ color: 'var(--text-muted)' }} data-testid="videos-missing">
       <MissingNote text={note} /> The lesson video still teaches all of it.

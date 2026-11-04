@@ -137,7 +137,6 @@ export const publicDropletSelect = {
   lessonPosterUrl: true,
   hookVideoUrl: true,
   hookPosterUrl: true,
-  videoError: true, // with READY, why a video is missing (the song left out after it failed): the studio's own words
   likeCount: true,
   commentCount: true,
   songTags: true,
@@ -160,7 +159,6 @@ type PublicDropletRow = {
   lessonPosterUrl: string | null;
   hookVideoUrl: string | null;
   hookPosterUrl: string | null;
-  videoError: string | null;
   likeCount: number;
   commentCount: number;
   songTags: string[];
@@ -222,7 +220,6 @@ function publicVideo(a: PublicDropletRow) {
     lessonPosterUrl: a.lessonPosterUrl,
     hookVideoUrl: a.hookVideoUrl,
     hookPosterUrl: a.hookPosterUrl,
-    note: a.videoError, // why a video is missing, or null
   };
 }
 
