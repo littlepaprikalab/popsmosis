@@ -171,11 +171,12 @@ one diagram:
 - For a younger audience, two or three structures a scene, the finer parts left out.
 
 `look`: how the hook and every scene that is not a diagram are painted, one look for the
-whole droplet, chosen for this topic, its time and place and its mood, the way an art
-director would choose it: a medium and a feel an illustrator knows, in a few words ending in
-"illustration" ("a bold gouache poster illustration" for a revolution, "a soft storybook
-watercolour illustration" for a fairy tale). Those show the form; choose for the topic.
-Code adds it to each of those scenes with bright, even light and each part in its own colour,
+whole droplet. Take it from the topic's own world, the way an art director would: the art
+of its time and place, or of the world it is about ("an Ancient Egyptian wall-painting
+illustration" for the pyramids, "a 1930s national-park travel-poster illustration" for
+erosion). A general style that would suit any topic (flat vector, gouache, watercolour) is
+the last choice. A medium and a feel an illustrator knows, in a few words ending in
+"illustration". Code adds it to each of those scenes with bright, even light and each part in its own colour,
 since the video finds each part by its colour: never sepia, black and white, monochrome,
 noir, an engraving, charcoal, silhouettes, a photograph or dark, moody light, which code
 strikes, and never an artist, a studio or a book.
