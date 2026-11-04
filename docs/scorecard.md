@@ -362,3 +362,28 @@ against Nov 1's evening; key lines went up (4.17 to 4.67). Read through:
 - **The errors are song lines** the fact-check is there for: "Nothing turns to CO2" (a poisoned converter),
   "Moon slides in front of the Sun", "The far side's dark", "Keeps the water out" (the pump), "Each step pumps
   hydrogen in" (only one carrier pumps).
+
+## In-session run, Nov 4
+
+After the headline (one line in the learner's terms, written by the brain beside the topic, judged by the fact-check
+as public text, cleared by code past 80 characters) and the song style field. Judged by Opus beside the same baseline
+droplets; the learner test and the narration edit skipped, as before.
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Nov 2 | 12 of 12 | 4.51 | 3.68 | 9 / 14 |
+| Nov 4 | 10 of 12 | 4.36 | 3.74 | 8 / 10 |
+
+By criterion (new / baseline): hook 4.58 / 4.42, frame 4.33 / 3.83, why chain 4.33 / 4.00, key lines 4.58 / 2.83,
+accuracy 4.42 / 4.33, singability 3.50 / 3.17, lesson 4.75 / 3.58. The baseline won light reactions and classical
+conditioning (a tie on the mean). Singability is down on Nov 2 (4.00 to 3.50); the headline does not touch the song,
+so this reads as the noise of one run, but worth watching.
+
+- **Every headline came out as asked**, one line in the learner's terms, none cleared by the guard: "Why does the Moon
+  seem to change shape?", "If there's no air in space, what does a rocket push against?", "Why is it 'espero que
+  vengas' and not 'espero que vienes'?". The topic stayed the textbook's name ("phases of the Moon").
+- **Four writers edited for quality**, against the brief's "fix only what the check lists": the rocket, dramatic
+  irony, the p-value and the catalyst trimmed narration that ran past 420 words (one to 501), and the p-value
+  rewrote a closing line it judged misleading. Narration over length is still not checked by code.
+- **The errors are song and lesson lines** the fact-check is there for: "two x every time" (the derivative's power
+  rule), "it can never erase" (extinction), CO's bonds said to weaken on platinum where it is oxygen that splits.
