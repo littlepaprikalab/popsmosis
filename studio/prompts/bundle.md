@@ -353,7 +353,7 @@ explanation left to the narration.
   accents: "Bright pop with rapped verses and a catchy sung chorus;
   sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat; shimmering
   synths lead, claps accent the beat", with sounds of your own for this topic. Concrete sounds ("a
-  warm Rhodes", "an 808 that slides", "stacked harmonies on the hook") beat adjectives ("upbeat",
+  warm Rhodes", "an 808 that slides", "a muted guitar riff") beat adjectives ("upbeat",
   "educational"). The voice stays close and natural, one clear lead: never soaring or
   belted. Its rapped verses are confident and rhythmic, every syllable
   on the beat, in a flow of their own that suits the genre and the song (a quick double-time run,
