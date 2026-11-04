@@ -836,3 +836,23 @@ def test_two_kinds_of_particle_on_one_video_are_never_drawn_alike():
     assert colours["Na⁺"] == MARKER_COLOURS["Na⁺"]  # a common kind keeps its own
     assert colours["glucose"] in OTHER_MARKERS and _rgb_apart(colours["glucose"], colours["Na⁺"]) >= APART
     assert all(_rgb_apart(colours["glucose"], c) >= APART for label, c in colours.items() if label != "glucose")
+
+
+def test_with_no_camera_written_it_moves_in_on_the_spotlit_part_for_at_most_three_lines(job):
+    """Since Nov 4 the writer writes no camera: the camera follows the spotlight, CLOSE_ZOOM from the whole scene,
+    and pulls back after CLOSE_LINES lines on one part. A scene's first line still shows the whole picture."""
+    data = sample_media.bundle().model_dump()
+    for d in data["direction"]:
+        d["camera"] = None
+    for line_id in ("v1-2", "c1-1", "v2-1", "c2-1", "c3-1"):
+        direct(data, line_id, spotlight="Thylakoid")  # named on the hook, so labelled on the overview
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    framed = {i: (song[i].camera.target, song[i].camera.zoom) for i in ("v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1")}
+    assert framed == {
+        "v1-2": (None, 1.0),  # the overview's first line: the whole picture, though it counts as the first of three
+        "c1-1": ("Thylakoid", step.CLOSE_ZOOM), "v2-1": ("Thylakoid", step.CLOSE_ZOOM),
+        "c2-1": (None, 1.0),  # a fourth line on the same part: back to the whole scene
+        "b-1": (None, 1.0),  # nothing spotlit
+        "c3-1": ("Thylakoid", step.CLOSE_ZOOM),  # spotlit again after a line without: in again
+    }

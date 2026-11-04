@@ -663,6 +663,28 @@ def test_every_chorus_is_directed_as_the_first_where_it_sings_the_same_words():
     assert [f for f in found if f[1] == "motion"] == [("c2-1", "motion", True)]
 
 
+def test_a_chorus_line_left_undirected_takes_the_same_line_where_the_writer_directed_it_unrecorded():
+    """Since Nov 4 the writer directs the first chorus alone (Direction.held). A later chorus it left undirected is
+    directed as the first, and the first, left undirected, as a later one the writer did direct: neither recorded."""
+    def later_left(data):
+        data["direction"] = [d for d in data["direction"] if d["line_id"] not in LATER_CHORUSES]
+        direction(data, "c1-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+
+    bundle, found, _ = review(later_left)
+    directed = {d.line_id: d for d in bundle.direction}
+    assert all(directed[i].particles == ["Thylakoid", "Cytochrome b6f"] and not directed[i].held for i in LATER_CHORUSES)
+    assert [f for f in found if f[1] == "motion"] == []
+
+    def first_left(data):
+        data["direction"] = [d for d in data["direction"] if d["line_id"] != "c1-1"]
+        direction(data, "c2-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+
+    bundle, found, _ = review(first_left)
+    directed = {d.line_id: d for d in bundle.direction}
+    assert all(directed[i].particles == ["Thylakoid", "Cytochrome b6f"] for i in ("c1-1", "c2-1", "c3-1"))
+    assert [f for f in found if f[1] == "motion"] == [("c3-1", "motion", True)]  # c3-1 was written, differently
+
+
 def test_the_questions_key_line_goes_where_each_video_asks_it():
     # Nov 1: the writer put the question on the narration's first sentence, a fact two before the narrator asks it.
     def asked(question_on="n1", step_on="n3"):

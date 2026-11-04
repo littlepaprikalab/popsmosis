@@ -180,8 +180,8 @@ def test_a_lesson_alone_that_does_not_hold_together_is_kept_for_a_look(tmp_path)
     knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
     write(tmp_path / "request.json", Request(topic="the light reactions"))
     broken = lesson_bundle_data()
-    broken["direction"] = broken["direction"][:-1]  # n2 has no direction
-    with pytest.raises(brain.InvalidOutput, match="no direction for n2"):
+    broken["direction"][-1]["scene"] = "nowhere"  # n2 plays over a scene the bundle does not draw
+    with pytest.raises(brain.InvalidOutput, match="direction for n2 names unknown scene 'nowhere'"):
         bundle_step.run(tmp_path, ask=_asking(broken, {}))
     assert (tmp_path / "bundle.invalid.json").exists() and not (tmp_path / "bundle.json").exists()
 

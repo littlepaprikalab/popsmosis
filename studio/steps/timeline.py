@@ -42,7 +42,9 @@ No model calls, so it is free to run again:
   framing (TimelineCamera.from_whole), as the brief writes it: 1.0 the whole scene, 1.4 to 1.6 a close-up (1.6
   to 2.0 until Nov 1, which cropped the labels a painted picture writes beside its parts). The
   whole scene frames what is drawn, often already closer than the whole art, so a close-up counted from the art
-  came out barely closer (1.8 on the sample's overview, whose whole scene is at 1.44: 1.25 times).
+  came out barely closer (1.8 on the sample's overview, whose whole scene is at 1.44: 1.25 times). A bundle
+  written since Nov 4 sets no camera: it moves in on the spotlit part (CLOSE_ZOOM), for at most CLOSE_LINES lines
+  in a row on one part, and shows the whole scene on a line with nothing spotlit.
 - The song's camera follows the words on a long hold (_follow). A shot of the whole picture only drifts, and the
   songs sit on one picture for long runs: the 12 songs of scorecard run 20261030-0015, at 3 s a line, held a
   whole, still picture for up to 32 s, 9 times for 15 s or more. Once the song has held a whole, still picture for
@@ -67,7 +69,7 @@ No model calls, so it is free to run again:
   Nov 1, and the brief gives that to a question or an aside too: the pump's lesson ran sodium out through the pump
   under "does the pump push the sodium back out?" and "A common mistake is to say yes".
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
-  lesson), held for at least CAPTION_HOLD_S.
+  lesson), held for at least CAPTION_HOLD_S. Only a bundle written before Nov 4 has captions or a glow.
 - A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
 - A painted picture labels its own parts (art.self_labelled()): the renderer draws no labels or axis names over
   it, only over a drawing, and flags on it each label the art check found wrong (art.flags()). The labels above
@@ -127,6 +129,12 @@ LESSON_CAPTION_SPACING_S = 20.0  # the narration has no sections, so captions ar
 PARTICLE_COLOR = MARKER_COLOURS["H⁺"]  # an unmarked particle's, and a proton's
 OTHER_MARKERS = ("#FF9F68", "#F784C5", "#9AD1FF", "#C3F26B", "#FFD166", "#C9A7FF")
 MAX_ZOOM = 3.0
+# A bundle written since Nov 4 sets no camera (Direction.camera): it follows the spotlight, this close from the whole
+# scene's framing (the brief asked the writer for 1.4 to 1.6), and pulls back after this many lines in a row on one
+# part, as the brief asked the writer to. On the 36 stored bundles, a close-up exactly when a part is spotlit is the
+# writer's own choice on 79% of lines; no simple rule tried came closer.
+CLOSE_ZOOM = 1.5
+CLOSE_LINES = 3
 FILL_S = 6.0  # seconds of particles arriving that fill a space from empty
 DRAIN_S = 10.0  # seconds of them leaving that would empty it
 # How full a space is before anything has arrived: half, so it reads as crowded from the start (a resting cell's
@@ -419,6 +427,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     heard: list[str] = []  # every structure named in this video so far, in order
     captions: list[str | None] = []
     opened: set[str] = set()  # scenes whose first line has played
+    close_on, close_run = None, 0  # the (scene, part) the camera follows the spotlight to, and for how many lines
 
     def gap(t0: float, t1: float, after: dict | None) -> None:
         scene = after["scene"] if after else opening
@@ -465,8 +474,14 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
                 heard.append(name)
 
         spotlight = _shown(direction.spotlight, scene_names, labels) if direction else None
-        target = _shown(direction.camera.target, scene_names, labels) if direction else None
-        zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target and direction else 1.0
+        if direction is not None and direction.camera is not None:  # the writer's own, in a bundle before Nov 4
+            target = _shown(direction.camera.target, scene_names, labels)
+            zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target else 1.0
+        else:  # in on the spotlit part, for at most CLOSE_LINES lines in a row on one part
+            close_run = close_run + 1 if spotlight and (scene, spotlight) == close_on else 1
+            close_on = (scene, spotlight)
+            target = spotlight if spotlight and close_run <= CLOSE_LINES else None
+            zoom = CLOSE_ZOOM if target else 1.0
         particles = []
         # The hook holds still: it is the learner's world as it is, and a dot travelling over it (round 20's sand
         # leaving a cliff, round 21's food going down a throat) read as a speck on the picture, not a lesson.
@@ -770,6 +785,8 @@ def _follow(beats: list[dict], hook: str) -> None:
             beat["camera"] = before["camera"]
             continue
         camera = beat["camera"]
+        if framed is None and before["camera"].target is not None and camera.target is None:
+            since = beat["t0"]  # back from the direction's close-up: the hold of the whole picture starts now
         if beat["scene"] != hook and camera.target is None and not beat["particles"]:
             named = beat["spotlight"] or next((n for n in beat.get("named", []) if n in beat["labels"]), None)
             held = beat["t0"] - since

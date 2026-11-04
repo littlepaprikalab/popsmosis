@@ -1071,22 +1071,32 @@ def _direct_choruses(data: dict) -> list[Problem]:
     """Every chorus directed as the first, so the refrain reads as one: a later chorus's line that sings a line of
     the first word for word (matched from the end, as the last chorus may open with lines of its own) takes its
     direction, all but its caption. The brief asked for it, and the five choruses of Nov 1 did; this makes it sure.
-    Before the lines are checked, so each is held to what is named by its own place in the song."""
+    Since Nov 4 the writer directs the first chorus alone, and a line it left undirected (Direction.held) takes the
+    direction of the same line where the writer did direct it, in whichever chorus, unrecorded: only a direction the
+    writer wrote differently is a problem. Before the lines are checked, so each is held to what is named by its own
+    place in the song."""
     lyrics, problems = data["lyrics"], []
     directions = {d["line_id"]: d for d in data["direction"]}
     spans = chorus_spans([line["section"] for line in lyrics])
+    alike: dict[int, list[int]] = {}  # a first chorus line, and the later ones that sing it word for word
     for span in spans[1:]:
         for i, j in zip(reversed(spans[0]), reversed(span)):
-            first, later = directions.get(lyrics[i]["id"]), directions.get(lyrics[j]["id"])
-            sung = {" ".join(fold(lyrics[k]["text"]).split()) for k in (i, j)}
-            if not first or not later or len(sung) > 1:
+            if len({" ".join(fold(lyrics[k]["text"]).split()) for k in (i, j)}) == 1:
+                alike.setdefault(i, [i]).append(j)
+    for i, group in alike.items():
+        sung = [d for d in (directions.get(lyrics[k]["id"]) for k in group) if d]
+        source = next((d for d in sung if not d.get("held")), None)  # the first chorus's, unless it holds
+        for later in sung if source else []:
+            copied = {**json.loads(json.dumps(source)), "line_id": later["line_id"], "caption": later.get("caption", "")}
+            if later is source or copied == later:
                 continue
-            copied = {**json.loads(json.dumps(first)), "line_id": later["line_id"], "caption": later["caption"]}
-            if copied != later:
-                later.clear()
-                later.update(copied)
+            held = later.get("held")
+            later.clear()
+            later.update(copied)
+            if not held:
+                which = "the first chorus's" if source["line_id"] == lyrics[i]["id"] else "the chorus's"
                 problems.append(Problem(line_id=later["line_id"], rule="motion", repaired=True,
-                                        detail=f"directed as {first['line_id']}, the first chorus's same line"))
+                                        detail=f"directed as {source['line_id']}, {which} same line"))
     return problems
 
 
@@ -1380,7 +1390,7 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
         problems.append(Problem(line_id=line_id, rule="spotlight", repaired=True,
                                 detail=f"spotlight {direction['spotlight']} {why}; no spotlight instead"))
         direction["spotlight"] = ""
-    target = direction["camera"]["target"]
+    target = (direction.get("camera") or {}).get("target")  # none since Nov 4: it follows the spotlight, held above
     if target and (why := misplaced(target)):
         problems.append(Problem(line_id=line_id, rule="camera", repaired=True,
                                 detail=f"camera on {target} {why}; whole scene instead"))

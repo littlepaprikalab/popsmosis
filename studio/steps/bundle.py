@@ -45,11 +45,11 @@ for the song alone: the schema has no `song_scenes`.
 The schema has no `music` and no `lyrics`. Where a rule above is written for the song's
 lines, apply it to the narration's sentences: plan the motion across the whole narration,
 build each pathway up one step a sentence as the narration teaches it, show the whole pathway
-on the sentences that sum it up, and keep captions to a few in the whole narration.
+on the sentences that sum it up.
 
 - Tag each narration sentence with the id of the fact it teaches, or "filler" for one that
   teaches nothing.
-- `direction` has one entry for every narration sentence, in the narration's order.
+- `direction` is for the narration's sentences alone, in the narration's order.
 - `key_lines` walk the `why_chain` through the narration, in its order, every link on at least
   one: `from_narration` is the sentence where the narrator starts on that step, never two on
   one sentence and none on the last. The first can ask the script's `question`. Write each

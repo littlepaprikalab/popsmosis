@@ -191,19 +191,26 @@ class Flow(Strict):
 class Direction(Strict):
     line_id: str = Field(description="The id of a lyric line or a narration sentence")
     scene: str
-    camera: Camera
+    # The camera, a glow and a caption were the writer's until Nov 4, and are kept for what was written before. The
+    # camera then aimed at the spotlit part on 97% of the close-ups in the 36 stored bundles, and a glow and a caption
+    # were on 2% of lines each, so the writer no longer writes them: with no camera (None) the timeline moves in on
+    # the spotlit part (studio/steps/timeline.py, _framed()).
+    camera: SkipJsonSchema[Camera | None] = None
     spotlight: str = Field(description='A structure name, or "" for none')
     particles: list[str] = Field(description="Structure names the particles travel between, in order; [] for none")
     carries: str = Field(description='What the particles are, as a textbook prints it ("H⁺", "e⁻", "O₂", "glucose"); '
                                      '"" for none')
     moves: Moves = Field(default_factory=str, description=MOVES)
     says: str = Field(default_factory=str, description=SAYS)
-    glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
-    caption: str = Field(description='Usually ""')
+    glow: SkipJsonSchema[str] = Field(default_factory=str)
+    caption: SkipJsonSchema[str] = Field(default_factory=str)
     # A second thing moving on the line at the same time, when it names both: what one structure gives off together
     # (H⁺ and O₂ from Photosystem II), or two ways at once (Na⁺ out, K⁺ in). [] in a bundle written before Oct 29.
     also: list[Flow] = Field(default_factory=list, description="A second thing moving on this line at the same time, "
                                                                "when the line names both; [] for none, at most one")
+    # True: the writer wrote no direction for the line, so it holds the picture of the line before it, whole, with
+    # nothing lit or moving (Bundle._held_lines). Never the writer's to write.
+    held: SkipJsonSchema[bool] = False
 
     def flows(self) -> list[Flow]:
         """Everything moving on the line, the main flow first; a flow with no path is left out."""
@@ -404,6 +411,44 @@ class Bundle(Strict):
             scene.update(song_only=True, stage_of="")
         return {**data, "scenes": [*scenes, *own], "song_scenes": []}
 
+    @model_validator(mode="before")
+    @classmethod
+    def _held_lines(cls, data):
+        """A line the writer wrote no direction for holds (Nov 4): it plays over the picture of the line before it in
+        its video, shown whole, with nothing lit or moving, as the video always played a line with none; marked `held`.
+        Lines before any direction take the first one's picture. Until Nov 4 a missing direction refused the bundle,
+        a whole bundle call again: a noise-cancelling headphones bundle came back with most lines undirected, and was
+        written again in the operator's session."""
+        if not isinstance(data, dict) or not isinstance(data.get("direction"), list):
+            return data
+        directions = [_plain(d) for d in data["direction"]]
+        streams = [[_plain(line) for line in data.get(key) or []] for key in ("lyrics", "narration")]
+        scenes = [_plain(s) for s in [*(data.get("scenes") or []), *(data.get("song_scenes") or [])]]
+        if not all(isinstance(x, dict) for x in [*directions, *scenes, *streams[0], *streams[1]]):
+            return data  # not what it should be: the validation says why
+        known = [s.get("id") for s in scenes]
+        written: dict = {}
+        for d in directions:
+            written.setdefault(d.get("line_id"), []).append(d)
+        if all(line.get("id") in written for stream in streams for line in stream):
+            return data
+        ordered, placed = [], set()
+        for stream in streams:
+            first = next((d["scene"] for line in stream for d in written.get(line.get("id"), [])[:1]
+                          if d.get("scene") in known), known[0] if known else "")
+            before = first
+            for line in stream:
+                line_id = line.get("id")
+                if line_id in written and line_id not in placed:
+                    ordered += written[line_id]
+                    placed.add(line_id)
+                    before = next((d["scene"] for d in written[line_id] if d.get("scene") in known), before)
+                elif line_id not in written:
+                    ordered.append({"line_id": line_id, "scene": before, "spotlight": "", "particles": [],
+                                    "carries": "", "held": True})
+        ordered += [d for d in directions if d.get("line_id") not in placed]  # for no line: refused below
+        return {**data, "direction": ordered}
+
     @model_validator(mode="after")
     def _consistent(self) -> Bundle:
         # The song is timed and sung from the lyrics' own sections (studio/steps/audio.py); music.sections
@@ -517,7 +562,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 
     line_ids = [line.id for line in bundle.lyrics] + [n.id for n in bundle.narration]
     directed = [d.line_id for d in bundle.direction]
-    missing = [i for i in line_ids if i not in directed]
+    missing = [i for i in line_ids if i not in directed]  # none once read: a line with none holds (_held_lines)
     extra = sorted({i for i in directed if i not in line_ids or directed.count(i) > 1})
     if missing:
         problems.append(f"no direction for {', '.join(missing)}")
