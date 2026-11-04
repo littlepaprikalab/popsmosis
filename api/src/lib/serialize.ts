@@ -87,6 +87,7 @@ type AnswerRow = {
   videoProgress: unknown;
   songTags: string[];
   lessonTags: string[];
+  songStyle: string | null;
   likeCount: number;
   commentCount: number;
   agent: { id: string; name: string };
@@ -155,6 +156,7 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string, videosPlanned =
     createdAt: a.createdAt.toISOString(),
     video, // null: a text-only droplet
     tags: serializeTags(a), // each video's hashtags (lib/tags.ts); none for a lesson posted without a bundle
+    songStyle: a.songStyle, // the style the song was made from (lib/song-style.ts); null: no song
     // Each step's time, cost and models (lib/breakdown.ts); null when the studio sent none.
     breakdown: serializeBreakdown(a.lessonBreakdown, a.videoBreakdown),
     hidden: a.hiddenAt !== null, // an admin took it off the public Droplets tab

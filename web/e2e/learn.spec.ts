@@ -520,10 +520,10 @@ test.describe('signed in', () => {
     await expect(card.locator('.badge-agent')).toHaveCount(2);
   });
 
-  test('a learner picks the song style in its own field: a chip fills it, the card shows it, and the teacher\'s claim carries it', async ({ page, context, request }) => {
+  test('a learner suggests the song style in its own field: a chip fills it, the claim carries it, and the card shows it beside the style the song was made from', async ({ page, context, request }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
-    const field = page.getByLabel('Song style (optional)');
+    const field = page.getByLabel('Suggest a song style (optional)');
     await expect(field).toHaveValue('');
     await expect(field).toHaveAttribute('placeholder', 'e.g. K-pop with rapped verses');
     const styles = page.getByTestId('style-picker');
@@ -531,25 +531,47 @@ test.describe('signed in', () => {
     await expect(page.getByTestId('style-note')).toContainText('the studio picks a style');
 
     await styles.getByRole('button', { name: 'K-pop' }).click();
-    await expect(field).toHaveValue('K-pop with rapped verses and a big sung chorus');
+    await expect(field).toHaveValue(/^K-pop hip-hop, moderate 94 BPM bounce; .* sharp verse-to-chorus transitions$/);
     await expect(styles.getByRole('button', { name: 'K-pop' })).toHaveAttribute('aria-pressed', 'true');
     await field.fill('K-pop with rapped verses, 120 bpm'); // still the learner's to change
     await expect(styles.getByRole('button', { name: 'K-pop' })).toHaveAttribute('aria-pressed', 'false');
+    // The owner's styles are written out whole, this one in 212 characters, and the API takes them.
+    const hipHopPop = 'Hip-hop pop, upbeat 100 bpm groove, confident female rap verses with a catchy sung chorus, punchy 808s and '
+      + 'bright synth hook, tight quantized drum programming with crisp kick-snare hits and precise vocal layering';
+    await styles.getByRole('button', { name: 'Hip-hop pop' }).click();
+    await expect(field).toHaveValue(hipHopPop);
+    await expect(styles.getByRole('button', { name: 'Hip-hop pop' })).toHaveAttribute('aria-pressed', 'true');
 
     const text = `E2E ${Date.now()}: how noise cancelling headphones work`;
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
-    await expect(card.getByTestId('request-style')).toContainText('K-pop with rapped verses, 120 bpm');
+    await expect(card.getByTestId('request-style')).toContainText(hipHopPop);
     await expect(field).toHaveValue(''); // sent, so the next topic starts with none
 
     // The studio reads the style from the claim (studio/run.py), never from the topic's words.
     const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
     const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
     const sent = own.data.find((q: { content: string }) => q.content === text);
-    expect(sent.songStyle).toBe('K-pop with rapped verses, 120 bpm');
-    const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim(sent.id);
-    expect((await claimed.json()).songStyle).toBe('K-pop with rapped verses, 120 bpm');
+    expect(sent.songStyle).toBe(hipHopPop);
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    const claimed = await bot.claim(sent.id);
+    expect((await claimed.json()).songStyle).toBe(hipHopPop);
+
+    // The teacher writes the song's own style from the suggestion, into the bundle; the card shows it under the videos.
+    const made = 'Hip-hop pop at an upbeat 100 bpm; a confident female voice raps the verses over punchy 808s, and a bright '
+      + 'synth hook lifts the sung chorus';
+    const posted = await bot.answer(sent.id, 'Headphones **cancel noise** with a wave that is its opposite.', {
+      bundle: { course: 'Physics', topic: 'noise cancelling headphones', music: { positive_styles: [`${made}.`], negative_styles: [] } },
+      factcheck: { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] },
+    });
+    expect(posted.status()).toBe(201);
+    const lesson = await (await request.get(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).json();
+    expect(lesson.answer.songStyle).toBe(made); // without its full stop
+    expect((await bot.video((await posted.json()).id, { status: 'RENDERING' })).status()).toBe(200);
+    await page.reload();
+    await expect(card.getByTestId('song-style')).toHaveText(`Song style: ${made}`);
+    await expect(card.getByTestId('request-style')).toHaveText(`Suggested style: ${hipHopPop}`);
   });
 
   test('an admin sends a topic to a brain of their own: the card and the teacher\'s claim say which, and the pick is remembered', async ({ page, context, request }) => {

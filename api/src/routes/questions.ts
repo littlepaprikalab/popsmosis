@@ -15,6 +15,7 @@ import { breakdownError } from '../lib/breakdown.js';
 import { checksError } from '../lib/review.js';
 import { progressError, storedProgress } from '../lib/progress.js';
 import { bundleTags } from '../lib/tags.js';
+import { bundleSongStyle } from '../lib/song-style.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { clearSoon, queueFileDeletion } from '../lib/storage-delete.js';
 import { parseBrain } from '../lib/brains.js';
@@ -23,7 +24,7 @@ import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritt
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
-export const SONG_STYLE_MAX_LENGTH = 200; // a style is a phrase: "K-pop with rapped verses, 110 bpm"
+export const SONG_STYLE_MAX_LENGTH = 400; // a style is a phrase or two; the learn page's longest chip is 296
 export const ANSWER_MAX_LENGTH = 5000;
 
 // Why a topic whose runs are used up was given up (lib/claim.ts), on its card: written by the queue's sweep, and by
@@ -509,9 +510,11 @@ export default async function questionRoutes(app: FastifyInstance) {
         const created = await tx.answer.create({
           data: {
             questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null,
-            // Each video's hashtags come with the bundle, and are kept on their own to be searched (lib/tags.ts).
+            // Each video's hashtags come with the bundle, and are kept on their own to be searched (lib/tags.ts), and
+            // so is the style the song was made from, for the lesson card (lib/song-style.ts).
             ...(bundle !== undefined && {
               bundle: bundle as Prisma.InputJsonObject, factcheck: factcheck as Prisma.InputJsonObject, ...bundleTags(bundle),
+              songStyle: bundleSongStyle(bundle),
             }),
             // What the code checks found in the bundle, for an admin's review (lib/review.ts); never shown to the learner.
             ...(checks !== undefined && { checks: checks as Prisma.InputJsonObject }),

@@ -398,6 +398,9 @@ export interface Answer {
   createdAt: string;
   video: Video | null; // null: a text-only droplet
   tags?: DropletTags; // each video's hashtags; absent from an API older than them
+  // The style the song was made from: the teacher writes it from the learner's suggestion, or from the studio's
+  // rotation when they left it empty. Null: no song; absent from an API older than this page.
+  songStyle?: string | null;
   breakdown: Breakdown | null; // null: the studio sent none (a lesson written by hand, or an older one)
   // How long it took from the request, by the API's clock; on a question's answer only, absent from an older API.
   endToEnd?: EndToEnd | null;
