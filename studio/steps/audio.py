@@ -109,20 +109,25 @@ OUTAGE = "the audio provider failed"
 TOOK_TOO_LONG = "the provider took too long"
 
 
-# A provider's account with too little credit left for what was asked: no try in the run gets past it, only a top-up.
-# Fixed words, shown on the droplet when the song is left out (studio/anneal.py, note()).
-NO_CREDIT = "the audio provider's account is out of credit"
-# Gemini would not sing the song's words (Blocked): fixed words, as NO_CREDIT.
-BLOCKED = "the music model would not sing these lyrics"
+# Fixed words, shown on the droplet when the song is left out (studio/anneal.py, note()): who refused, never what
+# the provider's answer said. An account with too little credit left for what was asked: no try in the run gets past
+# it, only a top-up.
+def no_credit(provider: str) -> str:
+    return f"the {provider} account is out of credit"
 
 
-def _code(status: int, body: bytes = b"") -> str | None:
-    """OUTAGE for a status a later try may not meet (busy, a server's fault); NO_CREDIT for an account out of credit
-    (ElevenLabs answers 401 quota_exceeded, or 402); else the plain code."""
+# Lyria's safety filter blocked the song's words (Blocked).
+BLOCKED = "Google's Lyria music model blocked these lyrics"
+ELEVENLABS = "ElevenLabs"
+
+
+def _code(status: int, body: bytes = b"", provider: str = ELEVENLABS) -> str | None:
+    """OUTAGE for a status a later try may not meet (busy, a server's fault); no_credit(provider) for an account out
+    of credit (ElevenLabs answers 401 quota_exceeded, or 402); else the plain code."""
     if status in (0, 408, 429) or status >= 500:
         return OUTAGE
     if status == 402 or b"quota_exceeded" in body:
-        return NO_CREDIT
+        return no_credit(provider)
     return None
 
 
@@ -319,10 +324,12 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
             # Why neither made it, in fixed words: an outage alone, so that a later try is still allowed for it.
             if again.code in (OUTAGE, TOOK_TOO_LONG):
                 code = again.code
+            elif again.code == no_credit(ELEVENLABS):
+                code = f"{e.code}, and the backup provider, {ELEVENLABS}, is out of credit"
             elif again.code == media.StepFailed.code:
-                code = e.code
+                code = f"{e.code}, and the backup provider, {ELEVENLABS}, could not make it either"
             else:
-                code = f"{e.code}, and {again.code}"
+                code = f"{e.code}, and the backup provider, {ELEVENLABS}, failed too: {again.code}"
             raise media.StepFailed(f"{e}, and Eleven Music could not make it instead: {again}", code=code) from again
         return f"elevenlabs, as {e}"
 
@@ -456,7 +463,8 @@ def _make_gemini_song(job: Path, bundle: Bundle) -> None:
     started = time.monotonic()
     status, headers, answer = _gemini(f"/models/{urllib.parse.quote(model, safe='')}:generateContent", body)
     if status != 200:
-        raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}", code=_code(status, answer))
+        raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}",
+                                 code=_code(status, answer, "Google Gemini"))
     audio, mime_type, said = read_gemini_song(answer)
     _log(job, "song", model, started, GEMINI_SONG_PRICES.get(model))  # a song came back: one song's price
     audio = as_mp3(audio, mime_type)
@@ -606,7 +614,7 @@ def _make_gemini_speech(job: Path, kind: str, lines: list[tuple[str, str]], text
     status, headers, answer = _gemini("/interactions", body)
     if status != 200:
         raise media.StepFailed(f"Gemini's text-to-speech refused the {kind}: {status} {_error(answer)}",
-                               code=_code(status))
+                               code=_code(status, answer, "Google Gemini"))
     audio, mime_type, said = read_gemini_speech(answer, kind)
     audio = as_mp3(audio, mime_type, kind)
     _log(job, kind, model, started, gemini_speech_cost(said.get("usage"), duration_of(audio)))

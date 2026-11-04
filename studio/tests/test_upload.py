@@ -539,10 +539,10 @@ def test_the_lesson_alone_uploads_and_reports_only_the_lesson_video(job, server)
 def test_a_song_left_out_says_why_with_ready(job, server):
     from studio import anneal
 
-    anneal.drop_song(job, "the song failed at audio (x)", "the audio provider's account is out of credit")
+    anneal.drop_song(job, "the song failed at audio (x)", "the ElevenLabs account is out of credit")
     upload.run(job, api=api_for(server))
     assert server.patches()[-1]["status"] == "READY"
-    assert server.patches()[-1]["error"] == "The song could not be made: the audio provider's account is out of credit."
+    assert server.patches()[-1]["error"] == "The song could not be made: the ElevenLabs account is out of credit."
 
 
 def test_an_api_from_before_ready_took_a_note_still_gets_ready_without_it(job, server):

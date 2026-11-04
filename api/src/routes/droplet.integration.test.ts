@@ -181,7 +181,7 @@ d('droplet endpoints', () => {
     const answerId = (await answer()).json().id;
     const lesson = 'https://media.popsmosis.com/a/out/lesson_h.mp4';
     expect((await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson, error: ' ' })).statusCode).toBe(400);
-    const note = 'The song could not be made: the audio provider’s account is out of credit.';
+    const note = 'The song could not be made: Google’s Lyria music model blocked these lyrics, and the backup provider, ElevenLabs, is out of credit.';
     const ready = await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson, error: note });
     expect(ready.json()).toMatchObject({ status: 'READY', songVideoUrl: null, lessonVideoUrl: lesson, error: note });
     const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();

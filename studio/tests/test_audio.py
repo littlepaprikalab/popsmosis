@@ -799,11 +799,12 @@ def test_a_song_blocked_and_then_refused_for_credit_says_both_in_fixed_words(job
     sing(job, "gemini")
     with pytest.raises(media.StepFailed) as failed:
         audio.run(job)
-    assert failed.value.code == f"{audio.BLOCKED}, and {audio.NO_CREDIT}"
+    assert failed.value.code == ("Google's Lyria music model blocked these lyrics, "
+                                 "and the backup provider, ElevenLabs, is out of credit")
 
 
 def test_an_account_out_of_credit_has_its_own_code_and_an_outage_stays_an_outage():
-    assert audio._code(401, b'{"detail":{"code":"quota_exceeded"}}') == audio.NO_CREDIT
-    assert audio._code(402) == audio.NO_CREDIT
+    assert audio._code(401, b'{"detail":{"code":"quota_exceeded"}}') == "the ElevenLabs account is out of credit"
+    assert audio._code(402, provider="Google Gemini") == "the Google Gemini account is out of credit"
     assert audio._code(401, b'{"detail":"invalid api key"}') is None
     assert audio._code(503, b"quota_exceeded") == audio.OUTAGE
