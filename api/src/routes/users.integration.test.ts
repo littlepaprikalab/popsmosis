@@ -3,7 +3,8 @@
  *
  * Covers: admins first, then newest first; pages by cursor that neither skip nor repeat a user, across the step from
  * admins to users and across users who joined at the same instant; a search pages the same way; the last page says
- * so; adminCount counts every admin whatever the search; a malformed cursor is the first page, not a 500.
+ * so; adminCount counts every admin whatever the search; a malformed cursor is the first page, not a 500; and the
+ * order the route takes the roles in is the order Postgres sorts them in.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -106,6 +107,21 @@ d('admin users list', () => {
     expect(emails((await walk({ limit: '3' })).flatMap((p) => p.data))).toEqual(emails(expected));
   });
 
+  it('neither repeats nor skips anyone when someone signs up between two pages', async () => {
+    // With page numbers, a sign-up pushes everyone down one place and the next page repeats a user. A cursor
+    // carries on from the last user shown, and the newcomer, newest of all, waits for the next first page.
+    const first = (await list('limit=4')).body;
+    await prisma.user.create({ data: { email: 'new@pop.test', googleId: 'g-new', name: 'new' } });
+    const rest = [];
+    for (let cursor = first.nextCursor; cursor;) {
+      const page = (await list(`limit=4&cursor=${cursor}`)).body;
+      rest.push(...page.data);
+      cursor = page.nextCursor;
+    }
+    expect(emails([...first.data, ...rest])).toEqual(emails(expected));
+    expect(emails((await list('limit=50')).body.data)).toContain('new@pop.test');
+  });
+
   it('pages a search the same way, and counts every admin whatever the search', async () => {
     // "a" is in ada, abe, amy, cal, fay and hal, in their names and their emails: three admins, then three users.
     const matches = expected.filter((u) => u.email.split('@')[0].includes('a'));
@@ -120,6 +136,16 @@ d('admin users list', () => {
     expect(one.body.nextCursor).toBeNull();
 
     expect((await list('q=nobody')).body).toEqual({ data: [], nextCursor: null, adminCount: 3 });
+  });
+
+  it('takes the roles in the order Postgres sorts them in', async () => {
+    // The route sorts role DESC in SQL, which follows the enum's order in the database, and its cursor walks the
+    // roles in the generated client's order, reversed. The two agree while a new role is added at the end of the
+    // enum in schema.prisma. One added in the middle would differ (Postgres appends a new value at the end) and
+    // pages would skip or repeat a role's users.
+    const { UserRole } = await import('../generated/prisma/enums.js');
+    const rows = await prisma.$queryRaw<{ role: string }[]>`SELECT unnest(enum_range(NULL::"UserRole"))::text AS role`;
+    expect(rows.map((r) => r.role)).toEqual(Object.values(UserRole));
   });
 
   it('reads a malformed cursor as the first page, and is for admins only', async () => {

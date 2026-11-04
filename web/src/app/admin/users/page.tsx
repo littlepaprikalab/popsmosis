@@ -44,8 +44,9 @@ export default function AdminUsersPage() {
       const res = await api.listUsers(query || undefined);
       if (search !== searches.current) return;
       setUsers(res.data);
-      setCursor(res.nextCursor);
-      setAdminCount(res.adminCount);
+      setCursor(res.nextCursor ?? null);
+      // The web app can go live before the API that sends adminCount: then count the admins loaded, as it did before.
+      setAdminCount(res.adminCount ?? res.data.filter((u) => u.role === 'ADMIN').length);
       setShown(query);
     } catch (err) {
       if (search !== searches.current) return;
@@ -66,8 +67,8 @@ export default function AdminUsersPage() {
         const seen = new Set(prev.map((u) => u.id));
         return [...prev, ...res.data.filter((u) => !seen.has(u.id))];
       });
-      setCursor(res.nextCursor);
-      setAdminCount(res.adminCount);
+      setCursor(res.nextCursor ?? null);
+      if (res.adminCount !== undefined) setAdminCount(res.adminCount);
     } catch (err) {
       if (search === searches.current) showToast(err instanceof Error ? err.message : 'Failed to load more users', 'error');
     } finally {
