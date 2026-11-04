@@ -91,16 +91,36 @@ function isArmed(q: Question, now = Date.now()): boolean {
 }
 
 /**
+ * A song style on a card, folded to its label until it is asked for: written out whole, one runs to a few lines.
+ * The click stays here, as the request's line sits in the card's header, where a click folds the card.
+ */
+function StyleLine({ label, style, className, testId }: { label: string; style?: string | null; className: string; testId: string }) {
+  const [open, setOpen] = useState(false);
+  if (!style) return null;
+  return (
+    <div className={`text-[10px] ${className}`} style={{ color: 'var(--text-muted)' }} data-testid={testId}>
+      <button type="button" onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} aria-expanded={open}
+        className="group/style inline-flex items-center gap-2 select-none" data-testid={`${testId}-toggle`}>
+        <span className="inline-flex items-center gap-1 uppercase tracking-wider">
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+            className={`shrink-0 transition-transform duration-200 ${open ? '' : '-rotate-90'}`}>
+            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {label}
+        </span>
+        <span className="underline underline-offset-2 group-hover/style:text-[var(--text-hover)]">{open ? 'hide' : 'show'}</span>
+      </button>
+      {open && <p className="mt-1 tracking-wider break-words" data-testid={`${testId}-text`}>{style}</p>}
+    </div>
+  );
+}
+
+/**
  * The style the song was made from, which the teacher wrote from the learner's suggestion (or from the studio's
  * rotation): known once the lesson is posted, before the song is made.
  */
 function SongStyle({ style }: { style?: string | null }) {
-  if (!style) return null;
-  return (
-    <p className="mt-2 text-[10px] uppercase tracking-wider break-words" style={{ color: 'var(--text-muted)' }} data-testid="song-style">
-      Song style: <span className="normal-case">{style}</span>
-    </p>
-  );
+  return <StyleLine label="Song style" style={style} className="mt-2" testId="song-style" />;
 }
 
 /** Whether a re-fetched card differs from the one on screen in anything a card shows. */
@@ -404,11 +424,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
               The learner took this request back. Their words, files and follow-ups are deleted; the lesson stays.
             </p>
           )}
-          {q.user && q.songStyle && (
-            <p className="mt-1.5 text-[10px] uppercase tracking-wider break-words" style={{ color: 'var(--text-muted)' }} data-testid="request-style">
-              Suggested style: <span className="normal-case">{q.songStyle}</span>
-            </p>
-          )}
+          {q.user && <StyleLine label="Suggested style" style={q.songStyle} className="mt-1.5" testId="request-style" />}
           {/* On a line of its own: the header row is full on a phone. */}
           {brain && (
             <p className="mt-1.5 text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>

@@ -546,7 +546,18 @@ test.describe('signed in', () => {
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
-    await expect(card.getByTestId('request-style')).toContainText(hipHopPop);
+    // Folded to its label until asked for: written out whole, a style runs to a few lines.
+    const asked = card.getByTestId('request-style');
+    await expect(asked.getByTestId('request-style-toggle')).toHaveText('Suggested style show');
+    await expect(asked.getByTestId('request-style-toggle')).toHaveAttribute('aria-expanded', 'false');
+    await expect(asked.getByTestId('request-style-text')).toHaveCount(0);
+    const fold = card.getByRole('button', { name: /^(Collapse|Expand) card$/ }).first();
+    const folded = (await fold.getAttribute('aria-expanded'))!;
+    await asked.getByTestId('request-style-toggle').click();
+    await expect(asked.getByTestId('request-style-text')).toHaveText(hipHopPop);
+    await expect(fold).toHaveAttribute('aria-expanded', folded); // in the card's header, the click opened only the style
+    await asked.getByTestId('request-style-toggle').click();
+    await expect(asked.getByTestId('request-style-text')).toHaveCount(0);
     await expect(field).toHaveValue(''); // sent, so the next topic starts with none
 
     // The studio reads the style from the claim (studio/run.py), never from the topic's words.
@@ -570,8 +581,13 @@ test.describe('signed in', () => {
     expect(lesson.answer.songStyle).toBe(made); // without its full stop
     expect((await bot.video((await posted.json()).id, { status: 'RENDERING' })).status()).toBe(200);
     await page.reload();
-    await expect(card.getByTestId('song-style')).toHaveText(`Song style: ${made}`);
-    await expect(card.getByTestId('request-style')).toHaveText(`Suggested style: ${hipHopPop}`);
+    const songStyle = card.getByTestId('song-style');
+    await expect(songStyle.getByTestId('song-style-text')).toHaveCount(0); // folded after a reload, too
+    await songStyle.getByTestId('song-style-toggle').click();
+    await expect(songStyle.getByTestId('song-style-text')).toHaveText(made);
+    await expect(songStyle.getByTestId('song-style-toggle')).toHaveAttribute('aria-expanded', 'true');
+    await card.getByTestId('request-style-toggle').click();
+    await expect(card.getByTestId('request-style-text')).toHaveText(hipHopPop);
   });
 
   test('an admin sends a topic to a brain of their own: the card and the teacher\'s claim say which, and the pick is remembered', async ({ page, context, request }) => {
