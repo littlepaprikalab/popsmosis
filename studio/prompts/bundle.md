@@ -170,12 +170,29 @@ one diagram:
   figure for several people.
 - For a younger audience, two or three structures a scene, the finer parts left out.
 
-`image_prompt` asks an illustrator for a standard textbook diagram, in a few plain
-sentences. The illustrator draws best the diagrams it already knows:
+`look`: how the hook and every scene that is not a diagram are painted, one look for the
+whole droplet. Take it from the topic's own world, the way an art director would: a kind of
+picture its time and place, or the world it is about, is known for ("a 1930s national-park
+travel-poster illustration" for erosion, "a 1950s diner-menu illustration" for nutrition).
+The hook is set in the learner's world today, so the look must suit a scene of today too: a
+poster, a print, a mural, a label, never a fresco or an old master's painting, which dresses
+today's people in the past and whose faded colours lose the parts. A general style that
+would suit any topic (flat vector, gouache, watercolour) is the last choice. A medium and a
+feel an illustrator knows, in a few words ending in
+"illustration". Code adds it to each of those scenes with bright, even light and each part in its own colour,
+since the video finds each part by its colour: never sepia, black and white, monochrome,
+noir, an engraving, charcoal, silhouettes, a photograph or dark, moody light, which code
+strikes, and never an artist, a studio or a book.
 
-- Open with "Educational textbook illustration of" the subject and its style: "clean
-  scientific style" for a science scene, "clean textbook style" for anything else
-  (history, literature, economics, every hook). Then say what it shows and how
+`image_prompt` asks an illustrator for the picture in a few plain sentences: a diagram as a
+textbook draws it, a scene as an illustrator paints it. The illustrator draws best the
+pictures it already knows:
+
+- Open with the kind of picture, its subject and its style. A diagram: "Educational
+  textbook illustration of" the subject, "clean scientific style" for a science scene and
+  "clean textbook style" for a graph or chart in any subject. A scene of people, places or
+  everyday things (every hook; history, literature, a story, a market): "Illustration of"
+  the subject and no style, which code adds from `look`. Then say what it shows and how
   it is oriented: "Educational textbook illustration of a thylakoid membrane in
   cross-section, clean scientific style: the membrane across the middle, the stroma above,
   the lumen below, four protein complexes passing through it..." Never name a textbook, a
@@ -212,7 +229,8 @@ sentences. The illustrator draws best the diagrams it already knows:
   - anatomy: "a softly shaded medical textbook illustration."
   - astronomy, Earth science, physics or chemistry: "a clean textbook schematic, each
     object simplified but recognisable."
-  - an everyday hook: "a friendly textbook illustration of the real thing."
+  - a scene of people, places or everyday things, the hook among them: nothing; code ends
+    it with `look`.
 - Name the real things, never their shapes ("Earth's northern hemisphere", not "a blue
   dome"). Place things with plain words (left, right, above, below, inside, through, tilted
   toward), each said once, never a relation such as "at right angles to".

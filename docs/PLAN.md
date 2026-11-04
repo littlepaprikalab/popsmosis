@@ -421,7 +421,9 @@ labels were worth keeping even where one was wrong.) The picture is a still stag
 says where everything is and which way it faces, never what it does, and the video draws
 every flow as moving dots (round 8: the same layouts without their actions came back
 clean, [test-rounds.md](test-rounds.md)). The kind of diagram is the scene's: a cell biology figure in the Campbell/OpenStax manner, an
-astronomy schematic as its textbooks draw one. (One OpenStax/Campbell style for every
+astronomy schematic as its textbooks draw one. A scene that is no diagram (the hook, a history, a story) is painted
+in the droplet's look, the writer's pick for its topic, which code adds with bright, even light and each part in its
+own colour (Nov 3: 22 of 23 parts located, against 16 of 23 with the textbook wording). (One OpenStax/Campbell style for every
 subject, hex colours and a list of shapes were right once in 6 on the seasons scenes; the
 plain request 8 in 12: [test-rounds.md](test-rounds.md).) Disable Muse Image's web search and shell
 (`tool_enablement`); turning them on made no difference. Keep
@@ -896,9 +898,11 @@ video in under 5 minutes per layout.
 
 ## 8. Quality rules (also the QA checklist)
 
-- One style: a modern textbook illustration (soft gradients, semi-realistic parts, colour
-  coding), the SVG art's graphs in the house look, on paper as a textbook's are. Never anime, personified characters,
-  clip-art, 3D molecule renders, mixed styles, or slide-style text cards.
+- Two looks a droplet: its diagrams a modern textbook illustration (soft gradients, semi-realistic parts, colour
+  coding), the SVG art's graphs in the house look, on paper as a textbook's are; its hook and every scene of people,
+  places or things in one look the writer picks for the topic (`Bundle.look`, the owner's choice on Nov 4), always
+  bright and evenly lit with each part in its own colour (`art.looked()`). Never anime, personified characters,
+  clip-art, 3D molecule renders, sepia, noir or dark light, a third style, or slide-style text cards.
 - A painted picture carries its own labels, a wrong one flagged on it; the renderer draws every other text,
   and every label on a drawing.
 - A fixed colour per structure across all scenes and both videos.

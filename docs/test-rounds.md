@@ -2103,6 +2103,159 @@ but two kept them all), and the colours' "never near black" against the script's
 Nothing in the brief changed on this round: the only cuts it found overlapped, and another session is reworking the
 picture descriptions' rules.
 
+## Nov 3: hooks and story scenes asked for as editorial illustrations
+
+Every `image_prompt` opened "Educational textbook illustration of" and every hook ended "a friendly textbook
+illustration of the real thing", so hooks and history, literature and story scenes came out as flat textbook
+figures. The brief was changed: a diagram (a science scene, a graph) keeps the textbook opener; a scene of people,
+places or everyday things opens "Editorial illustration of ..., painterly style" and ends "a rich editorial
+illustration: painterly, cinematic light, real depth, the things the lesson names clear in front."
+
+- **The writer follows it.** A subagent writer on four topics (French Revolution, dramatic irony, light reactions,
+  supply and demand) used the new opener on all 13 hooks and story scenes and kept the textbook one on all 9
+  diagrams (4 thylakoid scenes, 5 supply-and-demand graphs).
+- **Painted both ways.** Six scenes (three hooks, three story scenes) on Gemini 3.1 Flash Image, one picture per
+  wording, the same words but for the opener and the look line ($0.82). A blind Opus judge, A and B at random:
+
+| Scene | Preferred | Old: appeal / clarity / correct | New: appeal / clarity / correct |
+|---|---|---|---|
+| Romeo and Juliet hook | new | 4 / 3 / 2 | 4 / 4 / 3 |
+| French Revolution hook | new | 2 / 5 / 4 | 5 / 4 / 4 |
+| Light reactions hook | old | 3 / 5 / 4 | 4 / 3 / 3 |
+| Three estates | old | 3 / 4 / 3 | 4 / 2 / 2 |
+| Bastille | old | 4 / 4 / 4 | 4 / 4 / 2 |
+| Capulet tomb | new | 2 / 3 / 1 | 5 / 4 / 4 |
+| Mean | 3 of 6 | 3.0 / 4.0 / 3.0 | 4.3 / 3.5 / 3.0 |
+
+- **Better looking, less clear.** The new pictures were richer and moodier; the old ones bland and clip-art-like.
+  But the new ones lost colour coding in crowds (the three estates' clergy and nobles in mixed costume colours) and
+  in dim light (the pondweed's red oxygen bubbles came back silver), and the bakery gained figures no one asked for.
+- **One look for another.** Every new picture came out the same: dark, warm, painterly, lit by a candle or a lamp.
+  "Editorial ... cinematic light" fixes a style as "textbook" did.
+- **Label slips in both**, one picture each, likely the painter's noise: the old tomb labelled Juliet twice and
+  Romeo not at all; the new Bastille added "Storming of Iuly 1789". Both Romeo and Juliet hooks wrote "PLAY SCRIPT"
+  on the book, though a hook asks for no writing.
+
+**The fix: bright light, each part in its own colour.** The look line became "a rich editorial illustration:
+painterly, bright and evenly lit with no deep shadows, real depth, each thing the lesson names painted solidly in
+its own colour, clear in front." The same six scenes, repainted ($0.41), came back as bright as the old ones with
+the colours back (purple clergy, red nobles, a green girl on a blue screen, red bubbles) and no "PLAY SCRIPT". Blind
+beside the old wording (a new Opus judge): each preferred 3 times in 6 again, but the fix scored higher on all three
+(appeal 4.5 vs 3.7, clarity 4.2 vs 3.8, correct 3.7 vs 3.2). Its slips: "Nobles" labelled twice, a few red bubbles
+on the leaves above the water, the Bastille's labels white on black and the picture flatter.
+
+**Segmentation, run for real** (locate.find_all: SAM 3.1 on the Meta key, $0.22; the helper's boxes and label
+checks answered by subagents, the repair step left out), old wording against the fix:
+
+| Scene | Old: found | Fix: found |
+|---|---|---|
+| Romeo and Juliet hook | 4 of 5 (no Danger) | 5 of 5 |
+| French Revolution hook | 2 of 2 | 2 of 2 |
+| Light reactions hook | 3 of 4 (no Oxygen) | 4 of 4 |
+| Three estates | 3 of 4 (no Third Estate) | 3 of 4 (no Third Estate) |
+| Bastille | 4 of 4 | 4 of 4 |
+| Capulet tomb | 0 of 4 | 1 of 4 |
+| All | 16 of 23, 9 by SAM's first words | 19 of 23, 14 by SAM's first words |
+
+Every part found was on the right thing, in both. The fix needed the helper's box 5 times, the old wording 7. The
+tomb fails the locate step either way (fewer than half found): its setting ("Capulet tomb") is the whole picture and
+the edge colour, so it reads as background, and Romeo's dark blue is lost in it. The first try's dark pictures were
+not segmented; the colour count on them (locate.Colours) had the clergy's purple at 0.3% of the picture against 6.4%
+in the old one, and three of the three estates' four parts at risk.
+
+The wording stays as fixed. Still one look for every droplet, as "textbook" was.
+
+**The writer picks the look** (`Bundle.look`, the owner's choice). A scene that is not a diagram opens "Illustration
+of" with no style; at paint time code makes it "A <look> of ..." and ends it with "<look>: bright and evenly lit
+with no deep shadows, real depth, each thing the lesson names painted solidly in its own colour, clear in front"
+(`art.looked()`), striking from the look what takes colour or light away (sepia, noir, engraving, dark, cinematic,
+"in the style of ..."). Six subagent writers, free: every one used the form on every scene and kept the textbook
+look on every diagram. Their looks fit their topics but fell in two families, the first of them the brief's own
+example's medium:
+
+| Topic | Look |
+|---|---|
+| French Revolution | a vivid painterly gouache history illustration |
+| Romeo and Juliet | a warm, vivid gouache theatre-poster illustration |
+| Supply and demand | a cheerful, chunky flat-colour vector illustration |
+| Spanish subjunctive | a warm, sunny flat-colour editorial illustration |
+| Classical conditioning | a warm, friendly flat vector illustration |
+| Light reactions | a bright, sun-washed flat vector illustration |
+
+The same six scenes, painted in their topics' looks ($0.41) and segmented ($0.08):
+
+| | Old wording | Fixed editorial look | Writer's look |
+|---|---|---|---|
+| Parts found | 16 of 23 | 19 of 23 | 22 of 23 |
+| By SAM's first words | 9 | 14 | 18 |
+| In the helper's box | 7 | 5 | 4 |
+
+Every part found was on the right thing; the tomb passed for the first time (the helper boxed the slab, not the
+vault). Blind beside the fixed look, the judge preferred the writer's look 2 times in 6 (appeal 3.8 vs 4.2, clarity
+4.0 vs 4.2, correct 3.2 vs 3.5): it liked the flat-vector pondweed's bubbles in the water and the gouache three
+estates' green Third Estate, and marked down an Eiffel Tower behind the 1789 Bastille, modern banknotes on the tax
+table, the tomb's missing "Romeo" label and made-up writing on the hook's posters. One picture each, so the scores
+are close to noise; the segmentation gain held on four scenes of six and was lost on none.
+
+The owner chose the writer's look (Nov 4), from the four versions side by side.
+
+**The look from the topic's own world** (Nov 4). The brief dropped its gouache example and asks for the art of the
+topic's time and place, or of the world it is about, with examples from no scorecard topic ("an Ancient Egyptian
+wall-painting illustration" for the pyramids, "a 1930s national-park travel-poster illustration" for erosion), a
+general style last. Six subagent writers on the same topics, the bundle call alone (their scripts kept):
+
+| Topic | Before (general style) | After (the topic's own world) |
+|---|---|---|
+| French Revolution | vivid painterly gouache history | bright 1780s French neoclassical history-painting |
+| Romeo and Juliet | warm, vivid gouache theatre-poster | Italian Renaissance fresco |
+| Supply and demand | cheerful, chunky flat-colour vector | bright 1930s fruit-crate-label |
+| Spanish subjunctive | warm, sunny flat-colour editorial | vibrant Latin American street-mural |
+| Classical conditioning | warm, friendly flat vector | 1920s lithographed science-poster |
+| Light reactions | bright, sun-washed flat vector | bright 1930s fruit-crate-label lithograph |
+
+Five families in place of two, every scene still in the form. Two picks are the same fruit-crate label (both hooks
+are fruit: a market's strawberries, an apple tree), and three name a decade as the brief's second example does.
+
+Painted in the new looks (the same six scenes and words; $0.41) and segmented ($0.11):
+
+| | Old wording | Writer: general style | Writer: topic's own world |
+|---|---|---|---|
+| Parts found | 16 of 23 | 22 of 23 | 20 of 23 |
+| By SAM's first words | 9 | 18 | 12 |
+| In the helper's box | 7 | 4 | 8 |
+
+The neoclassical history painting (the French Revolution's three scenes) and the fruit-crate label (the pondweed)
+lost nothing: 14 of 14. The Renaissance fresco lost what was lost: its colours came back pale, the tomb found 2 of 4,
+and on the Romeo and Juliet hook the period look turned the modern teenager watching a horror film into a Renaissance
+youth in front of a flat-screen television. Blind beside the general styles (Opus judge), the topic's own world was
+preferred 2 times in 6 (appeal 3.5 vs 4.0, clarity 3.8 vs 4.2, correct 3.2 vs 3.5). The judge was told a hook is the
+learner's world today, which marked down the 1789 bakery the scene itself asks for. A period look fits the story
+scenes but leaks into a hook set today, and a faded medium loses parts.
+
+**A look that suits a hook set today** (Nov 4, the owner's choice). The brief asks for a kind of picture the topic's
+world is known for that suits a scene of today too ("a poster, a print, a mural, a label, never a fresco or an old
+master's painting"), with poster and menu examples; code strikes fresco, tempera, pastel and old masters. Six writers
+again:
+
+| Topic | Look |
+|---|---|
+| French Revolution | a bright, stencil-coloured French popular-print illustration |
+| Romeo and Juliet | a bold screen-printed Shakespeare-festival theater-poster illustration |
+| Supply and demand | a bold vintage fruit-crate-label illustration |
+| Spanish subjunctive | a vibrant Latin American street-mural illustration |
+| Classical conditioning | a bright 1950s magazine-advertisement illustration |
+| Light reactions | a vivid 1940s apple-crate label illustration |
+
+Painted ($0.41) and segmented ($0.07): **23 of 23 parts found, 20 by SAM's first words**, every one on the right thing,
+the best of every version (old wording 16, fixed editorial 19, general styles 22, the topic's world 20). Blind beside
+the general styles, the judge now told what each scene asks for, each was preferred 3 times in 6 (appeal 4.2 vs 4.3,
+clarity 4.2 both, correct 3.3 both). The three estates came back in the cleanest colour coding yet (solid purple, red
+and green), and no period dress reached a modern hook. Its slips: "HAMLET" on the Romeo and Juliet hook's book, the
+Bastille labelled twice, a plain bakery. The crate label came twice again, for the two fruit hooks.
+
+The writer's look that suits a hook set today is kept. In all, six versions of the six scenes cost $2.95 ($2.46 of
+pictures, $0.49 of SAM); every Claude call was answered in the session.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

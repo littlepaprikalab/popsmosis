@@ -30,7 +30,7 @@ def test_schema_uses_only_what_both_providers_accept(model):
 def test_bundle_fields_are_in_the_order_the_model_writes_them():
     assert list(strict_schema(Bundle)["properties"]) == [
         "course", "topic", "audience", "core_idea", "why_chain", "key_terms", "facts", "misconception",
-        "scenes", "lesson_markdown", "music", "lyrics", "song_scenes", "narration", "direction", "builds_up", "spins",
+        "look", "scenes", "lesson_markdown", "music", "lyrics", "song_scenes", "narration", "direction", "builds_up", "spins",
         "blocks", "conversions", "meanings", "key_lines", "tags",
     ]
     facts = strict_schema(Bundle)["properties"]["facts"]["items"]

@@ -816,6 +816,40 @@ def test_a_biology_picture_is_asked_for_in_campbell_biologys_style():
         f"Label nothing else. {art.NO_SLIDE}")  # still read as a science scene
 
 
+def test_the_hook_and_a_story_scene_are_painted_in_the_droplets_look_with_light_and_colours_kept():
+    # Nov 3: the writer picks a look for the topic; code adds it, with the bright light and solid colours the locate
+    # step finds parts by, to every scene that is not a diagram.
+    bundle = Bundle.model_validate(bundle_data()).model_copy(update={"look": "a bold gouache poster illustration"})
+    hook = bundle.scenes[0].model_copy(update={"image_prompt": "Illustration of a bakery counter: a loaf [[Thylakoid]]."})
+    prompt = art.paint_prompt(bundle, hook)
+    assert prompt.startswith("A bold gouache poster illustration of a bakery counter: a loaf (green).")
+    assert f"A bold gouache poster illustration: {art.LOOK_LIGHT}." in prompt and prompt.endswith(art.NO_LABELS)
+    diagram = bundle.scenes[1].model_copy(update={"image_prompt": TAGGED})
+    graph = bundle.scenes[1].model_copy(update={"image_prompt": "Educational textbook illustration of a supply and "
+                                                                "demand graph, clean textbook style: two lines."})
+    for scene in (diagram, graph):  # a diagram keeps the textbook look
+        assert "gouache" not in art.paint_prompt(bundle, scene)
+        assert art.key(bundle, scene) == art.key(bundle.model_copy(update={"look": ""}), scene)
+    assert art.key(bundle, hook) != art.key(bundle.model_copy(update={"look": "a soft watercolour"}), hook)
+    assert art.key(bundle.model_copy(update={"look": ""}), hook) == art.key(Bundle.model_validate(bundle_data()), hook)
+    plain = Bundle.model_validate(bundle_data())  # a bundle from before Nov 3 has no look: as written
+    assert art.looked(plain, hook, "Illustration of a bakery.") == "Illustration of a bakery."
+
+
+@pytest.mark.parametrize("look, kept", [
+    ("a soft storybook watercolour illustration", "soft storybook watercolour illustration"),
+    ("vivid paper-cut collage", "vivid paper-cut collage illustration"),
+    ("An aged sepia engraving, dark and moody", ""),
+    ("a dramatic, cinematic oil painting in the style of Jacques-Louis David", "oil painting illustration"),
+    ("black and white charcoal illustration", ""),
+    ("an Italian Renaissance fresco illustration", "Italian Renaissance illustration"),  # Nov 4: pale, parts lost
+    ("soft pastel old-master illustration", "soft illustration"),
+    ("", ""),
+])
+def test_a_look_loses_what_takes_the_colour_or_the_light_away(look, kept):
+    assert art.droplet_look(Bundle.model_validate(bundle_data()).model_copy(update={"look": look})) == kept
+
+
 TAGGED = ("Educational textbook illustration of a thylakoid membrane, clean scientific style: the membrane "
           "[[thylakoid]] across the middle, one protein complex [[Cytochrome b6f]] passing through it.")
 
