@@ -378,11 +378,11 @@ def delivery(styles: list[str]) -> str:
 
 # Every Lyria song is asked to sing its lines as written (the owner, Nov 4): Nov 4's Silk Road song sang a chorus line
 # three times and skipped a bridge line, and the karaoke could not follow it. The line asks for the lines alone, once
-# each, in order, and nothing of how the words are sung: until round 17 the prompt asked for every word exactly as
+# each, in order, and nothing of how the words are sung (not "don't add words": an "oh" on a held note is singing,
+# and a whole line sung again is what threw the karaoke off): until round 17 the prompt asked for every word exactly as
 # written with no ad-libs, among asks for diction, and the songs came back recited. Step 6 checks it (a line Whisper
 # hears skipped fails the song).
-AS_WRITTEN = ("Sing each lyric line exactly once, in the order written: repeat a line only where the lyrics write it "
-              "again, and leave none out.")
+AS_WRITTEN = "Sing each line once, in order: skip none, and add no lines."
 
 
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
