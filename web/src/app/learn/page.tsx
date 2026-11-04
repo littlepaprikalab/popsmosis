@@ -581,6 +581,9 @@ function LearnContent() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasNew, setHasNew] = useState(false);
+  // Which list the page shows: one more each time it starts on a new one (My Topics pressed, a sign-in or a
+  // sign-out). A page that comes back for an older one is dropped, never added under the new one's name.
+  const listRef = useRef(0);
   const [agentLastSeenAt, setAgentLastSeenAt] = useState<string | null | undefined>(undefined);
   const [newQuestion, setNewQuestion] = useState('');
   // The song style for the next topic, in the learner's words; empty: the studio's rotation picks one.
@@ -612,21 +615,25 @@ function LearnContent() {
   }, [router]);
 
   const load = useCallback(async () => {
+    const list = ++listRef.current;
     setLoading(true);
+    setLoadingMore(false); // a next page still on its way is the old list's, and is dropped
     setHasNew(false);
     latestSeenRef.current = null;
     try {
       const params: Record<string, string> = { limit: String(PAGE_SIZE) };
       if (mine) params.mine = 'true';
       const [res, status] = await Promise.all([api.listQuestions(params), api.getStatus(mine).catch(() => null)]);
+      if (list !== listRef.current) return;
       setQuestions(res.data);
       setCursor(res.nextCursor);
       latestSeenRef.current = latestTimestamp(res.data);
       if (status) setAgentLastSeenAt(status.agentLastSeenAt);
     } catch (err) {
+      if (list !== listRef.current) return;
       showToast(err instanceof Error ? err.message : 'Failed to load topics', 'error');
     } finally {
-      setLoading(false);
+      if (list === listRef.current) setLoading(false);
     }
   }, [mine, showToast]);
 
@@ -634,6 +641,7 @@ function LearnContent() {
     if (authLoading) return;
     if (!user) {
       // Signed out, or just logged out: nothing of a signed-in list stays behind to show, page or poll.
+      listRef.current++;
       setQuestions([]);
       setCursor(null);
       setHasNew(false);
@@ -760,17 +768,22 @@ function LearnContent() {
 
   const loadMore = useCallback(async () => {
     if (!cursor || loadingMore) return;
+    const list = listRef.current;
     setLoadingMore(true);
     try {
       const params: Record<string, string> = { limit: String(PAGE_SIZE), cursor };
       if (mine) params.mine = 'true';
       const res = await api.listQuestions(params);
-      setQuestions((prev) => [...prev, ...res.data]);
+      if (list !== listRef.current) return;
+      setQuestions((prev) => {
+        const seen = new Set(prev.map((q) => q.id));
+        return [...prev, ...res.data.filter((q) => !seen.has(q.id))];
+      });
       setCursor(res.nextCursor);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to load more', 'error');
+      if (list === listRef.current) showToast(err instanceof Error ? err.message : 'Failed to load more', 'error');
     } finally {
-      setLoadingMore(false);
+      if (list === listRef.current) setLoadingMore(false);
     }
   }, [cursor, loadingMore, mine, showToast]);
 

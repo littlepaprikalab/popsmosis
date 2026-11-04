@@ -291,6 +291,49 @@ test.describe('signed in', () => {
     await expect(page.getByText('ATP synthesis: how do cells')).toHaveCount(0);
   });
 
+  test('a next page of everyone\'s topics that comes back after My Topics was pressed is dropped', async ({ page, context, request }) => {
+    await signIn(context, S.users.ada);
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    // Someone else's topic, as the list of everyone's sends it.
+    const everyone = await (await request.get(apiUrl('/api/questions?limit=50'), { headers: asAda })).json();
+    const theirs = everyone.data.find((q: { content: string; user: { id: string } | null }) =>
+      q.user && q.user.id !== S.users.ada && q.content);
+    expect(theirs).toBeTruthy();
+
+    // A first page of one topic, so the list has a next page. That next page of everyone's topics is held until My
+    // Topics has loaded, then answered with the other learner's topic.
+    let asked!: () => void;
+    const nextAsked = new Promise<void>((resolve) => { asked = resolve; });
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => { release = resolve; });
+    await page.route(/\/api\/questions\?/, async (route) => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.has('ids')) return route.fallback();
+      if (!url.searchParams.has('cursor')) {
+        url.searchParams.set('limit', '1');
+        return route.fulfill({ response: await route.fetch({ url: url.toString() }) });
+      }
+      if (url.searchParams.has('mine')) return route.fallback();
+      asked();
+      await released;
+      return route.fulfill({ json: { data: [theirs], nextCursor: null } });
+    });
+
+    await page.goto('/learn');
+    await page.getByTestId('load-more').getByRole('button', { name: 'Load more' }).click();
+    await nextAsked;
+    const mineLoaded = page.waitForResponse((r) => r.url().includes('mine=true') && !r.url().includes('cursor='));
+    await page.getByRole('button', { name: 'My Topics' }).click();
+    await mineLoaded;
+    await expect(page).toHaveURL(/mine=1/);
+    await expect(page.getByTestId('question-card').first()).toBeVisible(); // Ada's own topics are up
+    const late = page.waitForResponse((r) => r.url().includes('cursor=') && !r.url().includes('mine='));
+    release();
+    await late;
+    await page.waitForTimeout(300); // the page has had the late page in hand
+    await expect(page.getByTestId('question-card').filter({ hasText: theirs.content })).toHaveCount(0);
+  });
+
   test('a topic with a lesson can be deleted, the request only: it goes, the lesson stays on the Droplets tab', async ({ page, context, request }) => {
     const text = `E2E ${Date.now()}: diffusion, for my quiz`;
     const asked = await request.post(apiUrl('/api/questions'), {
