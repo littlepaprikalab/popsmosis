@@ -918,7 +918,7 @@ test.describe('studio settings', () => {
       await expect(learner.getByTestId('brain-picker')).toHaveCount(0);
       await expect(learner.getByTestId('brain-picks-off')).toHaveCount(0);
       let sent: Record<string, unknown> | null = null;
-      await learner.route(apiUrl('/api/questions'), (route) => {
+      await learner.route('**/api/questions', (route) => { // the page's own origin, which Next hands to the API
         if (route.request().method() !== 'POST') return route.continue();
         sent = route.request().postDataJSON();
         return route.abort();
@@ -927,7 +927,7 @@ test.describe('studio settings', () => {
       await learner.getByRole('button', { name: 'SUBMIT' }).click();
       await expect.poll(() => sent).not.toBeNull();
       expect(sent).not.toHaveProperty('brain');
-      await learner.unroute(apiUrl('/api/questions'));
+      await learner.unroute('**/api/questions');
 
       // Off again, the picker is back, with the learner's remembered pick.
       await settings({ defaultOnly: false });

@@ -283,7 +283,7 @@ def _videos(job: Path, api: Api | None, ask, session_answers: bool = False) -> t
     jobs.keep_studio_settings(job, claimed.get("studio"))
     if not (job / BRAIN_FILE).exists():  # a job from before the brain was kept: the one its lesson was written on
         default, effort = default_brain(claimed.get("studio"))
-        name = claimed.get("brain") or brain.choice_for_model(lesson_model(job) or claimed.get("model")) or default
+        name = written_on(lesson_model(job) or claimed.get("model"), claimed.get("brain"), default)
         keep_brain(job, name, effort)
         brain.choose(name, effort)
     why = unavailable(job, session_answers=session_answers)  # a painter the setting just changed to may need a key
@@ -569,6 +569,14 @@ def recover(api: Api | None = None) -> tuple[str, str, str]:
                                   f"`python -m studio videos {question_id} --background`")
 
 
+def written_on(model: str | None, picked: str | None, default: str | None) -> str | None:
+    """The brain a lesson was written on, for its videos on a machine that never saw it: the one the model its answer
+    records belongs to, else the brain picked for the topic, else today's default. The model first, as it is what ran:
+    while an admin has the default make every topic, a topic picked for another brain is written on the default
+    (run.use_brain), and its videos follow that, as they do on the machine that wrote it."""
+    return brain.choice_for_model(model) or picked or default
+
+
 def rebuild(job: Path, item: dict) -> None:
     """Write what the media steps read, from what the API stored with the lesson: never the learner's words."""
     bundle = Bundle.model_validate(item["bundle"])
@@ -584,9 +592,9 @@ def rebuild(job: Path, item: dict) -> None:
     jobs.write(job / "bundle.json", bundle)
     jobs.write(job / "factcheck.json", factcheck)
     jobs.write(job / "posted.json", {"id": item["answerId"], "questionId": item["questionId"], "recovered": True})
-    # The brain the lesson was written on: the topic's own, else the one its answer records, else today's default.
+    # The brain the lesson was written on, as on the machine that wrote it (written_on()).
     default, effort = default_brain(item.get("studio"))
-    keep_brain(job, item.get("brain") or brain.choice_for_model(item.get("model")) or default, effort)
+    keep_brain(job, written_on(item.get("model"), item.get("brain"), default), effort)
     jobs.keep_studio_settings(job, item.get("studio"))  # who paints its art
     jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"],
                              **({"maxAttempts": item["maxAttempts"]} if isinstance(item.get("maxAttempts"), int) else {})})

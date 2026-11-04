@@ -105,7 +105,9 @@ def install() -> None:
     def provider(role, prompt, schema, images, system, label):
         fault = take("brain", label or role)
         claude = role in brain.CLAUDE_ONLY or brain.provider() == "claude"
+        # The model of the brain in force, as studio/brain.py records it: a topic sent to Muse Spark is Muse Spark's.
         model = (brain.claude_brain()[0] if role == "brain" else brain.CLAUDE[role]["model"]) if claude \
+            else brain.brain_model() if role == "brain" \
             else brain.META.get(role, brain.CLAUDE.get(role, {})).get("model", "muse-spark-1.3")
         if fault == "nokey" or (claude and not brain.claude_key()):
             raise brain.BrainError(f"{model} needs {' or '.join(brain.CLAUDE_KEY_VARS)}")

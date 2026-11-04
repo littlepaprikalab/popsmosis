@@ -36,6 +36,7 @@
  */
 import prisma from './prisma.js';
 import { BRAINS, type Brain } from './brains.js';
+import { SharedRead } from './ttl-cache.js';
 import {
   KNOBS, knobsFrom, putKnobs, reloadKnobsWith, type KnobName, type KnobValue, type Knobs,
 } from './knobs.js';
@@ -108,6 +109,13 @@ export function brainFrom(stored: unknown): BrainSettings {
 export async function brainPicksOpen(db: Pick<typeof prisma, 'setting'> = prisma): Promise<boolean> {
   return !brainFrom((await db.setting.findUnique({ where: { key: BRAIN_KEY } }))?.value).defaultOnly;
 }
+
+// The Learn page asks on every load, signed in or not, so each instance keeps the answer for PICKS_CACHE_MS and reads
+// it once however many ask at once, as the announcement does (lib/announcement.ts): the instance that takes a change
+// has it at once, another within PICKS_CACHE_MS. Only the page's picker reads it; a topic's send reads the row itself.
+export const PICKS_CACHE_MS = 10_000;
+const sharedPicks = new SharedRead(() => brainPicksOpen(), PICKS_CACHE_MS);
+export const brainPicksShown = (): Promise<boolean> => sharedPicks.get();
 
 /** The stored song settings over the defaults, as artFrom(). */
 export function songFrom(stored: unknown): SongSettings {
@@ -261,5 +269,6 @@ export async function writeStudioSettings(change: {
   await prisma.$transaction(writes);
   const saved = await readStudioSettings();
   if (change.knobs) putKnobs(saved.knobs);
+  if (change.brain) sharedPicks.set(!saved.brain.defaultOnly);
   return saved;
 }

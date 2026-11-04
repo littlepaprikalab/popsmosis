@@ -18,7 +18,7 @@ import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { clearSoon, queueFileDeletion } from '../lib/storage-delete.js';
 import { parseBrain } from '../lib/brains.js';
-import { brainPicksOpen, studioForAgent } from '../lib/studio-settings.js';
+import { brainPicksOpen, brainPicksShown, studioForAgent } from '../lib/studio-settings.js';
 import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritten, topicAllowance } from '../lib/usage.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
@@ -102,10 +102,12 @@ export default async function questionRoutes(app: FastifyInstance) {
 
   // GET /api/questions/brains — anyone: { open }, whether a topic may be sent to a brain of its own (lib/brains.ts)
   // now. Not while an admin has the default brain make every topic (lib/studio-settings.ts, defaultOnly): the Learn
-  // page then hides its picker. Signed out too, as the picker shows before sign-in.
-  app.get('/api/questions/brains', async (_request, reply) => {
+  // page then hides its picker. Signed out too, as the picker shows before sign-in. Every load of the page asks, so it
+  // is read from memory (brainPicksShown) and, like the announcement, spends none of an address's requests: a class
+  // on one school address loading the page together keeps them for what it does.
+  app.get('/api/questions/brains', { config: { rateLimit: false } }, async (_request, reply) => {
     reply.header('cache-control', 'no-store');
-    return { open: await brainPicksOpen() };
+    return { open: await brainPicksShown() };
   });
 
   // GET /api/questions/queue — agent: PENDING questions, oldest first, claimed

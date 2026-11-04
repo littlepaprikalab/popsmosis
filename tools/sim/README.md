@@ -57,7 +57,9 @@ signs upload URLs without asking R2; the upload's bytes go nowhere, `STUDIO_SIM_
     DATABASE_URL=postgresql://.../seam_e2e npx tsx src/scripts/create-agent.ts --name seam-teacher
     python tools/sim/seam.py --api http://127.0.0.1:3191 --key sk_pop_... --db postgresql://.../seam_e2e
 
-Six scenarios, one at a time (they share the topic queue): a droplet; the brain down for a whole run, answered in
+Nine scenarios, one at a time (they share the topic queue): a droplet; the brain down for a whole run, answered in
 session, its bill saying so; a topic given up once its 3 runs are used; videos never claimed, recovered; a render
-that hung twice, recovered on its second attempt; a render abandoned on its last attempt, marked FAILED with why.
+that hung twice, recovered on its second attempt; a render abandoned on its last attempt, marked FAILED with why; a
+topic sent to Muse Spark, made on it; the same while the Studio page has the default brain make every topic, made
+on Claude, lesson and videos; and that one with its videos recovered on another machine, still on Claude.
 Faults the real API cannot be told to make are made in the studio's own client (`"client"` in `fakes.py`).

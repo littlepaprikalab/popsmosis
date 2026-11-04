@@ -46,11 +46,19 @@ def state(db: str, qid: str) -> dict:
     return json.loads(row)
 
 
-def ask(db: str, topic: str) -> str:
+def ask(db: str, topic: str, brain: str | None = None) -> str:
     uid, qid = "u" + uuid.uuid4().hex[:20], "q" + uuid.uuid4().hex[:20]
+    picked = f"'{brain}'" if brain else "NULL"
     sql(db, f"""INSERT INTO users (id, email, "googleId", "updatedAt") VALUES ('{uid}', '{uid}@seam.test', '{uid}', now());
-               INSERT INTO questions (id, "userId", content) VALUES ('{qid}', '{uid}', '{topic}')""")
+               INSERT INTO questions (id, "userId", content, brain) VALUES ('{qid}', '{uid}', '{topic}', {picked})""")
     return qid
+
+
+def settings(db: str, studio: dict) -> None:
+    """The Studio page's settings, as an admin saves them (api/src/lib/studio-settings.ts); {} for the defaults."""
+    sql(db, "DELETE FROM settings")
+    for key, value in studio.items():
+        sql(db, f"""INSERT INTO settings (key, value, "updatedAt") VALUES ('{key}', '{json.dumps(value)}'::jsonb, now())""")
 
 
 def age(db: str, qid: str, minutes: int = 61) -> None:
@@ -61,6 +69,29 @@ def age(db: str, qid: str, minutes: int = 61) -> None:
 
 def session_lines(bill: dict | None) -> int:
     return sum(1 for s in (bill or {}).get("steps", []) for m in s.get("models", []) if m.get("via") == "session")
+
+
+def models(bill: dict | None) -> set[str]:
+    return {m.get("model") or "" for s in (bill or {}).get("steps", []) for m in s.get("models", [])}
+
+
+def made_on(s: dict, maker: str) -> bool:
+    """The lesson posted and its videos READY, every call of both bills on this maker's models (the drawer, Claude
+    whatever the brain, aside), the lesson's model first."""
+    bills = (models(s["breakdown"]) | models(s["videoBreakdown"])) - {"claude-opus-5-5"} if maker == "muse" else \
+        models(s["breakdown"]) | models(s["videoBreakdown"])
+    return (s["status"] == "ANSWERED" and s["videoStatus"] == "READY" and (s["model"] or "").startswith(maker)
+            and bool(bills) and all(m.startswith(maker) for m in bills))
+
+
+# The admin's switch (/admin/studio): the default brain makes every topic, whatever brain it was sent to.
+DEFAULT_ONLY = {"brain": {"default": "claude", "effort": "high", "defaultOnly": True}}
+# name -> (the brain the topic was sent to, the Studio page's settings); a scenario not here: none, the defaults
+SETUP = {
+    "picked-brain": ("muse-spark", {}),
+    "default-only": ("muse-spark", DEFAULT_ONLY),
+    "default-only-recovered": ("muse-spark", DEFAULT_ONLY),
+}
 
 
 # name -> (faults, env, how many heartbeats at most, the check on the end state)
@@ -81,6 +112,14 @@ SCENARIOS = {
                                             {"STUDIO_STEP_MINUTES": "10"}, 4,
                                             lambda s: s["videoStatus"] == "FAILED" and s["videoAttempts"] == 2
                                             and "last attempt" in (s["videoError"] or "")),
+    # Sent to Muse Spark with the switch off: Muse writes it and makes its videos.
+    "picked-brain": ({}, {}, 1, lambda s: made_on(s, "muse")),
+    # Sent to Muse Spark while the default makes every topic: Claude writes it and makes its videos.
+    "default-only": ({}, {}, 1, lambda s: made_on(s, "claude")),
+    # The same, its videos never claimed by the machine that wrote it, so the next heartbeat's machine recovers them
+    # from the video queue: they follow the model that wrote the lesson, not the topic's pick (videos.written_on).
+    "default-only-recovered": ({"client": {"claim_videos": {"fault": "error", "times": 2}}}, {}, 3,
+                               lambda s: made_on(s, "claude") and s["videoAttempts"] == 1),
 }
 
 
@@ -89,7 +128,9 @@ def run(name: str, api: str, key: str, db: str, root: Path) -> tuple[str, bool, 
     sim = root / name
     sim.mkdir(parents=True, exist_ok=True)
     (sim / "faults.json").write_text(json.dumps(faults))
-    qid = ask(db, f"seam check {name.replace('-', ' ')}")
+    picked, studio = SETUP.get(name, (None, {}))
+    settings(db, studio)
+    qid = ask(db, f"seam check {name.replace('-', ' ')}", picked)
     teacher = Teacher(sim, api, {"STUDIO_SIM_STORAGE": "discard", **env}, api_key=key)
     started = time.monotonic()
     for n in range(1, beats + 1):
@@ -99,6 +140,7 @@ def run(name: str, api: str, key: str, db: str, root: Path) -> tuple[str, bool, 
             break
         age(db, qid)
     s = state(db, qid)
+    settings(db, {})
     (sim / "operator.log").write_text("\n".join(teacher.log) + "\n\nend state:\n" + json.dumps(s, indent=1) + "\n")
     return name, bool(check(s)), s, time.monotonic() - started
 

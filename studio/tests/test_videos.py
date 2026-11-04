@@ -694,6 +694,19 @@ def test_recover_takes_the_brain_from_the_model_that_wrote_the_lesson(setup):
     assert operator_run.job_brain(jobs.ROOT / "q7") == "muse-wonder"
 
 
+def test_recover_follows_the_model_over_the_pick_when_the_default_wrote_a_picked_topic(setup):
+    """Sent to Muse Spark, written on Claude while an admin had the default make every topic (run.use_brain): the
+    machine that wrote it makes its videos on Claude (brain.json), so a machine that recovers the render must too,
+    not on the Meta account the switch was turned on to stop."""
+    api = VideoApi()
+    api.attempt = 2
+    api.queue = [{"answerId": "ans6", "questionId": "q6", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK,
+                  "brain": "muse-spark", "model": "claude-opus-5-5",
+                  "studio": {"brain": {"default": "claude", "defaultOnly": True}}}]
+    assert videos.recover(api=api)[0] == "RECOVER"
+    assert operator_run.job_brain(jobs.ROOT / "q6") == "claude"
+
+
 def test_a_job_from_before_the_brain_was_kept_takes_the_one_its_lesson_was_written_on(meta_job):
     (meta_job.job / operator_run.BRAIN_FILE).unlink()
     (meta_job.job / "calls.jsonl").write_text(json.dumps({"label": "bundle", "model": "muse-spark-1.3"}) + "\n")
