@@ -587,6 +587,7 @@ function LearnContent() {
   const signInRef = useRef<HTMLAnchorElement>(null);
   const { submitting, guard } = useGuardedSubmit();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const styleRef = useRef<HTMLTextAreaElement>(null);
   const latestSeenRef = useRef<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -771,11 +772,17 @@ function LearnContent() {
     return () => io.disconnect();
   }, [cursor]);
 
-  // The box grows with what is in it: typed, brought back from before a sign-in, or cleared once sent.
+  // The boxes grow with what is in them: typed, picked from a chip, brought back from before a sign-in, or cleared
+  // once sent. The song style wraps rather than running off the end of one line; a narrower window refits both.
   useLayoutEffect(() => {
-    const ta = textareaRef.current;
-    if (ta) { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight}px`; }
-  }, [newQuestion, authLoading, unreachable]);
+    const fit = (ta: HTMLTextAreaElement | null) => { // scrollHeight leaves out the border, which the height counts
+      if (ta) { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight + ta.offsetHeight - ta.clientHeight}px`; }
+    };
+    const fitAll = () => { fit(textareaRef.current); fit(styleRef.current); };
+    fitAll();
+    window.addEventListener('resize', fitAll);
+    return () => window.removeEventListener('resize', fitAll);
+  }, [newQuestion, songStyle, authLoading, unreachable]);
 
   // A topic typed before a sign-in (or a reload) is back in the box. Back from a sign-in that Submit asked for,
   // the page says so: it waits for Submit rather than sending itself, so nothing goes out unseen.
@@ -1012,15 +1019,17 @@ function LearnContent() {
           <label htmlFor="song-style" className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>
             Suggest a song style <span className="normal-case font-normal">(optional)</span>
           </label>
-          <input
+          {/* One line of text, wrapped to show all of it: Enter still sends, and a pasted line break is a space. */}
+          <textarea
             id="song-style"
-            type="text"
+            ref={styleRef}
+            rows={1}
             value={songStyle}
             maxLength={SONG_STYLE_MAX}
-            onChange={(e) => changeStyle(e.target.value)}
+            onChange={(e) => changeStyle(e.target.value.replace(/[\r\n]+/g, ' '))}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAsk(); } }}
             placeholder="e.g. K-pop with rapped verses"
-            className="mt-1 w-full text-sm outline-none px-3 py-1.5 rounded"
+            className="block mt-1 w-full text-sm outline-none px-3 py-1.5 rounded resize-none overflow-hidden"
             style={{ border: '1px solid var(--border)', color: 'var(--text-primary)', background: 'var(--bg-tertiary)' }}
           />
           <div className="flex flex-wrap items-center gap-2 mt-2">
