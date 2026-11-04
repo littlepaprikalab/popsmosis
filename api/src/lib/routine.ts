@@ -77,6 +77,9 @@ export function debounceMs(): number {
 
 export class RoutineTrigger {
   private lastFiredAt = 0;
+  // The latest write that waited on the trailing wake rather than fired one: a fire in between (a new topic's, or
+  // a retry's) serves the writes before it, never this one if it came after.
+  private lastWaitingAt = 0;
   private trailing: NodeJS.Timeout | null = null;
   private inFlight: Promise<void> | null = null;
 
@@ -108,9 +111,14 @@ export class RoutineTrigger {
       this.start(reason, log);
       return;
     }
+    this.lastWaitingAt = Date.now();
     // A trailing fire is already queued and will drain both queues; it covers
     // this event too.
     if (this.trailing !== null) return;
+    this.queueTrailing(reason, log, waitMs);
+  }
+
+  private queueTrailing(reason: string, log: FireLogger, waitMs: number): void {
     // Identity, not remaining time: setTimeout is allowed to fire a hair early,
     // and a "has the window really elapsed?" test would then silently drop a
     // legitimate trailing fire. Only a fire that actually happened in between
@@ -118,10 +126,13 @@ export class RoutineTrigger {
     const firedAtWhenQueued = this.lastFiredAt;
     this.trailing = setTimeout(() => {
       this.trailing = null;
-      // A write landing in the same tick ran ahead of this timer and fired.
-      // That fire is later than the write which queued this one, so it already
-      // serves it; firing again here would just double up.
-      if (this.lastFiredAt !== firedAtWhenQueued) return;
+      if (this.lastFiredAt !== firedAtWhenQueued) {
+        // A fire in between (a write landing in the same tick as this timer, a new topic's, a retry's) is later
+        // than the writes before it, so it already serves them; firing for them here would just double up. A write
+        // after it still waits, its wake held back by this timer: queue that wake for the cooldown it opened.
+        if (this.lastWaitingAt >= this.lastFiredAt) this.queueTrailing(reason, log, Math.max(0, this.dueInMs()));
+        return;
+      }
       this.startIfWorkPending(reason, log);
     }, waitMs);
     // A wake that has not come due must never hold the process open on SIGTERM.
