@@ -706,7 +706,7 @@ test.describe('signed in', () => {
     const note = page.getByTestId('topic-allowance');
     const canSend = (left: number, used: boolean) => (used
       ? `You can send ${left} more of your ${before.perDay} topics.`
-      : `You can send ${left} topic${left === 1 ? '' : 's'}.`);
+      : `You can send ${left} topic${left === 1 ? '' : 's'} in any 24 hours.`);
     await expect(note).toContainText(canSend(before.left, before.left < before.perDay));
 
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(`E2E ${Date.now()}: why the sky is blue`);

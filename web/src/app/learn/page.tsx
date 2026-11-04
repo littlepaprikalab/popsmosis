@@ -286,8 +286,8 @@ function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
   else if (left === 0) {
     text = `You have used ${perDay === 1 ? 'your topic' : `all ${perDay} of your topics`}. You can send another ${when(nextAt)}.`;
   }
-  // None sent in the last 24 hours, so all of them are there.
-  else if (!nextAt) text = `You can send ${topics(left)}. Each comes back 24 hours after you send it.`;
+  // None sent in the last 24 hours, so all of them are there. "In any 24 hours": the window rolls, no midnight reset.
+  else if (!nextAt) text = `You can send ${topics(perDay)} in any 24 hours.`;
   else text = `You can send ${left} more of your ${topics(perDay)}. Another comes back ${clockLabel(nextAt)}.`;
   const none = siteFull || left === 0;
   return (
