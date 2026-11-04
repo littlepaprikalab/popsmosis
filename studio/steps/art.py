@@ -610,40 +610,46 @@ MEMBRANE = re.compile(r"membrane|bilayer", re.I)
 EVERYDAY = ("hook",)  # the everyday picture; no picture draws the analogy since Nov 1 (checks._no_analogy_scene)
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
-CHECK_PROMPT = """You check one illustration for a short educational video before it is used. The picture \
-labels its own parts; the video adds no labels to it.
+# The check's instructions, grouped by what happens to the picture (Nov 4). Before, they said only `misplaced` repaints it,
+# though `wrong` has since Nov 2 (Painting.problems()); asked for "a part of the wrong shape" with no shape to judge
+# by; and took a loose place ("beside one part of it") literally. Measured with the real checker on 14 Calvin cycle
+# pictures: 38 problems before, 16 after; loose places refused 7 times, then 2; pictures repainted 13, then 10; the
+# real ones still found (a stray sphere, a wrong label, carbon dioxide not entering at Rubisco, a chloroplast not
+# green), and one more: sugar cubes the stroma's orange, the clash that failed the locate step that day.
+CHECK_PROMPT = """You check one picture for a short science video before it is used. Judge it only against what \
+the scene should show and the lesson's facts, both given below: not against the whole topic, and not against your \
+own taste. List only problems, and leave a list empty when it has none.
 
-In `labels`, give each label in the picture that is wrong: on or pointing at the wrong part, naming \
-something the scene does not show, or misspelled or garbled. The video flags each one you give on the picture as a \
-mistake, so give only those that are wrong: never one that is right, roughly right or acceptable, a part with no \
-label, or a label whose line merely ends a little off its part. For each: `text`, the writing as it reads there; \
-`note`, the sticky note for the student, under 8 words, saying what is true ("Should read: thylakoid space", "This \
-is cytochrome b6f"); and a tight box round the writing as fractions of the picture's width and height from its \
-top-left corner: `left` and `right` from 0 to 1 across, `top` and `bottom` from 0 to 1 down. Leave it empty when \
-every label is right or the picture has none.
+The picture is painted again for anything in these two lists:
+- `misplaced`: a part listed below that is missing from the picture, somewhere the scene's words or the facts rule \
+out (an organelle outside what holds it), or facing the wrong way (a protein's head on the wrong side of its \
+membrane).
+- `wrong`: anything else that would teach the learner something false, or a part a learner could not make out.
+Each in a few words.
 
-List in `misplaced` each structure below that is missing from the picture, in the wrong place, or facing \
-the wrong way for what the scene should show (an organelle outside what holds it, a protein's head on the \
-wrong side of its membrane), each in a few words. A picture with any of these is painted again.
+When you judge them:
+- A place the scene's words leave loose ("beside it", "near them", "beside one part of it") is right wherever the \
+part sits near what it is named beside. A part is misplaced only where the words or the facts rule its place out.
+- A part's shape is right unless the scene's words or the facts ask for another. Its look, colour shade and style \
+are not problems.
+- What the scene leaves out is not missing. The video animates each flow as dots moving between the parts, so a \
+flow or arrow the picture leaves out is not a problem; one drawn the wrong way is.
 
-List in `wrong` anything else that would mislead a learner, each in a few words: a part of the wrong shape \
-or too hard to make out, or anything scientifically wrong for what the scene should show.
+The picture is kept, and marked, for what is in these two lists:
+- `labels`: each label written in the picture that is wrong: on or pointing at the wrong part, naming something the \
+scene does not show, or misspelled or garbled. Never one that is right or roughly right, a part with no label, or a \
+label whose line ends a little off its part. For each: `text`, the writing as it reads there, and `note`, a sticky \
+note for the student under 8 words saying what is true ("Should read: thylakoid space", "This is cytochrome b6f").
+- `notes`: for each problem in `misplaced` or `wrong` that contradicts one of the lesson's facts, so that the \
+picture would teach something the lesson says is false. Never one about a detail the facts do not mention, and \
+never one about a label. For each: `fact`, the id of the fact it contradicts; `text`, one short, plain sentence for \
+the student saying what the picture shows and what is true, under 25 words ("The chromosomes' bends point the wrong \
+way: each is pulled toward its pole by its middle, so the bend leads."); and `note`, the sticky note the video puts \
+there, under 8 words ("The inner face is negative").
 
-Judge both as the kind of scene it is, against what it should show, not the whole topic: what the scene \
-leaves out is not missing. The video animates each flow itself, as dots \
-moving between the structures, so a flow or arrow the picture leaves out is not a problem; one drawn the \
-wrong way is. List only problems, never what you checked and found right. Leave it empty when the picture \
-is right. Do not list matters of taste or style.
-
-Then, in `notes`, give one for each problem above where the picture contradicts one of the lesson's \
-facts, so that it would teach the student something false that the lesson teaches: a part in the wrong place, facing \
-the wrong way, of the wrong shape or in the wrong number. Never one about a detail the facts do not mention, such as \
-a building's roof or a costume, even if it is wrong. For each: `fact`, the id of the fact it contradicts; `text`, one \
-short, plain sentence for the student saying what the picture shows and what is true, under 25 words ("The \
-chromosomes' bends point the wrong way: each is pulled toward its pole by its middle, so the bend leads."); `note`, \
-the sticky note the video puts there, under 8 words ("The inner face is negative"); and a box round where it is, as \
-for a label, or 0 for all four when it is about the whole picture or no one place. A wrong label is never a \
-note. Leave it empty when nothing in the picture contradicts the facts."""
+Give each label and note a box round where it is, as fractions of the picture's width and height from its top-left \
+corner: `left` and `right` from 0 to 1 across, `top` and `bottom` from 0 to 1 down; for a label, tight round its \
+writing; for a note about the whole picture or no one place, 0 for all four."""
 
 
 class ArtCheck(Strict):
