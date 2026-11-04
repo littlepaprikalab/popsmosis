@@ -431,6 +431,7 @@ def _check_colours(data: dict, problems: list) -> None:
     sam_phrases are made to name their colours so first. The rest is recorded, for the prompt: which part should
     change is the writer's to say."""
     _colour_for_ions(data, problems)
+    _one_hue_a_part(data, problems)
     _recolour_sam_phrases(data, problems)
     _recolour_image_prompts(data, problems)
     looks: dict[tuple[str, str], list[str]] = {}
@@ -507,6 +508,50 @@ def _colour_for_ions(data: dict, problems: list) -> None:
     if changed:
         problems.append(Problem(line_id="structures", rule="colours", repaired=True,
                                 detail="a part named for an ion is painted in its colour: "
+                                       + "; ".join(dict.fromkeys(changed))))
+
+
+def _one_hue_a_part(data: dict, problems: list) -> None:
+    """Two parts of one scene in one colour word are painted alike, since the word is all the illustrator is told, and
+    the locate step, which finds each part by its colour, cannot tell them apart: on Nov 4 the Calvin cycle's stroma
+    and sugar were both "orange", painted as orange cubes on an orange fluid, and its videos failed. So all but one move
+    to the free hue nearest their own, free on every scene they are on. The one kept is the first the scene lists, as
+    the writer names the whole before its parts (the chloroplast stays green, not its G3P); a part named for an ion
+    keeps its ion's colour. A part with no hue left keeps its own,
+    and _check_colours records the clash. Repaired, and recorded."""
+    ionic = {s["name"] for scene in data["scenes"] for s in scene["structures"]
+             if len(_names_kinds(s["name"], IONS)) == 1}
+    scenes_of: dict[str, list[dict]] = {}
+    colour: dict[str, str] = {}
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            scenes_of.setdefault(structure["name"], []).append(scene)
+            colour.setdefault(structure["name"], structure["color_hex"])
+    changed = []
+    for scene in data["scenes"]:
+        by_hue: dict[str, list[str]] = {}
+        for structure in scene["structures"]:
+            by_hue.setdefault(_hue(colour[structure["name"]]), []).append(structure["name"])
+        for names in by_hue.values():
+            if len(names) < 2:
+                continue
+            kept = next((n for n in names if n in ionic), names[0])
+            for name in names:
+                if name == kept or name in ionic:
+                    continue
+                taken = {_hue(colour[s["name"]]) for on in scenes_of[name] for s in on["structures"]
+                         if s["name"] != name}
+                free = sorted((c for c in FREE_COLOURS if _hue(c) not in taken),
+                              key=lambda c: _hue_gap(c, colour[name]))
+                if free:
+                    changed.append(f"{name} {colour_word(colour[name])} as {colour_word(free[0])}, clear of {kept}")
+                    colour[name] = free[0]
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            structure["color_hex"] = colour[structure["name"]]
+    if changed:
+        problems.append(Problem(line_id="structures", rule="colours", repaired=True,
+                                detail="two parts of a scene in one colour word are painted alike: "
                                        + "; ".join(dict.fromkeys(changed))))
 
 

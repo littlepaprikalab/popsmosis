@@ -1110,7 +1110,7 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     words, left = inline(scene)
     words = without_bilayer(scene, words)
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in left)
-    parts = [looked(bundle, scene, campbell_styled(bundle, words)).strip().rstrip(".") + "."]
+    parts = [looked(bundle, scene, one_look(scene, campbell_styled(bundle, words))).strip().rstrip(".") + "."]
     if left or not scene.structures:
         parts.append(f"Colours: {colours}.")
     if loose := loose_line(bundle, scene):
@@ -1172,6 +1172,37 @@ def campbell_styled(bundle: Bundle, image_prompt: str) -> str:
     if not (BIOLOGY_COURSE.search(bundle.course or "") or CELL_PARTS.search(image_prompt)):
         return image_prompt
     return re.sub(re.escape(SCIENCE_STYLE), CAMPBELL_STYLE, image_prompt, count=1, flags=re.I)
+
+
+# The look the brief ends a cell or molecular scene with (prompts/bundle.md) says the style again after the opening
+# has, and Campbell's, said it: on Nov 4 the Calvin cycle's pictures were asked for as an "Educational textbook
+# illustration", in "clean biology Campbell style", as "a clean, modern biology textbook illustration" with
+# "semi-realistic organelles" and "each protein complex a smooth rounded shape" in a close-up of four molecules in
+# the stroma, which has neither. Its last clause, "a molecule the scene names as a small glossy sphere", painted a
+# grey sphere that named nothing beside the cubes, drops, rod and starburst the scene asked for, on both tries.
+TEXTBOOK_LOOK = re.compile(r"\ba clean,? modern biology textbook illustration\s*[:,]?\s*", re.I)
+ORGANELLES_LOOK = re.compile(r"\bsemi-realistic organelles\s*,?\s*", re.I)
+COMPLEX_LOOK = re.compile(r"\beach protein complex a smooth rounded shape\s*,?\s*", re.I)
+SPHERE_LOOK = re.compile(r"\ba molecule (?:the scene names|shown) as a small glossy sphere", re.I)
+ONE_SHAPE_EACH = "each molecule named here one small glossy shape, and no shape that is not named"
+ORGANELLE = re.compile(r"chloroplast|mitochondri|nucleus|nucleolus|ribosome|golgi|endoplasmic|reticulum|vacuole|lysosome"
+                       r"|vesicle|thylakoid|grana|granum|centriole|centrosome|peroxisome|organelle|cell wall|cell\b", re.I)
+PROTEIN = re.compile(r"\w+ase\b|rubisco|photosystem|cytochrome|complex|pump|channel|protein|enzyme|receptor"
+                     r"|transporter|carrier|antibod|hemoglobin|haemoglobin|actin|myosin|spindle", re.I)
+
+
+def one_look(scene: Scene, words: str) -> str:
+    """The scene's words with the style said once (TEXTBOOK_LOOK and the rest): the opening's style, Campbell's
+    in a biology picture, is the style, and the look the brief ends with keeps only what the picture has: its
+    organelles and protein complexes when a part is one, and each molecule one shape of its own."""
+    if CAMPBELL_STYLE in words:
+        words = TEXTBOOK_LOOK.sub("", words)
+    names = " ".join(name for s in scene.structures for name in (s.name, *s.aliases))
+    if not ORGANELLE.search(names):
+        words = ORGANELLES_LOOK.sub("", words)
+    if not PROTEIN.search(names):
+        words = COMPLEX_LOOK.sub("", words)
+    return SPHERE_LOOK.sub(ONE_SHAPE_EACH, words)
 
 
 def droplet_look(bundle: Bundle) -> str:

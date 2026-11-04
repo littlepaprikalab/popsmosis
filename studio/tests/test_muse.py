@@ -779,6 +779,40 @@ def test_a_paler_duller_version_of_a_structures_colour_counts_as_it_and_another_
     assert colours.judge(earth, cyanide) == (0.0, None) and colours.fits(earth, cyanide)
 
 
+def test_a_part_in_its_colour_word_and_a_space_that_is_the_background_count_as_themselves(tmp_path):
+    # Nov 4: the Calvin cycle's G3P, mint (#06D6A0) in the bundle and "green" to the illustrator, was painted sage
+    # green, another hue to distance(); its stroma filled the view, so it was the background read off the edge. Both
+    # were left out, and the scene failed the step.
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), (255, 156, 78), np.uint8)  # the orange stroma
+    g3p_at, rubp_at = disc(700, 500, 150), disc(1100, 500, 100)
+    pixels[g3p_at] = (125, 163, 96)  # sage
+    pixels[rubp_at] = (135, 124, 191)  # a duller purple
+    path = tmp_path / "art.png"
+    path.write_bytes(svg.png(pixels))
+    stroma, g3p, rubp = (Structure(name="stroma", aliases=[], sam_phrase="orange wash", color_hex="#F4845F"),
+                         Structure(name="G3P", aliases=[], sam_phrase="green drops", color_hex="#06D6A0"),
+                         Structure(name="RuBP", aliases=[], sam_phrase="purple bar", color_hex="#8338EC"))
+    colours = locate.Colours(path, Scene(id="recycle-detail", image_prompt="G3P in the stroma.",
+                                         structures=[stroma, g3p, rubp]))
+    assert colours.fits(g3p_at, g3p) and not colours.fits(g3p_at, rubp) and not colours.fits(g3p_at, stroma)
+    assert colours.fits(rubp_at, rubp) and not colours.fits(rubp_at, g3p)
+    fluid = ~(g3p_at | rubp_at)
+    assert colours.judge(fluid, stroma) == (0.0, 1.0) and not colours.fits(fluid, g3p)
+    box = Box(x0=500, y0=300, x1=900, y1=700)
+    assert (colours.own(g3p, box) == (g3p_at & box_mask(box))).all()
+    # Two parts sharing one word are held to their colours alone: neither takes the other's pixels by the word.
+    twin = Structure(name="sugar", aliases=[], sam_phrase="green cubes", color_hex="#2FA84F")
+    shared = locate.Colours(path, Scene(id="recycle-detail", image_prompt="G3P in the stroma.",
+                                        structures=[stroma, g3p, twin]))
+    assert not shared.fits(g3p_at, g3p)
+
+
+def box_mask(box: Box) -> np.ndarray:
+    mask = np.zeros((media.ART_HEIGHT, media.ART_WIDTH), bool)
+    mask[int(box.y0):int(box.y1), int(box.x0):int(box.x1)] = True
+    return mask
+
+
 def test_a_match_on_the_white_background_is_dropped(job, monkeypatch):
     painted(job, monkeypatch, spots={**SPOTS, "Cytochrome b6f": (200, 900, 80)})  # where nothing is painted
     result = locate.run(job, FakeHelper())
