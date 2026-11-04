@@ -230,24 +230,31 @@ function Droplets() {
 /**
  * The heading's O, drawn as an outlined drop (the one in the tab icon, src/app/icon.svg)
  * that falls into the gap between R and P when the page opens, and stays a little above
- * the line. The real O stays in the text, see-through, so the heading still copies and
- * searches as "DROPLETS". Both stay in the line of text (taking either out of it splits
- * the word for screen readers): the drop is one character wide (1ch, in a monospace font)
- * and its negative margin puts the O back under it.
+ * the line, leaning 25° toward the P. The real O stays in the text, see-through, so the
+ * heading still copies and searches as "DROPLETS". Both stay in the line of text (taking
+ * either out of it splits the word for screen readers): the drop's box is one character
+ * wide (1ch, in a monospace font) and its negative margin puts the O back under it.
+ *
+ * The drop is drawn 1.5 times the size of its box, turned and grown about its round
+ * belly, with a thinner stroke so the line is as thick as the letters'. It spills out of
+ * the box, so the box and the O each take a little room to keep it off the R and the P.
+ * The fall moves and squashes the whole box, so the drop still falls straight down.
  *
  * The heading around it never wraps, since the drop is a place the word could break, and
  * carries the word as a label, since some screen readers read it in pieces around the drop.
- * In high-contrast mode, which shows every letter, the drop hides and the plain O shows.
+ * In high-contrast mode, which shows every letter, the drop hides and the plain O shows,
+ * without the drop's room, so it is spaced like the other letters.
  */
 function DropO() {
   return (
     <>
-      <svg aria-hidden="true" viewBox="14 7 36 48" className="animate-drop-fall relative inline forced-colors:hidden"
-        style={{ width: '1ch', marginRight: '-1ch', height: '0.8em', verticalAlign: '-0.03em', top: '-0.32em', color: 'var(--accent-brand)' }}>
+      <svg aria-hidden="true" viewBox="14 7 36 48" className="animate-drop-fall relative inline overflow-visible ml-[0.12em] forced-colors:hidden"
+        style={{ width: '1ch', marginRight: '-1ch', height: '0.8em', verticalAlign: '-0.03em', top: '-0.26em', color: 'var(--accent-brand)' }}>
         <path d="M32 12.5C32 12.5 20.3 28 20.3 38a11.7 11.7 0 0 0 23.4 0C43.7 28 32 12.5 32 12.5Z"
-          fill="none" stroke="currentColor" strokeWidth="6.6" strokeLinejoin="round" />
+          transform="translate(32 38) rotate(25) scale(1.5) translate(-32 -38)"
+          fill="none" stroke="currentColor" strokeWidth="4.4" strokeLinejoin="round" />
       </svg>
-      <span className="text-transparent">O</span>
+      <span className="text-transparent mr-[0.12em] forced-colors:mr-0">O</span>
     </>
   );
 }
