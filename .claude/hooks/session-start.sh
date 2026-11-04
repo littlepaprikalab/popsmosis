@@ -37,13 +37,13 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 # 2. Python: the studio, with the media steps' PyTorch (CPU), torchaudio, Demucs and skia.
-# Tried again after a pause: on Nov 4 the stamp was still Nov 1's, so every install since Nov 2 had failed at session
-# start (a network not ready yet, most likely: the same install ran in 5 s from the session), and faster-whisper,
-# added that day, was missing while the packages cached before it hid the failure.
+# pip installs a requirements file all or nothing: on Nov 4 one wheel came down corrupted (av, which faster-whisper
+# needs: "THESE PACKAGES DO NOT MATCH THE HASHES"), so nothing new in the file had been installed since Nov 2, and
+# faster-whisper, the song timing's backup since PR #148, was missing from every session. tools/install_requirements.py
+# tries the file again with no cache, then each requirement on its own, and checks every one is installed in its range.
 if changed pip studio/requirements.txt; then
-  if python -m pip install -q -r studio/requirements.txt \
-      || { sleep 15; python -m pip install -q -r studio/requirements.txt; }; then mark pip studio/requirements.txt
-  else log "pip could not install studio/requirements.txt; the studio will not run"
+  if python tools/install_requirements.py studio/requirements.txt; then mark pip studio/requirements.txt
+  else log "MISSING studio requirements (above): the steps that need them will fail; the timing step installs faster-whisper itself"
   fi
 fi
 
@@ -91,8 +91,8 @@ WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
 PY
 }
 if [ ! -f "$STAMPS/whisper" ]; then
-  if fetch_whisper || fetch_whisper; then touch "$STAMPS/whisper"
-  else log "could not fetch Whisper; the first song timing that needs it will download it"
+  if fetch_whisper || { sleep 15; fetch_whisper; }; then touch "$STAMPS/whisper"
+  else log "could not fetch Whisper's model; the first song timing that needs it downloads it (and installs faster-whisper if it is missing)"
   fi
 fi
 

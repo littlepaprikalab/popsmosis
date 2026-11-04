@@ -128,14 +128,14 @@ of its ladder instead of failing.
 | Point | What fails | Before | Now |
 |---|---|---|---|
 | API → routine | the trigger answers 429 or 5xx, times out, or cannot be reached | logged; the topic waits for the next sweep (or the next topic, when the routine has no schedule) | fired once more 30 s later (`api/src/lib/routine.ts`); a refused token is not retried |
-| Session start | the hook's `pip install` fails | logged only: the stamp was still Nov 1's, so every install since Nov 2 had failed, and faster-whisper (added Nov 4) was missing | tried again after 15 s (`.claude/hooks/session-start.sh`); Whisper is optional to the step anyway |
+| Session start | one wheel comes down corrupted ("THESE PACKAGES DO NOT MATCH THE HASHES": av 19.0.2, which faster-whisper needs) | pip installs the file all or nothing, so nothing new in it had been installed since Nov 2, and faster-whisper (added Nov 4) was missing from every session; logged only | `tools/install_requirements.py`: again with no cache, then each requirement on its own, then every one checked installed in its range, and each missing one named |
 | Lesson | API outage, brain outage or refusal, a kill or a hang | waited out, answered in session, deferred (Nov 3) | unchanged |
 | Lesson | the fact audit or the fact-check refuses the lesson twice | given up | unchanged: the gate |
 | art | a painter outage | the other painter (Nov 3) | unchanged |
 | art | a picture that is not an image | the step failed | a try that failed; if every try is so, the other painter paints it once |
 | art | a picture the painter declines on every try | the step failed | unchanged: a declined picture is never asked of the other painter |
 | locate | fewer than half a scene's structures found | the step failed, the same on the retry: **videos given up** (the Calvin cycle) | the scene painted again, once a job; then kept with what was found (a painted picture labels its own parts) |
-| timing | Whisper will not load or run (model not downloaded, rate-limited, out of memory) | the step failed as "a studio error", never retried | the song timed without it |
+| timing | faster-whisper missing, or its model will not load (not downloaded, rate-limited, out of memory) | missing: the lines MMS could not hear were never heard again, said nowhere (PR #148 made Whisper the aligner's only backup); a load that failed: the step failed as "a studio error", never retried | installed by the step, once a process, from requirements.txt's line; a model that will not load is loaded once more; only then is the song timed without it, and the step's line says WHISPER UNAVAILABLE, so the summary and the operator's journal do |
 | audio, timing | the song refused, never timed, or not singing its lyrics, every time | the step failed: **videos given up** | a new song, once a job; then the lesson video alone |
 | audio | the song's provider down past every attempt | **videos given up** | waited out and deferred, as before; on the API's last attempt, the lesson video alone |
 | timeline, arrows, render | the song's video or hook cut cannot be built | the step failed: **videos given up** | the lesson video alone |
