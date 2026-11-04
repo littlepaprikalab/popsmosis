@@ -449,24 +449,27 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
             realigned.append(line.line_id)
     if aligning is not None:
         _log_local(job, "song alignment", MMS_MODEL, aligning)
-    found, missed = [], []
+    found, missed, fitted = [], [], []
     unsure = any(s is not None and s < LOW_SCORE for s in scores.values())
     if unsure and whisper is not None and levels is not None:
         hearing = time.monotonic()
         heard = whisper(vocals)
         if hear is None:
             _log_local(job, "song lyrics heard", f"whisper-{WHISPER_MODEL}", hearing)
-        found, missed = by_whisper(lines, scores, heard, texts, levels, length)
-    spread = by_the_singing(lines, scores, levels, placed=set(found))
+        found, missed, fitted = by_whisper(lines, scores, heard, texts, levels, length)
+    spread = fitted + [i for i in by_the_singing(lines, scores, levels, placed=set(found)) if i not in fitted]
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
     return timing, {**song_report(timing, texts, scores), "realigned": realigned, "by_whisper": found,
                     "skipped": missed, "spread": spread}
 
 
 def by_whisper(lines: list[TimedLine], scores: dict[str, float | None], heard: list[tuple[float, float, str]],
-               texts: dict[str, str], levels: list[float], length: float) -> tuple[list[str], list[str]]:
+               texts: dict[str, str], levels: list[float],
+               length: float) -> tuple[list[str], list[str], list[str]]:
     """The lyrics matched to the words Whisper heard (the module's docstring), in place: the ids of the lines it timed,
-    and of the lines the singer skipped (marked not sung). The lines MMS heard at KEEP_SCORE keep their timing."""
+    of the lines the singer skipped (marked not sung), and of the lines neither placed that no longer fit where MMS
+    put them, spread over the singing between the lines placed either side. The lines MMS heard at KEEP_SCORE keep
+    their timing."""
     import numpy as np
 
     sung = np.asarray(levels) >= -SINGING_DB
@@ -478,7 +481,7 @@ def by_whisper(lines: list[TimedLine], scores: dict[str, float | None], heard: l
     said = sorted((start, end, spoken(word)) for start, end, word in heard
                   if spoken(word) and end >= start and singing(start, end))
     if not said:
-        return [], []
+        return [], [], []
 
     def kept(k: int) -> bool:  # MMS heard it well: its timing stays
         score = scores.get(lines[k].line_id)
@@ -519,7 +522,9 @@ def by_whisper(lines: list[TimedLine], scores: dict[str, float | None], heard: l
     for n, k in enumerate(sung_lines):
         if k not in found:
             continue
-        lo = lines[sung_lines[n - 1]].end if n else 0.0
+        # From the last line placed (MMS heard it well, or Whisper found it): a line before it that neither placed
+        # may be where MMS crammed it, too late, and is fitted in after.
+        lo = next((lines[q].end for q in reversed(sung_lines[:n]) if kept(q) or q in found), 0.0)
         hi = next((lines[q].start for q in sung_lines[n + 1:] if kept(q)), length)
         heard_at = {i: said[b][:2] for i, b in words_of_line[k]}
         # The line's first and last words Whisper misheard: the heard words next to the ones it matched that no line
@@ -556,8 +561,26 @@ def by_whisper(lines: list[TimedLine], scores: dict[str, float | None], heard: l
     for k in skipped:
         lines[k] = _unsung(lines[k].line_id, texts, lines[k - 1].end if k else 0.0)
         scores[lines[k].line_id] = None
+    # The lines neither placed, each run between two lines placed: left where MMS put them when they fit between,
+    # else spread over the singing there (or, with none, at no length where the line placed before them ends).
+    fitted, run = [], []
+    for k in [*sung_lines, None]:
+        if k is not None and not (kept(k) or k in found or k in skipped):
+            run.append(k)
+            continue
+        if run:
+            t0 = next((lines[q].end for q in reversed(sung_lines) if q < run[0] and (kept(q) or q in found)), 0.0)
+            t1 = lines[k].start if k is not None else length
+            if any(lines[m].start < t0 or lines[m].end > t1 for m in run):
+                moved = _spread(lines, run, t0, max(t0, t1), sung)
+                for m in (m for m in run if lines[m].line_id not in moved):
+                    at = round(t0, 3)
+                    lines[m] = lines[m].model_copy(update={"start": at, "end": at, "words": [
+                        Word(word=w.word, start=at, end=at) for w in lines[m].words]})
+                fitted += [lines[m].line_id for m in run]
+            run = []
     _in_order(lines, length)
-    return [lines[k].line_id for k in found], [lines[k].line_id for k in skipped]
+    return [lines[k].line_id for k in found], [lines[k].line_id for k in skipped], fitted
 
 
 def _alike(word: str, heard: str) -> float:

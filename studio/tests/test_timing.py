@@ -710,7 +710,7 @@ def test_whisper_times_the_lines_mms_could_not_hear_and_the_lines_it_heard_stay(
     heard = [*_heard("Strong empires guard the road", 0.1, 2.1), *_heard("Kerry's still far, ring paper hone", 3.0, 6.0),
              *_heard("Kerry's still far, ring paper hone", 6.5, 9.0), *_heard("Asia trace Europe, goods both ways", 9.5, 11.5),
              *_heard("Markets shut down", 12.0, 14.0), *_heard("la la la", 15.0, 16.0)]
-    found, skipped = timing.by_whisper(lines, scores, heard, texts, _levels(18.0, silent=[(14.5, 17.0)]), 18.0)
+    found, skipped, _ = timing.by_whisper(lines, scores, heard, texts, _levels(18.0, silent=[(14.5, 17.0)]), 18.0)
     assert found == ["c", "d"] and skipped == []
     a, c, d, e = lines
     assert (a.start, a.end, e.start, e.end) == (0.0, 2.0, 12.0, 14.0)  # MMS's timing, finer, kept
@@ -727,7 +727,7 @@ def test_a_line_whisper_heard_too_little_of_is_left_to_mms():
     before = [line.model_copy() for line in lines]
     heard = [*_heard("Strong empires guard the road", 0.0, 2.0), *_heard("They say you're wrong, what do we do", 2.5, 6.5),
              *_heard("Markets shut down", 8.0, 10.0)]
-    found, skipped = timing.by_whisper(lines, {"a": 0.9, "c": 0.1, "e": 0.9}, heard, texts, _levels(10.0), 10.0)
+    found, skipped, _ = timing.by_whisper(lines, {"a": 0.9, "c": 0.1, "e": 0.9}, heard, texts, _levels(10.0), 10.0)
     assert found == [] and skipped == [] and lines == before
 
 
@@ -739,7 +739,7 @@ def test_a_line_the_singer_skipped_is_not_sung_and_fails_the_song():
     scores = {"a": 0.86, "b": 0.04, "c": 0.61}
     heard = [*_heard("Markets shut down, with the camel stands still", 0.0, 2.0),
              *_heard("Paper still moves glass, but the cost is clear", 2.05, 4.0)]
-    found, skipped = timing.by_whisper(lines, scores, heard, texts, _levels(5.0), 5.0)
+    found, skipped, _ = timing.by_whisper(lines, scores, heard, texts, _levels(5.0), 5.0)
     assert skipped == ["b"] and scores["b"] is None
     b = lines[1]
     assert not b.sung and b.start == b.end == 2.0
@@ -756,7 +756,7 @@ def test_a_line_neither_heard_but_with_room_to_be_sung_is_not_called_skipped():
     lines = [_line("a", texts["a"], 0.0, 2.0), _line("b", texts["b"], 2.0, 2.6), _line("c", texts["c"], 6.0, 8.0)]
     heard = [*_heard("Markets shut down, the camels stand still", 0.0, 2.0),
              *_heard("Paper still moves west, but the cost is clear", 6.0, 8.0)]
-    assert timing.by_whisper(lines, {"a": 0.9, "b": 0.04, "c": 0.9}, heard, texts, _levels(8.0), 8.0) == ([], [])
+    assert timing.by_whisper(lines, {"a": 0.9, "b": 0.04, "c": 0.9}, heard, texts, _levels(8.0), 8.0) == ([], [], [])
     assert lines[1].sung
 
 
@@ -808,9 +808,27 @@ def test_a_line_whisper_misheard_in_places_is_found_and_starts_where_its_first_w
              *_heard("Asia trace your eyes, cause both legs roll", 3.0, 7.0),
              *_heard("They say you're running with tools, no time stands for none", 7.5, 13.0),
              *_heard("Same road brings riches", 14.0, 16.0)]
-    found, _ = timing.by_whisper(lines, {"a": 0.9, "c": 0.1, "d": 0.1, "e": 0.9}, heard, texts, _levels(16.0), 16.0)
+    found, _, _ = timing.by_whisper(lines, {"a": 0.9, "c": 0.1, "d": 0.1, "e": 0.9}, heard, texts, _levels(16.0), 16.0)
     assert found == ["c", "d"]
     c, d = lines[1:3]
     assert c.start == 3.0 and c.end <= 7.0
     assert d.start == 7.5  # from "They": the four words misheard for "Faiths ride", two more than it has
     Timing(audio="audio/song.mp3", duration=16.0, lines=lines)
+
+
+def test_a_line_whisper_found_is_not_cut_short_by_a_line_before_it_that_neither_placed():
+    """From review: MMS crammed b after where Whisper hears c sung, and Whisper heard too little of b to place it. c
+    keeps where it was heard, and b is fitted into the singing between the lines placed either side of it."""
+    texts = {"a": "Strong empires guard the road", "b": "Faiths ride with tools, no town stands alone",
+             "c": "Carry silk far, bring paper home", "e": "Markets shut down"}
+    lines = [_line("a", texts["a"], 0.0, 2.0), _line("b", texts["b"], 7.0, 8.0), _line("c", texts["c"], 8.0, 8.5),
+             _line("e", texts["e"], 12.0, 14.0)]
+    heard = [*_heard("Strong empires guard the road", 0.0, 2.0), *_heard("La da dee", 2.5, 4.5),
+             *_heard("Carry silk far, bring paper home", 5.0, 7.8), *_heard("Markets shut down", 12.0, 14.0)]
+    found, skipped, fitted = timing.by_whisper(lines, {"a": 0.9, "b": 0.1, "c": 0.1, "e": 0.9}, heard, texts,
+                                               _levels(14.0), 14.0)
+    assert found == ["c"] and skipped == [] and fitted == ["b"]
+    b, c = lines[1:3]
+    assert c.start == 5.0 and c.end == pytest.approx(7.8, abs=0.1)  # where it was heard, not cut to 8.0
+    assert 2.0 <= b.start < b.end <= c.start  # between the lines placed either side
+    Timing(audio="audio/song.mp3", duration=14.0, lines=lines)
