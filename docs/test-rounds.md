@@ -2232,6 +2232,30 @@ preferred 2 times in 6 (appeal 3.5 vs 4.0, clarity 3.8 vs 4.2, correct 3.2 vs 3.
 learner's world today, which marked down the 1789 bakery the scene itself asks for. A period look fits the story
 scenes but leaks into a hook set today, and a faded medium loses parts.
 
+**A look that suits a hook set today** (Nov 4, the owner's choice). The brief asks for a kind of picture the topic's
+world is known for that suits a scene of today too ("a poster, a print, a mural, a label, never a fresco or an old
+master's painting"), with poster and menu examples; code strikes fresco, tempera, pastel and old masters. Six writers
+again:
+
+| Topic | Look |
+|---|---|
+| French Revolution | a bright, stencil-coloured French popular-print illustration |
+| Romeo and Juliet | a bold screen-printed Shakespeare-festival theater-poster illustration |
+| Supply and demand | a bold vintage fruit-crate-label illustration |
+| Spanish subjunctive | a vibrant Latin American street-mural illustration |
+| Classical conditioning | a bright 1950s magazine-advertisement illustration |
+| Light reactions | a vivid 1940s apple-crate label illustration |
+
+Painted ($0.41) and segmented ($0.07): **23 of 23 parts found, 20 by SAM's first words**, every one on the right thing,
+the best of every version (old wording 16, fixed editorial 19, general styles 22, the topic's world 20). Blind beside
+the general styles, the judge now told what each scene asks for, each was preferred 3 times in 6 (appeal 4.2 vs 4.3,
+clarity 4.2 both, correct 3.3 both). The three estates came back in the cleanest colour coding yet (solid purple, red
+and green), and no period dress reached a modern hook. Its slips: "HAMLET" on the Romeo and Juliet hook's book, the
+Bastille labelled twice, a plain bakery. The crate label came twice again, for the two fruit hooks.
+
+The writer's look that suits a hook set today is kept. In all, six versions of the six scenes cost $2.95 ($2.46 of
+pictures, $0.49 of SAM); every Claude call was answered in the session.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
