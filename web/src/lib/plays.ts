@@ -1,8 +1,9 @@
-import type { SyntheticEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 
 /**
  * Play counts (api/src/routes/plays.ts): how far plays of each droplet video get, and how often a hook clip is
- * shared or downloaded, so the owner can see which droplets work for students (/admin/plays).
+ * shared or downloaded, so the owner can see which droplets work for students (/admin/plays). The starts of the song
+ * and the lesson are shown to everyone beside each, as its views (components/ViewCount.tsx, useViews).
  *
  * Nothing in a count says who sent it. It goes without the session cookie, so even a signed-in person's plays are
  * counted with no account; it carries no id of the browser, the device or the visit; and nothing is stored here.
@@ -72,8 +73,11 @@ function playedShare(v: HTMLVideoElement): number {
   return played / length;
 }
 
-/** A droplet video's counting, as props for its <video>. */
-export function countPlays(droplet: string, video: PlayVideo) {
+/**
+ * A droplet video's counting, as props for its <video>. `onStart` is handed this page view's start of it as it is
+ * sent: true once the API took it (useViews adds it to the views shown).
+ */
+export function countPlays(droplet: string, video: PlayVideo, onStart?: (counted: Promise<boolean>) => void) {
   const play = `${droplet}|${video}`;
   const progress = (e: SyntheticEvent<HTMLVideoElement>) => {
     let steps = plays.get(play);
@@ -87,7 +91,10 @@ export function countPlays(droplet: string, video: PlayVideo) {
   };
   return {
     onPlaying: () => {
-      if (once(play, 'started')) plays.set(play, send(droplet, video, 'started'));
+      if (!once(play, 'started')) return;
+      const started = send(droplet, video, 'started');
+      plays.set(play, started);
+      onStart?.(started);
     },
     onTimeUpdate: progress,
     onEnded: progress,
@@ -97,4 +104,20 @@ export function countPlays(droplet: string, video: PlayVideo) {
 /** The hook tile's Share (once it went through) or Download. */
 export function countClip(droplet: string, event: 'shared' | 'downloaded') {
   if (once(`${droplet}|hook`, event)) void send(droplet, 'hook', event);
+}
+
+/**
+ * A video's views as the page shows them: the API's count, and this viewer's own play once the API took it, the way a
+ * count moves when you press play. `views` is the API's number as the page last read it; the play is added to that
+ * number as it stood when the play began, so a page that reads the count again after (the Learn page's polling) shows
+ * the API's own and never counts the play twice. Nothing is added for a play that was not counted: an admin's, or
+ * one turned away. Pass `onStart` to countPlays.
+ */
+export function useViews(views: number) {
+  const [floor, setFloor] = useState(0);
+  const onStart = (counted: Promise<boolean>) => {
+    const before = views;
+    void counted.then((ok) => { if (ok) setFloor(before + 1); });
+  };
+  return { views: Math.max(views, floor), onStart };
 }

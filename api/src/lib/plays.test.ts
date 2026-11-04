@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PLAY_EVENTS, countPlaySql, playEventOf, serializePlays } from './plays.js';
+import { PLAY_EVENTS, countPlaySql, playEventOf, serializePlays, viewsOf } from './plays.js';
 
 describe('playEventOf', () => {
   it('takes a video and one of the events', () => {
@@ -49,5 +49,18 @@ describe('serializePlays', () => {
 
   it('has no finish rate before a start', () => {
     expect(serializePlays({ ...zero, shared: 3 }).finishRate).toBeNull();
+  });
+});
+
+describe('viewsOf', () => {
+  it("reads the song's and the lesson's starts, 0 for a video with no row", () => {
+    expect(viewsOf([{ video: 'SONG', started: 7 }, { video: 'LESSON', started: 2 }])).toEqual({ song: 7, lesson: 2 });
+    expect(viewsOf([{ video: 'LESSON', started: 2 }])).toEqual({ song: 0, lesson: 2 });
+    expect(viewsOf([])).toEqual({ song: 0, lesson: 0 });
+  });
+
+  it('leaves out the hook, and anything that is not a count', () => {
+    expect(viewsOf([{ video: 'HOOK', started: 50 }, { video: 'SONG', started: 'x' }, null])).toEqual({ song: 0, lesson: 0 });
+    expect(viewsOf(null)).toEqual({ song: 0, lesson: 0 });
   });
 });

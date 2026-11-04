@@ -102,7 +102,8 @@ test.describe('signed out', () => {
     expect(res.status()).toBe(200);
     expect(res.headers()['cache-control']).toBe('public, max-age=60');
     const { droplet } = await res.json();
-    const allowed = ['id', 'title', 'course', 'topic', 'excerpt', 'content', 'video', 'tags', 'createdAt'];
+    // The views are the same for every viewer; likes and comments are not (whether you liked it, which are yours).
+    const allowed = ['id', 'title', 'course', 'topic', 'excerpt', 'content', 'video', 'tags', 'views', 'createdAt'];
     expect(Object.keys(droplet).filter((k) => !allowed.includes(k))).toEqual([]);
     expect(droplet.content.length).toBeGreaterThan(0);
     expect(droplet.video.songVideoUrl).toBeTruthy(); // the song is the hook

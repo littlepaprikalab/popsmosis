@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Locator, type Page, type Route } from '@playwright/test';
 import { seed, signIn, apiUrl, sessionToken } from './helpers';
 
 // Play counts (web/src/lib/plays.ts, api/src/routes/plays.ts): what the players send, and the owner's page.
@@ -46,6 +46,8 @@ const playTo = (video: Locator, seconds: number) => video.evaluate(async (v: HTM
   v.pause();
 }, seconds);
 const settle = (page: Page) => page.waitForTimeout(500);
+/** "1 view", "12 views": a video's views as the page writes them, for counts under a thousand. */
+const viewsText = (n: number) => `${n} ${n === 1 ? 'view' : 'views'}`;
 
 test.describe('play counts', () => {
   test('a play counts each step once a page view, in order, with no cookie, and a new page view counts again', async ({ page, request }) => {
@@ -99,7 +101,8 @@ test.describe('play counts', () => {
     expect(await counts.withCookie()).toBe(0);
   });
 
-  test("an admin's own plays are not counted", async ({ page, context }) => {
+  test("an admin's own plays are not counted", async ({ page, context, request }) => {
+    const { started } = await countsOf(request, 'song');
     await signIn(context, S.users.ada);
     const counts = watchCounts(page);
     await page.goto(`/droplets/${S.droplet}`);
@@ -107,6 +110,8 @@ test.describe('play counts', () => {
     await playThrough(page.getByLabel('song video'));
     await settle(page);
     expect(counts.sent).toEqual([]);
+    // Nor added to the views the page shows.
+    await expect(page.getByTestId('player-song').getByTestId('view-count')).toHaveText(viewsText(started));
   });
 
   test("the hook tile counts a share that went through and a download, each once a page view", async ({ page, request }) => {
@@ -192,6 +197,78 @@ test.describe('play counts', () => {
     expect(counts.sent.filter((c) => c === 'hook started')).toHaveLength(1);
     await clip.click();
     await expect.poll(() => counts.sent.filter((c) => c === 'hook started')).toHaveLength(2);
+  });
+});
+
+test.describe('views', () => {
+  test("shows each video's starts as its views, and the viewer's own play the moment it counts, once", async ({ page, request }) => {
+    const song = (await countsOf(request, 'song')).started;
+    const lesson = (await countsOf(request, 'lesson')).started;
+    await page.goto(`/droplets/${S.droplet}`);
+    const songViews = page.getByTestId('player-song').getByTestId('view-count');
+    await expect(songViews).toHaveText(viewsText(song));
+    await expect(page.getByTestId('player-lesson').getByTestId('view-count')).toHaveText(viewsText(lesson));
+
+    await playTo(page.getByLabel('song video'), 1);
+    await expect(songViews).toHaveText(viewsText(song + 1));
+    // Played again on the same page: still the one view.
+    await playThrough(page.getByLabel('song video'));
+    await settle(page);
+    await expect(songViews).toHaveText(viewsText(song + 1));
+    // A new page view reads the API's count, which has it: not one more on top.
+    await page.reload();
+    await expect(page.getByTestId('player-song').getByTestId('view-count')).toHaveText(viewsText(song + 1));
+    await expect(page.getByTestId('player-lesson').getByTestId('view-count')).toHaveText(viewsText(lesson));
+  });
+
+  test('a card on the tab shows the views of the video it plays, YouTube-style, beside when it was made', async ({ page, request }) => {
+    const song = (await countsOf(request, 'song')).started;
+    await page.goto('/droplets');
+    const card = page.getByTestId('droplet-card').filter({ has: page.locator(`a[href="/droplets/${S.droplet}"]`) });
+    const views = card.getByTestId('view-count');
+    await expect(views).toHaveText(viewsText(song));
+    await expect(views.locator('..')).toContainText(' · ');
+    await card.getByTestId('card-play').click();
+    await expect(views).toHaveText(viewsText(song + 1));
+  });
+
+  test('with no views from the API (one older than them, or a read that failed), the videos show and play as before', async ({ page }) => {
+    // The API's answers with `views` taken out, as an API from before them sends them.
+    const withoutViews = async (route: Route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const res = await route.fetch();
+      const body = await res.json();
+      for (const d of Array.isArray(body.data) ? body.data : [body]) delete d.views;
+      await route.fulfill({ response: res, json: body });
+    };
+    await page.route(/\/api\/droplets(\?[^/]*)?$/, withoutViews);
+    await page.route(/\/api\/droplets\/[^/?]+$/, withoutViews);
+    const counts = watchCounts(page);
+
+    await page.goto(`/droplets/${S.droplet}`);
+    await expect(page.getByTestId('player-song').getByText('SONG')).toBeVisible();
+    await expect(page.getByTestId('player-lesson').getByText('LESSON')).toBeVisible();
+    await playTo(page.getByLabel('song video'), 1);
+    await expect.poll(() => counts.sent).toContain('song started'); // still counted
+    await settle(page);
+    await expect(page.getByTestId('view-count')).toHaveCount(0); // and no number made up for it
+
+    await page.goto('/droplets');
+    const card = page.getByTestId('droplet-card').filter({ has: page.locator(`a[href="/droplets/${S.droplet}"]`) });
+    await expect(card.getByText(/ ago$/)).toBeVisible();
+    await expect(card.getByTestId('view-count')).toHaveCount(0);
+    await expect(card.getByText(/ ago$/)).not.toContainText('·');
+  });
+
+  test("a learner sees their own droplet's views on /learn", async ({ page, context, request }) => {
+    const lesson = (await countsOf(request, 'lesson')).started;
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first();
+    const views = card.getByTestId('player-lesson').getByTestId('view-count');
+    await expect(views).toHaveText(viewsText(lesson));
+    await playTo(card.getByLabel('lesson video'), 1);
+    await expect(views).toHaveText(viewsText(lesson + 1));
   });
 });
 

@@ -9,6 +9,7 @@ import { termsCurrent } from './terms.js';
 import { awaitingVideos, lessonProgress, readProgress, videoProgress } from './progress.js';
 import { claimMinutes, questionMaxRuns } from './claim.js';
 import { pastRetention } from './attachments.js';
+import type { DropletViews } from './plays.js';
 
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
 export const agentSelect = { id: true, name: true } as const;
@@ -227,6 +228,20 @@ export function serializeQuestionForAgent(q: QuestionRow, now = new Date()) {
   const { user: _user, isOwner: _isOwner, canDelete: _canDelete, answer, ...rest } = serializeQuestion(q, undefined, now);
   const replies = q.answers[0]?.replies.map(serializeReplyForAgent) ?? [];
   return { ...rest, runs: q.runs, maxRuns: questionMaxRuns(), answer: answer && { ...answer, replies } };
+}
+
+/** The answers whose views a learner's page shows: those with READY videos, the only ones a play can be counted on. */
+export function viewedAnswerIds(questions: QuestionRow[]): string[] {
+  return questions.flatMap((q) => (q.answers[0]?.videoStatus === 'READY' ? [q.answers[0].id] : []));
+}
+
+/**
+ * A learner's topic with its droplet's views, `{ song, lesson }`, as the Droplets tab shows them (lib/views.ts): on
+ * an answer with READY videos, when they could be read. The teacher's reads never carry them.
+ */
+export function withViews<Q extends { answer: { id: string } | null }>(q: Q, views: Map<string, DropletViews> | null) {
+  const counted = q.answer && views?.get(q.answer.id);
+  return counted ? { ...q, answer: { ...q.answer, views: counted } } : q;
 }
 
 export type SerializedQuestion = ReturnType<typeof serializeQuestion>;

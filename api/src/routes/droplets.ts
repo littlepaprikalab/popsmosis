@@ -12,6 +12,8 @@ import { PUBLIC_PER_CLIENT_PER_MINUTE, PUBLIC_PER_INSTANCE_PER_MINUTE, WindowCou
 import { requireUser, sessionSubject } from '../middleware/auth.js';
 import { tagQueryOf } from '../lib/tags.js';
 import { BILL_MODELS_PATH } from '../lib/breakdown.js';
+import { viewsOf, viewsSql } from '../lib/plays.js';
+import { viewsFor } from '../lib/views.js';
 
 // Likes are one row each way and cost little, but each is a write on the droplet's row, so one
 // person flipping a thumb as fast as they can click is held to a pace no real use reaches.
@@ -84,12 +86,12 @@ export default async function dropletRoutes(app: FastifyInstance) {
       : Prisma.sql`false`;
     // A card needs two fields of the bundle, the start of the lesson and the models the bills
     // name; the bundle can be hundreds of KB, so Postgres hands back only those (the same fields
-    // publicDropletSelect names). Walks the (videoStatus, createdAt, id) index.
-    const rows = await prisma.$queryRaw<(Parameters<typeof serializeDropletCard>[0] & { liked: boolean })[]>`
+    // publicDropletSelect names), and its videos' views. Walks the (videoStatus, createdAt, id) index.
+    const rows = await prisma.$queryRaw<(Omit<Parameters<typeof serializeDropletCard>[0], 'views'> & { liked: boolean; plays: unknown })[]>`
       SELECT id, left(content, ${EXCERPT_SOURCE_LENGTH}) AS content, "createdAt",
              jsonb_build_object('course', bundle->'course', 'topic', bundle->'topic') AS bundle,
              "songVideoUrl", "lessonVideoUrl", "songPosterUrl", "lessonPosterUrl", "hookVideoUrl", "hookPosterUrl",
-             "likeCount", "commentCount", "songTags", "lessonTags", ${liked} AS liked,
+             "likeCount", "commentCount", "songTags", "lessonTags", ${liked} AS liked, ${viewsSql} AS plays,
              jsonb_path_query_array("lessonBreakdown", ${BILL_MODELS_PATH}::jsonpath) AS "lessonModels",
              jsonb_path_query_array("videoBreakdown", ${BILL_MODELS_PATH}::jsonpath) AS "videoModels"
       FROM answers
@@ -106,7 +108,9 @@ export default async function dropletRoutes(app: FastifyInstance) {
       request.log.warn({ err }, 'the cards went out without their comments');
     }
     return {
-      data: rows.map((row) => ({ ...serializeDropletCard(row, row.liked), ...(comments && { comments: comments(row) }) })),
+      data: rows.map(({ plays, ...row }) => ({
+        ...serializeDropletCard({ ...row, views: viewsOf(plays) }, row.liked), ...(comments && { comments: comments(row) }),
+      })),
       nextCursor: encodeCreatedAtIdCursor(rows, take),
     };
   });
@@ -154,18 +158,21 @@ export default async function dropletRoutes(app: FastifyInstance) {
     return { data: rows.map((c) => serializeComment(c, viewer)), nextCursor: encodeCreatedAtIdCursor(rows, take) };
   }
 
-  // GET /api/droplets/:id — one droplet, by its answer id, with the first page of its comments;
-  // 404 unless it is on the tab. One request for the whole page: every public request spends the
-  // instance's shared ceiling, so a page view that needed two would halve how many it can serve.
+  // GET /api/droplets/:id — one droplet, by its answer id, with its videos' views and the first page
+  // of its comments; 404 unless it is on the tab. One request for the whole page: every public request
+  // spends the instance's shared ceiling, so a page view that needed two would halve how many it can
+  // serve. Once the droplet is found, its like, comments and views are read side by side.
   app.get('/api/droplets/:id', { config, preHandler: [shared] }, async (request, reply) => {
     const viewer = viewerOf(request, reply);
     const { id } = request.params as { id: string };
     const row = await prisma.answer.findFirst({ where: { id, ...publicDropletWhere }, select: publicDropletSelect });
     if (!row) return sendError(reply, 'NOT_FOUND', 'Droplet not found');
-    const liked = !!viewer && !!(await prisma.dropletLike.findUnique({
-      where: { answerId_userId: { answerId: id, userId: viewer } }, select: { userId: true },
-    }));
-    return { ...serializeDroplet(row, liked), comments: await commentsPage(id, viewer, COMMENTS_PAGE_SIZE) };
+    const [like, comments, views] = await Promise.all([
+      viewer ? prisma.dropletLike.findUnique({ where: { answerId_userId: { answerId: id, userId: viewer } }, select: { userId: true } }) : null,
+      commentsPage(id, viewer, COMMENTS_PAGE_SIZE),
+      viewsFor([id], request.log), // extra: null when they cannot be read, and the droplet goes out without them
+    ]);
+    return { ...serializeDroplet({ ...row, views: views?.get(id) ?? null }, !!like), comments };
   });
 
   // GET /api/droplets/:id/comments — newest first; ?cursor=, ?limit= (default 20, max 50): the
