@@ -2,7 +2,8 @@
 
 `python tools/sim/scenarios.py` runs the teacher's heartbeat ([docs/popsmosis-agent-skill.md](../../docs/popsmosis-agent-skill.md))
 through a failure at each point of the pipeline, and says how each topic ended: a **droplet** (the lesson posted and
-its videos READY), **lesson only** (the videos given up), **given up** (no lesson), or **stuck** (nothing will ever
+its videos READY), **droplet, lesson video alone** (READY without the song, which could not be made:
+`studio/anneal.py`), **lesson only** (the videos given up), **given up** (no lesson), or **stuck** (nothing will ever
 finish it). It makes no call to Anthropic, Meta, Gemini, ElevenLabs, Inkmory or the real popsmosis API, and needs
 no key: every paid key is removed from the environment it runs the studio in, and the providers are stand-ins.
 
@@ -39,7 +40,8 @@ A scenario sets them in `faults.json` (the brain and the media steps, `fakes.py`
   API's own JSON error; a dropped connection; or a request carried out and its answer lost.
 - **the brain**: an outage (529), a refusal, an answer cut off or out of its schema, a missing key, a fact audit or
   fact-check that finds everything wrong, a call that never returns, or the process killed mid-call.
-- **a media step**: a failure with a code, a kill, a hang past the operator's hour, or a slow step.
+- **a media step**: a failure with a code (and `"part": "song"` for one that is the song's alone, as the real steps
+  say it), a kill, a hang past the operator's hour, or a slow step.
 
 Add a scenario to `SCENARIOS` in `scenarios.py`.
 

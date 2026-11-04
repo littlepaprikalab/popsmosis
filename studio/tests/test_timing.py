@@ -832,3 +832,110 @@ def test_a_line_whisper_found_is_not_cut_short_by_a_line_before_it_that_neither_
     assert c.start == 5.0 and c.end == pytest.approx(7.8, abs=0.1)  # where it was heard, not cut to 8.0
     assert 2.0 <= b.start < b.end <= c.start  # between the lines placed either side
     Timing(audio="audio/song.mp3", duration=14.0, lines=lines)
+
+
+def test_a_whisper_that_fails_leaves_the_song_timed_without_it_and_the_steps_line_says_so(made, capsys):
+    """Whisper is the aligner's backup (PR #148): one that fails never fails the step, and the operator's record says
+    it was not there."""
+    bundle = sample_media.bundle()
+
+    def broken(vocals):
+        raise RuntimeError("model.bin: 429 Too Many Requests")
+
+    timed, report = timing.song_timing(made, bundle, align=even_aligner([], score=0.1), vocals=_sung(30.1),
+                                       hear=broken)
+    assert report["by_whisper"] == [] and [line.line_id for line in timed.lines] == [line.id for line in bundle.lyrics]
+    assert report["whisper_missing"] == "Whisper failed: RuntimeError: model.bin: 429 Too Many Requests"
+    assert "WHISPER UNAVAILABLE (Whisper failed: RuntimeError" in timing.song_notes(report)
+    assert "the song is timed without it" in capsys.readouterr().err
+
+
+def test_a_song_whisper_was_not_needed_for_says_nothing_of_it(made):
+    _, report = timing.song_timing(made, sample_media.bundle(), align=even_aligner([]), vocals=_sung(30.1),
+                                   hear=lambda v: pytest.fail("not asked"))
+    assert "whisper_missing" not in report and "WHISPER" not in timing.song_notes(report)
+
+
+class FakePip:
+    """Stands in for `pip install`: installs faster-whisper (as find_spec sees it) unless told to fail."""
+
+    def __init__(self, monkeypatch, fails=0):
+        self.calls, self.fails, self.installed = [], fails, False
+        monkeypatch.setattr(timing, "_installed", None)
+        monkeypatch.setattr(timing, "WHISPER_RETRY_S", 0.0)
+        monkeypatch.setattr(timing, "_importable", lambda module: self.installed)
+        monkeypatch.setattr(timing.subprocess, "run", self.run)
+
+    def run(self, command, **kwargs):
+        import subprocess
+
+        self.calls.append(command)
+        if self.fails:
+            self.fails -= 1
+            return subprocess.CompletedProcess(command, 1, "", "ERROR: THESE PACKAGES DO NOT MATCH THE HASHES")
+        self.installed = True
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+
+def test_a_missing_faster_whisper_is_installed_by_the_step_once_a_process(monkeypatch, capsys):
+    pip = FakePip(monkeypatch, fails=1)  # the first try meets a download cut short, as the session hook did
+    assert timing.install_whisper() and timing.install_whisper()
+    assert len(pip.calls) == 2  # tried twice, then never again in this process
+    assert pip.calls[0][-3:] == ["-q", "--no-cache-dir", "faster-whisper>=1.2.1,<2"]  # requirements.txt's own line
+    assert "so the step installed it" in capsys.readouterr().err
+
+
+def test_a_faster_whisper_that_will_not_install_is_said_and_not_tried_again(monkeypatch, capsys):
+    pip = FakePip(monkeypatch, fails=99)
+    assert not timing.install_whisper() and not timing.install_whisper()  # whisper_hearer() is then None
+    assert len(pip.calls) == 2
+    assert "could not install faster-whisper>=1.2.1,<2 (try 2 of 2): ERROR: THESE PACKAGES" in capsys.readouterr().err
+
+
+def test_a_whisper_model_that_will_not_load_is_loaded_once_more(monkeypatch):
+    loads = []
+
+    def load():
+        loads.append(1)
+        if len(loads) == 1:
+            raise OSError("model.bin: unexpected end of file")
+        return "the model"
+
+    load.cache_clear = lambda: None
+    monkeypatch.setattr(timing, "_whisper", load)
+    monkeypatch.setattr(timing, "WHISPER_RETRY_S", 0.0)
+    assert timing.whisper_model() == "the model" and len(loads) == 2
+
+
+def test_the_requirement_is_read_from_requirements_txt():
+    assert timing.requirement("faster-whisper") == "faster-whisper>=1.2.1,<2"
+    assert timing.requirement("faster_whisper") == "faster-whisper>=1.2.1,<2"
+    assert timing.requirement("torch") == "torch==2.11.0"
+
+
+@pytest.mark.parametrize("raised", [IndexError("list index out of range"), ValueError("words out of order")])
+def test_whatever_fails_in_the_songs_timing_is_the_songs_alone_with_the_narration_timed(made, monkeypatch, raised):
+    def fails(*args, **kwargs):
+        raise raised
+
+    monkeypatch.setattr(timing, "song_timing", fails)
+    with pytest.raises(media.StepFailed) as failed:
+        timing.run(made)
+    assert failed.value.part == "song" and failed.value.code == timing.SONG_UNTIMED
+    assert (made / media.timing_path("narration")).exists()  # the lesson video's voice is timed
+
+
+def test_a_song_that_does_not_sing_its_lyrics_is_the_songs_alone(made, monkeypatch):
+    monkeypatch.setattr(timing, "lyric_mismatch", lambda report: "the song does not sing its lyrics")
+    monkeypatch.setattr(timing, "song_timing", lambda job, bundle: (_even_song(bundle), {"lines": []}))
+    with pytest.raises(media.StepFailed) as failed:
+        timing.run(made)
+    assert failed.value.part == "song" and failed.value.code == "the song did not sing its lyrics"
+
+
+def _even_song(bundle):
+    lines = [TimedLine(line_id=line.id, start=i * 2.0, end=i * 2.0 + 1.5,
+                       words=[Word(word=w, start=i * 2.0, end=i * 2.0 + 1.5) for w, _, _ in words_of(line.text)[:1]]
+                       or [Word(word="la", start=i * 2.0, end=i * 2.0 + 1.5)])
+             for i, line in enumerate(bundle.lyrics)]
+    return Timing(audio=media.audio_path("song"), duration=len(lines) * 2.0, lines=lines)

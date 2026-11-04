@@ -543,8 +543,10 @@ up its mask. If SAM finds nothing that sure for a structure, it is asked again i
 words (its colour and the phrase's last noun, then its colour and "region"), and only then
 does the helper propose a box for SAM to look in. Every match is held to the structure's
 colour: one mostly in another structure's colour is dropped. A structure none of these finds
-is left out, like one the SVG art leaves out (no spotlight, no camera move), and a scene
-with fewer than half its structures found fails the step. `locations.json` holds `box`,
+is left out, like one the SVG art leaves out (no spotlight, no camera move). A scene
+with fewer than half its structures found is painted again, once a job, and located again;
+after that it is kept with what was found, since a painted picture labels its own parts
+(studio/anneal.py: until Nov 4 it failed the step, and the Calvin cycle's videos with it). `locations.json` holds `box`,
 `centroid` and `label_anchor` per structure, all in art pixel coordinates. Built
 (`studio/steps/locate.py`); first run live on Oct 28, when SAM missed most long phrases and a
 helper box around two Earths labelled one's northern half "Southern Hemisphere", so the

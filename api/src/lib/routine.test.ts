@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { RoutineTrigger, parseDebounceMs, routineTrigger } from './routine.js';
+import { FIRE_RETRY_MS, RoutineTrigger, parseDebounceMs, routineTrigger } from './routine.js';
 
 const log = { info: () => {}, warn: () => {} };
 // Most cases only exercise the fire path, so the queues always hold work.
@@ -225,6 +225,85 @@ describe('RoutineTrigger', () => {
     await trigger.settled;
     expect(warn).toHaveBeenCalledWith({ status: 401 }, 'routine fire rejected');
     expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('fires once more, 30s on, when the trigger was busy or failing, and never a third time', async () => {
+    const fetchFn = stubFetch({ ok: false, status: 503 } as Partial<Response>);
+    const trigger = new RoutineTrigger('https://api.example/fire', 'tok', 0, WORK);
+
+    trigger.fireNow('a', log);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(FIRE_RETRY_MS);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(10 * FIRE_RETRY_MS);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('wakes a reply that came after a retry moved the cooldown (review on #151)', async () => {
+    // A fire fails at 0s, a reply queues the trailing wake at 10s, the retry fires at 30s, another reply at 40s:
+    // the retry served the first reply, and the second waits for the cooldown the retry opened.
+    let status = 503;
+    const fetchFn = vi.fn(async () => ({ ok: status < 400, status }) as Response);
+    vi.stubGlobal('fetch', fetchFn);
+    const trigger = new RoutineTrigger('https://api.example/fire', 'tok', 300_000, WORK);
+    trigger.notify('first', log);
+    await trigger.settled;
+    status = 200;
+    await vi.advanceTimersByTimeAsync(10_000);
+    trigger.notify('a reply', log);
+    await vi.advanceTimersByTimeAsync(FIRE_RETRY_MS - 10_000);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(2); // the failed fire, then the retry
+    await vi.advanceTimersByTimeAsync(10_000);
+    trigger.notify('a later reply', log);
+    await vi.advanceTimersByTimeAsync(300_000 - 40_000);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(2); // the first window's end: held for the retry's
+    await vi.advanceTimersByTimeAsync(30_000);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(3); // the retry's window's end: the later reply's wake
+  });
+
+  it('wakes a reply that came after a new topic fired inside the cooldown', async () => {
+    const fetchFn = stubFetch();
+    const trigger = new RoutineTrigger('https://api.example/fire', 'tok', 60_000, WORK);
+    trigger.fireNow('a topic', log);
+    await trigger.settled;
+    await vi.advanceTimersByTimeAsync(10_000);
+    trigger.notify('a reply', log);                 // queues the trailing wake for 60s
+    await vi.advanceTimersByTimeAsync(20_000);
+    trigger.fireNow('another topic', log);          // 30s: serves that reply
+    await trigger.settled;
+    await vi.advanceTimersByTimeAsync(10_000);
+    trigger.notify('a later reply', log);           // 40s: waits on the timer queued at 10s
+    await vi.advanceTimersByTimeAsync(20_000);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(2);       // 60s: nothing yet
+    await vi.advanceTimersByTimeAsync(30_000);
+    await trigger.settled;
+    expect(fetchFn).toHaveBeenCalledTimes(3);       // 90s: the later reply's wake
+  });
+
+  it('fires once more after an unreachable endpoint, and not after a refused token', async () => {
+    const thrown = vi.fn(async () => { throw new Error('ECONNREFUSED'); });
+    vi.stubGlobal('fetch', thrown);
+    const trigger = new RoutineTrigger('https://api.example/fire', 'tok', 0, WORK);
+    trigger.fireNow('a', log);
+    await trigger.settled;
+    await vi.advanceTimersByTimeAsync(FIRE_RETRY_MS);
+    await trigger.settled;
+    expect(thrown).toHaveBeenCalledTimes(2);
+
+    const refused = stubFetch({ ok: false, status: 401 } as Partial<Response>);
+    const other = new RoutineTrigger('https://api.example/fire', 'bad', 0, WORK);
+    other.fireNow('b', log);
+    await other.settled;
+    await vi.advanceTimersByTimeAsync(10 * FIRE_RETRY_MS);
+    await other.settled;
+    expect(refused).toHaveBeenCalledTimes(1);
   });
 
   it('swallows a thrown fire — an unreachable endpoint never reaches the caller', async () => {

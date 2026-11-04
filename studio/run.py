@@ -67,7 +67,7 @@ import traceback
 import uuid
 from pathlib import Path
 
-from studio import brain, checks, jobs, knobs, ledger, retry, review, session
+from studio import anneal, brain, checks, jobs, knobs, ledger, retry, review, session
 from studio.api import Api, ApiError
 from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
@@ -890,6 +890,9 @@ def summary(question_id: str) -> str:
         last = video_runs[-1]
         parts.append({DONE: "Videos made.", FAILED: f"Videos failed at {last['step']}.",
                       STOPPED: f"Videos stopped at {last['step']}."}[last["result"]])
+    let_go = anneal.said(job)  # what the videos were made without rather than fail (studio/anneal.py)
+    if let_go:
+        parts.append(f"Made without what failed: {let_go}.")
     calls = [c for c in ledger.read(job) if c.get("role") != "local"]  # Demucs and MMS run here, unbilled
     if calls:
         parts.append(f"{len(calls)} model call(s), {ledger.cost_text(calls)}.")

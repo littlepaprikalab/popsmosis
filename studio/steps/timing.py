@@ -50,7 +50,9 @@ sure of takes Whisper's timing when Whisper heard enough of its words (FOUND_SHA
 time it is heard best (of times heard as well, the first). Whisper's words over no singing (it makes up lyrics over
 silence) are left out. A line neither of them heard, between two lines Whisper heard sung one after the other with
 no room for its words, was not sung: it is marked so, and the song fails as one that does not sing its lyrics, so
-the retry sings it again. Without faster-whisper installed the step goes on without it. The report's `by_whisper`
+the retry sings it again. Whisper is the aligner's backup: when faster-whisper is missing the step installs it
+(install_whisper()), and a model that will not load is loaded once more; only when that fails too is the song timed
+without it, and the step's line says WHISPER UNAVAILABLE, so the operator's record shows it. The report's `by_whisper`
 and `skipped` name the lines.
 
 The narration as read: a Gemini narration is held to its lines as the song is to its lyrics. When the
@@ -71,10 +73,14 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import functools
+import importlib
+import importlib.util
 import json
 import re
 import statistics
 import subprocess
+import sys
+import threading
 import time
 import unicodedata
 import wave
@@ -88,6 +94,7 @@ from studio.schemas import TOLERANCE_S, Bundle, TimedLine, Timing, Word, timing_
 from studio.steps import audio as audio_step
 
 REPORT = "timing/song_report.json"
+SONG_UNTIMED = "the song could not be timed"  # its aligner or Demucs failed on it (studio/anneal.py)
 
 
 def speech_report(kind: str) -> str:
@@ -198,19 +205,25 @@ def _run(job: Path) -> str:
                                                             if report is not None else ""))
     if not with_song:
         return "no song (the lesson video alone); " + ", ".join(parts)
+    # Whatever goes wrong from here is the song's alone, with the narration timed: the videos can go on without the
+    # song and make the lesson video (studio/anneal.py).
     try:
         with cpu_turn(job):
             timing, report = song_timing(job, bundle)
-    except (ValueError, RuntimeError) as e:  # a timing out of order, or an aligner that could not fit the words
-        raise media.StepFailed(f"the song could not be aligned: {e}") from e
-    _check(timing, [line.id for line in bundle.lyrics], "song")
+        _check(timing, [line.id for line in bundle.lyrics], "song")
+    except media.StepFailed as e:
+        e.part = "song"
+        raise
+    except Exception as e:  # a timing out of order, an aligner that could not fit the words, or a bug in either
+        raise media.StepFailed(f"the song could not be aligned: {type(e).__name__}: {e}", code=SONG_UNTIMED,
+                               part="song") from e
     jobs.write(job / REPORT, report)  # kept either way: `show` and the summary say what was heard
     mismatch = lyric_mismatch(report)
     if mismatch:
         # Made again on the retry (the audio step makes only what is missing), never timed and published as it is.
         (job / media.audio_path("song")).unlink(missing_ok=True)
         raise media.StepFailed(f"{mismatch}; the song is deleted, so the retry sings it again",
-                               code="the song did not sing its lyrics")
+                               code="the song did not sing its lyrics", part="song")
     jobs.write(job / media.timing_path("song"), timing)
     return f"song {len(timing.lines)} lines in {timing.duration:.1f}s, {song_notes(report)}; " + ", ".join(parts)
 
@@ -385,7 +398,8 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
                 hear: Hearer | None = None) -> tuple[Timing, dict]:
     """The song's Timing and its report. `align`, `vocals` and `hear` stand in for MMS, Demucs and Whisper in tests;
     a test that stands in for MMS and not for Whisper has no Whisper."""
-    whisper = hear or (None if align else whisper_hearer())
+    real = align is None  # this machine's aligner, not a test's stand-in: its Whisper too, installed or not
+    whisper = hear or (whisper_hearer() if real else None)
     plan = json.loads((job / audio_step.plan_path("song")).read_text(encoding="utf-8"))
     length = audio_step.duration(job / media.audio_path("song"))
     # The aligner loads while Demucs runs. The first read of its 1.2 GB on a fresh machine took 100 s here, waiting on
@@ -451,16 +465,25 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
         _log_local(job, "song alignment", MMS_MODEL, aligning)
     found, missed, fitted = [], [], []
     unsure = any(s is not None and s < LOW_SCORE for s in scores.values())
+    missing = ""  # why Whisper did not hear a song that needed it, for the report and the step's line
+    if unsure and whisper is None and real and levels is not None:
+        missing = WHISPER_MISSING
     if unsure and whisper is not None and levels is not None:
         hearing = time.monotonic()
-        heard = whisper(vocals)
-        if hear is None:
-            _log_local(job, "song lyrics heard", f"whisper-{WHISPER_MODEL}", hearing)
-        found, missed, fitted = by_whisper(lines, scores, heard, texts, levels, length)
+        try:
+            heard = whisper(vocals)
+        except Exception as e:  # noqa: BLE001 (its model would not load twice, or it failed: timed without it)
+            missing = f"Whisper failed: {type(e).__name__}: {e}"
+            print(f"timing: {missing}; the song is timed without it", file=sys.stderr)
+            heard = None
+        if heard is not None:
+            if hear is None:
+                _log_local(job, "song lyrics heard", f"whisper-{WHISPER_MODEL}", hearing)
+            found, missed, fitted = by_whisper(lines, scores, heard, texts, levels, length)
     spread = fitted + [i for i in by_the_singing(lines, scores, levels, placed=set(found)) if i not in fitted]
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
     return timing, {**song_report(timing, texts, scores), "realigned": realigned, "by_whisper": found,
-                    "skipped": missed, "spread": spread}
+                    "skipped": missed, "spread": spread, **({"whisper_missing": missing[:300]} if missing else {})}
 
 
 def by_whisper(lines: list[TimedLine], scores: dict[str, float | None], heard: list[tuple[float, float, str]],
@@ -695,10 +718,9 @@ def _whisper():
 
 
 def whisper_hearer() -> Hearer | None:
-    """Whisper as the step hears with it; None when faster-whisper is not installed, and the step goes on without."""
-    try:
-        import faster_whisper  # noqa: F401
-    except ImportError:
+    """Whisper as the step hears with it. With faster-whisper missing it is installed here first (install_whisper());
+    None only when that fails too, and the song's report says so (WHISPER_MISSING)."""
+    if not install_whisper():
         return None
 
     def hear(vocals) -> list[tuple[float, float, str]]:
@@ -707,11 +729,84 @@ def whisper_hearer() -> Hearer | None:
         audio = np.asarray(vocals, dtype=np.float32).reshape(-1)
         # Temperature 0 alone: the same song is heard the same way each time (the fallback's sampling at higher
         # temperatures heard the Nov 4 song's second chorus differently run to run).
-        segments, _ = _whisper().transcribe(audio, language="en", word_timestamps=True, vad_filter=False,
-                                            condition_on_previous_text=False, temperature=0.0)
+        segments, _ = whisper_model().transcribe(audio, language="en", word_timestamps=True, vad_filter=False,
+                                                 condition_on_previous_text=False, temperature=0.0)
         return [(w.start, w.end, w.word.strip()) for segment in segments for w in (segment.words or [])]
 
     return hear
+
+
+# Whisper is the aligner's backup, not an extra: without it a line MMS cannot hear is only spread over the singing,
+# and a song with many such lines is sung again or let go of. The session hook installs faster-whisper and its model
+# (.claude/hooks/session-start.sh), but on Nov 4 its install had failed since Nov 2 (a download cut short failed the
+# whole requirements file), so faster-whisper was missing from every session. The step mends that itself, once a
+# process: it installs faster-whisper from requirements.txt's own line, and loads a model that would not load once more
+# after a pause. What it cannot mend, the song's report and the step's line say (song_notes()).
+WHISPER_MISSING = "faster-whisper is not installed here and could not be installed"
+INSTALL_TIMEOUT_S = 600
+WHISPER_RETRY_S = 10.0
+REQUIREMENTS = Path(__file__).resolve().parent.parent / "requirements.txt"
+_installing = threading.Lock()
+_installed: bool | None = None  # whether faster-whisper imports here, once install_whisper() has looked
+
+
+def install_whisper() -> bool:
+    """Whether faster-whisper imports on this machine, installing it first when it does not (once a process)."""
+    global _installed
+    with _installing:
+        if _installed is None:
+            _installed = _importable("faster_whisper") or _pip_install(requirement("faster-whisper"))
+        return _installed
+
+
+def requirement(name: str) -> str:
+    """The package's line in studio/requirements.txt, its version range with it ("faster-whisper>=1.2.1,<2")."""
+    wanted = re.sub(r"[-_.]+", "-", name).lower()
+    try:
+        lines = REQUIREMENTS.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return name
+    for line in lines:
+        spec = line.split("#", 1)[0].strip()
+        found = re.match(r"[A-Za-z0-9][A-Za-z0-9._-]*", spec)
+        if found and re.sub(r"[-_.]+", "-", found.group(0)).lower() == wanted:
+            return spec
+    return name
+
+
+def _importable(module: str) -> bool:
+    importlib.invalidate_caches()
+    return importlib.util.find_spec(module) is not None
+
+
+def _pip_install(spec: str) -> bool:
+    """pip install the one requirement, with no cache (a download cut short is cached as it came), tried twice."""
+    for attempt in (1, 2):
+        try:
+            done = subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--no-cache-dir", spec],
+                                  capture_output=True, text=True, timeout=INSTALL_TIMEOUT_S)
+            if done.returncode == 0 and _importable("faster_whisper"):
+                print(f"timing: {spec} was not installed here, so the step installed it", file=sys.stderr)
+                return True
+            why = (done.stderr or done.stdout).strip().splitlines()[-1:] or [f"pip exited {done.returncode}"]
+        except (OSError, subprocess.SubprocessError) as e:
+            why = [f"{type(e).__name__}: {e}"]
+        print(f"timing: could not install {spec} (try {attempt} of 2): {why[0]}", file=sys.stderr)
+        if attempt == 1:
+            time.sleep(WHISPER_RETRY_S)
+    return False
+
+
+def whisper_model():
+    """_whisper(), loaded once more after a pause when it would not load (a model download cut short, a rate limit)."""
+    try:
+        return _whisper()
+    except Exception as e:  # noqa: BLE001 (raised again below if the second load fails too)
+        print(f"timing: Whisper's model would not load, so it is loaded once more: {type(e).__name__}: {e}",
+              file=sys.stderr)
+        _whisper.cache_clear()
+        time.sleep(WHISPER_RETRY_S)
+        return _whisper()
 
 
 def by_the_singing(lines: list[TimedLine], scores: dict[str, float | None], levels: list[float] | None,
@@ -960,6 +1055,9 @@ def song_notes(report: dict) -> str:
         notes.append(f"re-aligned alone: {', '.join(report['realigned'])}")
     if report.get("by_whisper"):  # nor one from before Whisper was consulted
         notes.append(f"timed by Whisper: {', '.join(report['by_whisper'])}")
+    if report.get("whisper_missing"):  # the backup was needed and not there: the operator's record says so
+        notes.append(f"WHISPER UNAVAILABLE ({report['whisper_missing']}): the lines the aligner could not hear "
+                     f"were not heard again")
     if report.get("skipped"):
         notes.append(f"SKIPPED by the singer: {', '.join(report['skipped'])}")
     if report.get("spread"):  # nor one from before lines were spread over the singing

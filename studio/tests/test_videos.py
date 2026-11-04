@@ -457,18 +457,53 @@ def test_on_meta_the_run_paints_the_art_then_sam_locates_it_and_bills_both(meta_
     assert set(locate_models) == {"sam-3.1", "muse-spark-1.3"}
 
 
-def test_on_meta_a_failed_locate_keeps_the_pictures_and_the_retry_only_locates(meta_job):
-    job = meta_job.job
-    meta_job.muse.spots = {}  # SAM finds nothing, and the helper sees nothing to box
-    assert videos.videos("q1", api=VideoApi())[:2] == ("FAILED", "locate")
-    assert len(meta_job.muse.painted) == 3 and (job / "art" / "hook.json").exists()
+def test_on_meta_a_picture_whose_parts_sam_cannot_find_is_painted_again_once_then_kept(meta_job):
+    """The Calvin cycle of Nov 4: SAM found 2 of a scene's 5 structures in the same picture on both tries, and the
+    videos were given up. Now the scene is painted again, once a job, and then kept with what was found."""
+    from studio import anneal, retry
+    from studio.schemas import Locations
 
+    job = meta_job.job
+    meta_job.muse.spots = {}  # SAM finds nothing, and the helper sees nothing to box, in any picture
+    assert videos.videos("q1", api=VideoApi())[:2] == ("DONE", "upload")
+    assert len(meta_job.muse.painted) == 6  # each scene painted, then painted again once: never a third time
+    assert anneal.repainted(job) == ["hook", "overview", "synthase"]
+    assert anneal.read(job)["partial"] == ["hook", "overview", "synthase"]
+    located = jobs.read(job / media.LOCATIONS, Locations)
+    assert [len(scene.structures) for scene in located.scenes] == [0, 0, 0]  # each picture labels its own parts
+    steps = operator_run.read_jsonl(job / "runs.jsonl")[-1]["steps"]
+    assert [(s["step"], s["result"]) for s in steps if s["step"] in ("art", "locate")] == [
+        ("art", "DONE"), ("locate", "FAILED"), ("art", "DONE"), ("locate", "DONE")]
+    assert next(s for s in steps if s["step"] == "locate")["code"] == retry.REPAINT
+    assert "kept with the parts found after a repaint" in steps[-1 - [s["step"] for s in reversed(steps)].index(
+        "locate")]["detail"]
+    assert "scene(s) kept with the parts that were found" in operator_run.summary("q1")
+
+    meta_job.muse.painted.clear()
+    assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "the videos were already made")
+    assert meta_job.muse.painted == []
+
+
+def test_on_meta_a_repainted_picture_that_shows_its_parts_is_located_in_full(meta_job, monkeypatch):
+    from studio import anneal
+    from studio.schemas import Locations
+    from studio.steps import art
     from studio.tests.test_muse import SPOTS
 
-    meta_job.muse.spots = SPOTS
-    meta_job.muse.painted.clear()
+    job = meta_job.job
+    meta_job.muse.spots = {name: spot for name, spot in SPOTS.items() if name != "ATP synthase"}  # the synthase's
+    real = art.paint_again
+
+    def paint_again(job, scene):
+        meta_job.muse.spots = SPOTS  # the new picture shows them all
+        real(job, scene)
+
+    monkeypatch.setattr(art, "paint_again", paint_again)
     assert videos.videos("q1", api=VideoApi())[0] == "DONE"
-    assert meta_job.muse.painted == []  # the pictures were paid for once
+    assert anneal.repainted(job) == ["synthase"] and "partial" not in anneal.read(job)
+    assert [label for label, _ in meta_job.muse.painted].count("art synthase") == 2  # only it was painted again
+    synthase = jobs.read(job / media.LOCATIONS, Locations).scene("synthase")
+    assert [s.name for s in synthase.structures] == ["ATP synthase"]  # its one part, found in the new picture
 
 
 def test_switching_the_art_between_runs_remakes_it_and_everything_after_it(meta_job, monkeypatch):
@@ -767,3 +802,117 @@ def test_make_resumes_at_the_step_that_failed(setup):
     setup.ran.clear()
     assert videos.local(job)[0] == videos.DONE
     assert setup.ran == ["locate", "timeline", "arrows", "render"]
+
+
+# --- the song, let go of rather than the droplet (studio/anneal.py) -----------------------------------------
+
+
+@pytest.fixture
+def song_fails(setup, monkeypatch):
+    """The stand-in steps, with those named here failing on the song while the job still has one: step -> [times,
+    code]. The narration is taken as made, so a failure here is the song's alone."""
+    setup.barrier = threading.Barrier(1)
+    plain = setup.module
+    fails: dict[str, list] = {}
+
+    def module(name):
+        step = plain(name)
+
+        def run(job, ask=None):
+            told = fails.get(name)
+            if told and told[0] and not media.lesson_only(job):
+                told[0] -= 1
+                setup.ran.append(name)
+                raise media.StepFailed(f"the song broke at {name}", code=told[1], part="song")
+            return step.run(job, ask)
+
+        return SimpleNamespace(run=run, is_done=step.is_done)
+
+    monkeypatch.setattr(media, "step_module", module)
+    monkeypatch.setattr(videos, "_narration_ready", lambda job, step: True)
+    return fails
+
+
+class LastAttempts(VideoApi):
+    """VideoApi whose claim says how many attempts the API allows (VIDEO_MAX_ATTEMPTS)."""
+
+    def claim_videos(self, answer_id, attempt=None):
+        return {**super().claim_videos(answer_id, attempt), "maxAttempts": 2}
+
+
+def test_a_song_that_cannot_be_made_is_made_once_more_then_the_lesson_video_is_made_alone(setup, song_fails):
+    from studio import anneal
+
+    song_fails["audio"] = [99, None]  # Eleven Music refuses it, every time
+    job = posted()
+    assert videos.videos("q1", api=VideoApi())[:2] == ("DONE", "upload")
+    assert setup.ran.count("audio") == 3  # the song, a new song, then the narration alone
+    assert media.lesson_only(job) and anneal.song_failures(job) == 2
+    assert "the song failed at audio" in anneal.songless(job)
+    assert "the lesson video alone: the song could not be made" in operator_run.summary("q1")
+    assert operator_run.read_jsonl(job / "runs.jsonl")[-1]["result"] == "DONE"
+
+
+def test_a_song_made_again_that_works_keeps_the_song(setup, song_fails):
+    from studio import anneal
+
+    song_fails["timing"] = [1, "the song could not be timed"]
+    job = posted()
+    assert videos.videos("q1", api=VideoApi())[0] == "DONE"
+    assert not media.lesson_only(job) and anneal.songless(job) is None and anneal.song_failures(job) == 1
+
+
+def test_a_song_that_failed_before_on_this_machine_is_let_go_on_the_retry(setup, song_fails):
+    """The operator's retry, after a run the song failed in: the song has had its new try."""
+    from studio import anneal
+
+    job = posted()
+    anneal.note_song_failure(job, "the song could not be timed")
+    song_fails["timing"] = [1, "the song could not be timed"]
+    assert videos.videos("q1", api=VideoApi())[0] == "DONE"
+    assert media.lesson_only(job) and setup.ran.count("audio") == 1  # no new song: the narration was made
+
+
+def test_a_song_provider_outage_waits_for_a_later_attempt_and_on_the_last_one_the_lesson_goes_alone(setup, song_fails):
+    from studio import anneal
+
+    song_fails["audio"] = [99, "the audio provider failed"]
+    job = posted()
+    api = LastAttempts()
+    assert videos.videos("q1", api=api)[:2] == ("FAILED", "audio")  # an attempt is left: a later sweep tries
+    assert anneal.songless(job) is None and anneal.song_failures(job) == 0
+    assert operator_run.mark_failed("q1", api=api)[0] == "DEFERRED"
+
+    (job / videos.CLAIM).unlink()  # the API hands this machine the last attempt (`recover`)
+    assert videos.videos("q1", api=api)[0] == "DONE"
+    assert videos.held_attempt(job) == 2 and media.lesson_only(job)
+    assert "on the last attempt" in anneal.songless(job)
+
+
+def test_the_song_video_failing_to_render_leaves_the_lesson_video_rendered_alone(setup, song_fails):
+    song_fails["render"] = [99, None]
+    job = posted()
+    assert videos.videos("q1", api=VideoApi())[:2] == ("DONE", "upload")
+    assert setup.ran.count("render") == 2 and setup.ran.count("timing") == 1  # no new song for a video's fault
+    assert media.lesson_only(job)
+
+
+def test_a_narration_that_fails_is_not_the_songs_and_the_song_is_kept(setup, song_fails):
+    from studio import anneal
+
+    setup.fail["audio"] = 99  # no part: the narration's, or both
+    job = posted()
+    assert videos.videos("q1", api=VideoApi())[:2] == ("FAILED", "audio")
+    assert not media.lesson_only(job) and anneal.read(job) == {}
+
+
+def test_no_new_song_is_made_while_the_pictures_failed_too(setup, song_fails):
+    from studio import anneal
+
+    setup.fail["art"] = 1
+    song_fails["audio"] = [1, None]
+    job = posted()
+    assert videos.videos("q1", api=VideoApi())[:2] == ("FAILED", "art")
+    assert anneal.read(job) == {} and setup.ran.count("audio") == 1
+    assert videos.videos("q1", api=VideoApi())[0] == "DONE"  # the retry: both made, the song kept
+    assert not media.lesson_only(job)

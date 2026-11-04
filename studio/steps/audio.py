@@ -168,7 +168,17 @@ def run(job: Path, ask=brain.ask) -> str:
 
     def make(kind: str) -> str:
         if kind == "song":
-            return f"song ({_make_song(job, bundle, provider)})"
+            # A failure here is the song's alone: the videos can go on without it (studio/anneal.py). Not the spend
+            # ceiling, which stops every paid call that would follow, the lesson video's too.
+            try:
+                return f"song ({_make_song(job, bundle, provider)})"
+            except ledger.OverCeiling:
+                raise
+            except media.StepFailed as e:
+                e.part = "song"
+                raise
+            except Exception as e:  # a bug, or an answer nothing above expected: still the song's
+                raise media.StepFailed(f"the song could not be made: {type(e).__name__}: {e}", part="song") from e
         _make_speech(job, kind, speech_lines(bundle, kind), provider)
         return f"{kind} ({provider})"
 
@@ -185,6 +195,15 @@ def is_done(job: Path) -> bool:
     except (OSError, ValueError):
         return False
     return all(_current(job, bundle, kind) for kind in media.timed(job))
+
+
+def made(job: Path, kind: str) -> bool:
+    """Whether the audio file is there, made from the bundle's lines as they now stand (studio/videos.py asks it of the
+    narration before the videos go on without the song)."""
+    try:
+        return _current(job, jobs.read(job / "bundle.json", Bundle), kind)
+    except (OSError, ValueError):
+        return False
 
 
 def _current(job: Path, bundle: Bundle, kind: str) -> bool:

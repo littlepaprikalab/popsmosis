@@ -215,17 +215,17 @@ def run(job: Path, ask=brain.ask) -> str:
     media.restart(job, media.ARROWS)
     locations = read(job / media.LOCATIONS, Locations)
     timelines = [read(job / media.timeline_path(video), Timeline) for video in media.videos(job)]
+    found: dict[tuple, tuple[str, object, str]] = {}
     for video, timeline in zip(media.videos(job), timelines):
-        problems = timeline_problems(timeline, locations)
-        if problems:
-            raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
-    try:
-        found: dict[tuple, tuple[str, object, str]] = {}
-        for timeline in timelines:
-            for scene, flow, line in Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[])).hops():
-                found.setdefault(key(scene, flow), (scene, flow, line))
-    except RenderError as e:
-        raise StepFailed(str(e)) from e
+        with media.video_part(video):  # the song's failing is the song's alone (studio/anneal.py)
+            problems = timeline_problems(timeline, locations)
+            if problems:
+                raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
+            try:
+                for scene, flow, line in Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[])).hops():
+                    found.setdefault(key(scene, flow), (scene, flow, line))
+            except RenderError as e:
+                raise StepFailed(str(e)) from e
     painted = {scene for timeline in timelines for scene in timeline.self_labelled}
     scenes: dict[str, list[tuple]] = {}
     for scene, flow, line in found.values():

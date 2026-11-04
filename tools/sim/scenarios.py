@@ -11,6 +11,8 @@ passed. Between two heartbeats the clock moves on BETWEEN_MIN minutes, as the sc
 lease lapses and a render that died goes stale. It reports how each ended:
 
     droplet        the lesson posted and its videos READY
+    droplet, lesson video alone
+                   READY with the lesson video, the song let go of rather than the droplet (studio/anneal.py)
     lesson only    the lesson posted, its videos given up
     given up       the topic failed: no lesson
     stuck          none of those after MAX_HEARTBEATS: nothing will finish it
@@ -57,8 +59,9 @@ def brain(label: str, fault: str, times: int) -> dict:
     return {"brain": {label: {"fault": fault, "times": times}}}
 
 
-def step(name: str, fault: str, times: int, code: str = "") -> dict:
-    return {"steps": {name: {"fault": fault, "times": times, **({"code": code} if code else {})}}}
+def step(name: str, fault: str, times: int, code: str = "", part: str = "") -> dict:
+    return {"steps": {name: {"fault": fault, "times": times, **({"code": code} if code else {}),
+                             **({"part": part} if part else {})}}}
 
 
 SCENARIOS = [
@@ -128,9 +131,9 @@ SCENARIOS = [
              api_faults=[{"match": r"POST /api/answers/[^/]+/video/claim", "status": 503, "times": 2}]),
     Scenario("art-fails-once", "videos: art", "the art step fails once", step("art", "fail", 1)),
     Scenario("audio-fails-twice", "videos: audio", "the song provider fails twice (Lyria outage)",
-             step("audio", "fail", 2, "the audio provider failed")),
+             step("audio", "fail", 2, "the audio provider failed", part="song")),
     Scenario("timing-drifts-twice", "videos: timing", "the song drifts from its lyrics twice",
-             step("timing", "fail", 2, "the song did not sing its lyrics")),
+             step("timing", "fail", 2, "the song did not sing its lyrics", part="song")),
     Scenario("drawer-down-no-session", "videos: art", "Claude's drawer fails twice in a row, no fallback",
              brain("art", "error", 8), settings=OFF),
     Scenario("drawer-down-session", "videos: art", "Claude's drawer fails; the session draws",
@@ -148,6 +151,19 @@ SCENARIOS = [
              api_faults=[{"match": r"PUT /r2/", "status": 503, "times": 6}]),
     Scenario("ready-lost", "videos: upload", "marking the videos READY fails 3 times",
              api_faults=[{"match": r"PATCH /api/answers/[^/]+/video", "status": 503, "times": 3}]),
+    # Failures that come back the same on every try (Nov 4 sweep): the song is let go of, never the droplet.
+    Scenario("song-refused-always", "videos: audio", "the song's provider refuses the song every time",
+             step("audio", "fail", 99, part="song")),
+    Scenario("song-untimed-always", "videos: timing", "the song can never be timed (the aligner fails on it)",
+             step("timing", "fail", 99, "the song could not be timed", part="song")),
+    Scenario("song-drifts-always", "videos: timing", "every song made drifts from its lyrics",
+             step("timing", "fail", 99, "the song did not sing its lyrics", part="song")),
+    Scenario("song-outage-always", "videos: audio", "the song's provider is down for every attempt",
+             step("audio", "fail", 99, "the audio provider failed", part="song")),
+    Scenario("song-video-fails-always", "videos: render", "the song's video can never be rendered",
+             step("render", "fail", 99, part="song")),
+    Scenario("narration-fails-always", "videos: audio", "the narration is refused every time (no lesson video)",
+             step("audio", "fail", 99)),
 ]
 
 
@@ -182,7 +198,9 @@ def run_one(s: Scenario, root: Path) -> dict:
         return {"name": s.name, "point": s.point, "what": s.what, "outcome": "harness error", "detail": ""}
     finally:
         server.shutdown()
-    outcome = ("droplet" if d["videoStatus"] == "READY" else "lesson only" if d["videoStatus"] == "FAILED"
+    outcome = ("droplet" if d["videoStatus"] == "READY" and "songVideoUrl" in (d["videoUrls"] or {})
+               else "droplet, lesson video alone" if d["videoStatus"] == "READY"
+               else "lesson only" if d["videoStatus"] == "FAILED"
                else "given up" if d["question"] == "FAILED" else "stuck")
     detail = (d["failedReason"] if d["question"] == "FAILED" else d["videoError"] if d["videoStatus"] == "FAILED"
               else f"topic {d['question']}, videos {d['videoStatus']} after {d['videoAttempts']} attempt(s)"

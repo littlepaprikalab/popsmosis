@@ -46,17 +46,20 @@ def run(job: Path, ask=None) -> str:
     locations = read(job / media.LOCATIONS, Locations)
     timelines = []
     for video, _ in made:
-        timeline = read(job / media.timeline_path(video), Timeline)
-        problems = timeline_problems(timeline, locations)
-        if problems:
-            raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
+        with media.video_part(video):  # the song's failing is the song's alone (studio/anneal.py)
+            timeline = read(job / media.timeline_path(video), Timeline)
+            problems = timeline_problems(timeline, locations)
+            if problems:
+                raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
         timelines.append(timeline)
 
     # The arrows left out rather than drawn wrong, by the renderer's sanity gate or the arrows step (arrows.json, which
     # the renderer reads: where the helper pointed each hop on its painting), recorded beside the videos.
     from studio.render.renderer import Renderer
-    left_out = {video: Renderer(job, timeline, layout, locations).left_out
-                for (video, layout), timeline in zip(made, timelines)}
+    left_out = {}
+    for (video, layout), timeline in zip(made, timelines):
+        with media.video_part(video):
+            left_out[video] = Renderer(job, timeline, layout, locations).left_out
     write(job / LEFT_OUT, left_out)
 
     def posters() -> None:
@@ -64,7 +67,7 @@ def run(job: Path, ask=None) -> str:
             try:
                 write_poster(job, timeline, job / media.poster_path(video, layout), layout)
             except RenderError as e:
-                raise StepFailed(f"{video}: {e}") from e
+                raise StepFailed(f"{video}: {e}", part="song" if video in media.SONG_VIDEOS else None) from e
 
     # All the videos at once, on one set of workers (encode_all), and their posters drawn meanwhile: in this machine's
     # turn at its cores, after any other job's render or timing (media.cpu_turn()).
@@ -74,7 +77,8 @@ def run(job: Path, ask=None) -> str:
             rendered = encode_all(job, [(timeline, job / media.video_path(video, layout), layout)
                                         for (video, layout), timeline in zip(made, timelines)])
         except EncodeError as e:
-            raise StepFailed(f"{made[e.index][0]}: {e}") from e
+            raise StepFailed(f"{made[e.index][0]}: {e}",
+                             part="song" if made[e.index][0] in media.SONG_VIDEOS else None) from e
         drawn.result()
     dropped = len({(a["scene"], tuple(a["path"]), a["carries"]) for arrows in left_out.values() for a in arrows})
     return ("rendered " + ", ".join(f"{video} {timeline.duration:.0f} s in {done.seconds:.0f} s"

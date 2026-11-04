@@ -19,7 +19,9 @@ With painted art, Gemini 3.1 Flash Image's or Muse Image's, SAM 3.1 finds each s
    one thing in that box.
 4. If that finds nothing either, the structure is left out of locations.json: the
    timeline then gives it no spotlight and no camera move, as for a structure the SVG
-   art left out. Fewer than half of a scene's structures located fails the step.
+   art left out. When fewer than half of a scene's structures are located, the picture likely does
+   not show them: the scene is painted again, once a job, and located again; after that the scene is
+   kept with the parts that were found (studio/anneal.py), so a picture never ends the videos.
 
 Every match is held to the structure's colour first (Colours): the bundle gives each
 structure in a scene its own colour and Muse Image paints it so, so a match whose pixels
@@ -53,7 +55,7 @@ from pathlib import Path
 
 import numpy as np
 
-from studio import brain, checks, ledger, media, muse, repair, svg
+from studio import anneal, brain, checks, ledger, media, muse, repair, retry, svg
 from studio.checks import colour_word
 from studio.jobs import write
 from studio.schemas import (
@@ -146,14 +148,29 @@ def run(job: Path, ask=brain.ask) -> str:
     painted = [scene for scene in bundle.scenes if scene.id not in by_scene]
     # The scenes at the same time: each waits on SAM and the helper, one structure after another.
     found_all = ledger.parallel(lambda scene: find_and_repair(job, bundle, scene, ask), painted, WORKERS)
+    too_few = [(scene, located) for scene, (located, *_) in zip(painted, found_all)
+               if len(located) < max(1, math.ceil(len(scene.structures) / 2))]
+    if too_few and not anneal.repainted(job):
+        # The picture likely does not show them: painted again, once a job, and every scene located again
+        # (studio/anneal.py). The art step paints only the scenes whose record is gone.
+        anneal.mark_repainted(job, [scene.id for scene, _ in too_few])
+        for scene, _ in too_few:
+            art.paint_again(job, scene)
+        raise media.StepFailed("; ".join(f"scene {scene.id}: SAM 3.1 found {len(located)} of "
+                                         f"{len(scene.structures)} structures; not "
+                                         + ", ".join(s.name for s in scene.structures if s.name not in located)
+                                         for scene, located in too_few)
+                               + "; painted again, so the retry locates them in a new picture",
+                               code=retry.REPAINT)
+    kept = []  # painted again already: kept with the parts that were found, the others left out
+    if too_few:
+        anneal.kept_partial(job, [scene.id for scene, _ in too_few])
+        kept = [f"{scene.id} ({len(located)} of {len(scene.structures)})" for scene, located in too_few]
+        print(f"locate: kept with the parts found, after a repaint: {', '.join(kept)}", file=sys.stderr)
     repaired = []
     for scene, (located, how, wrong, done) in zip(painted, found_all):
         repaired += [f"{scene.id}: {what}" for what in done]
         dropped += wrong
-        if len(located) < max(1, math.ceil(len(scene.structures) / 2)):
-            missing = [s.name for s in scene.structures if s.name not in located]
-            raise media.StepFailed(f"scene {scene.id}: SAM 3.1 found {len(located)} of {len(scene.structures)} "
-                                   f"structures; not {', '.join(missing)}")
         by_scene[scene.id] = save(job, scene, located, how)
         left_out += [f"{s.name} on {scene.id}" for s in scene.structures if s.name not in located]
         boxed += [name for name, by in how.items() if by in ("sam-box", "helper")]
@@ -173,6 +190,7 @@ def run(job: Path, ask=brain.ask) -> str:
             + (f"; dropped {dropped} match{'es' if dropped != 1 else ''} in another structure's colour"
                if dropped else "")
             + (f"; left out {', '.join(left_out)}" if left_out else "")
+            + (f"; kept with the parts found after a repaint: {', '.join(kept)}" if kept else "")
             + (f"; repaired {'; '.join(repaired)}" if repaired else ""))
 
 
