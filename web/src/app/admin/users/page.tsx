@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { api, User } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import PageContainer from '@/components/PageContainer';
@@ -18,26 +18,62 @@ const outline = (color: string) => ({ color: `var(--accent-${color})`, border: `
 
 /**
  * Admin page. Anyone with a Google account can sign in and use the site; this
- * is where admins decide who else is an admin.
+ * is where admins decide who else is an admin. Users load 50 at a time, admins
+ * first, then newest first; Load more brings the next 50 of the same search.
  */
 export default function AdminUsersPage() {
   const { user: me, loading: authLoading, unreachable, retry } = useAuth();
   const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
+  // Where the next page starts (null: the list is whole), and the search the list shows, which Load more carries on.
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [shown, setShown] = useState('');
+  // Every admin, not only the ones loaded: who is the last admin does not depend on the search or the pages.
+  const [adminCount, setAdminCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [q, setQ] = useState('');
   const [action, setAction] = useState<Action | null>(null);
+  // Counts the searches: a page that comes back after a newer search started is dropped.
+  const searches = useRef(0);
 
   const load = useCallback(async (query: string) => {
+    const search = ++searches.current;
     setLoading(true);
     try {
-      setUsers((await api.listUsers(query || undefined)).data);
+      const res = await api.listUsers(query || undefined);
+      if (search !== searches.current) return;
+      setUsers(res.data);
+      setCursor(res.nextCursor);
+      setAdminCount(res.adminCount);
+      setShown(query);
     } catch (err) {
+      if (search !== searches.current) return;
       showToast(err instanceof Error ? err.message : 'Failed to load users', 'error');
     } finally {
-      setLoading(false);
+      if (search === searches.current) setLoading(false);
     }
   }, [showToast]);
+
+  const loadMore = async () => {
+    if (!cursor || loadingMore) return;
+    const search = searches.current;
+    setLoadingMore(true);
+    try {
+      const res = await api.listUsers(shown || undefined, cursor);
+      if (search !== searches.current) return;
+      setUsers((prev) => {
+        const seen = new Set(prev.map((u) => u.id));
+        return [...prev, ...res.data.filter((u) => !seen.has(u.id))];
+      });
+      setCursor(res.nextCursor);
+      setAdminCount(res.adminCount);
+    } catch (err) {
+      if (search === searches.current) showToast(err instanceof Error ? err.message : 'Failed to load more users', 'error');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,6 +85,7 @@ export default function AdminUsersPage() {
     try {
       const updated = await api.setUserRole(a.user.id, a.role);
       setUsers((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+      if (updated.role !== a.user.role) setAdminCount((n) => n + (updated.role === 'ADMIN' ? 1 : -1));
       showToast(`${who} is now ${a.role === 'ADMIN' ? 'an admin' : 'a regular user'}`, 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to update user', 'error');
@@ -65,7 +102,6 @@ export default function AdminUsersPage() {
     );
   }
 
-  const admins = users.filter((u) => u.role === 'ADMIN').length;
   const dialog = action && describe(action);
 
   return (
@@ -108,7 +144,7 @@ export default function AdminUsersPage() {
           {users.map((u) => {
             const isMe = u.id === me.id;
             const isAdmin = u.role === 'ADMIN';
-            const lastAdmin = isAdmin && admins <= 1;
+            const lastAdmin = isAdmin && adminCount <= 1;
             return (
               <div key={u.id} className="rounded-lg p-3 flex items-center gap-3" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }} data-testid="user-row">
                 <UserAvatar name={u.name} avatarUrl={u.avatarUrl} size={28} />
@@ -136,6 +172,16 @@ export default function AdminUsersPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {cursor && users.length > 0 && (
+        <div className="text-center mt-6">
+          <button onClick={loadMore} disabled={loadingMore}
+            className="px-4 py-2 rounded text-xs font-bold uppercase tracking-wider disabled:opacity-40"
+            style={outline('blue')}>
+            {loadingMore ? 'Loading…' : 'Load more'}
+          </button>
         </div>
       )}
     </PageContainer>

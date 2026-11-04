@@ -730,7 +730,13 @@ export const api = {
   agentSkillUrl: (id: string) => `${API_BASE}/agents/${id}/skill`,
 
   // Admin: users
-  listUsers: (q?: string) => request<{ data: User[] }>(`/users?${new URLSearchParams(q ? { q } : {})}`),
+  /** A page of users, admins first, then newest first. adminCount counts every admin, whatever the search. */
+  listUsers: (q?: string, cursor?: string | null) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (cursor) params.set('cursor', cursor);
+    return request<{ data: User[]; nextCursor: string | null; adminCount: number }>(`/users?${params}`);
+  },
   setUserRole: (id: string, role: 'ADMIN' | 'USER') =>
     request<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
 

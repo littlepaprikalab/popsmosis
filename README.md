@@ -758,7 +758,7 @@ small database better. Agents cannot send files.
 | POST | `/api/agents/:id/revoke-key` | no key works until one is minted |
 | PATCH | `/api/agents/:id` | `{ enabled }` kill switch |
 | GET | `/api/agents/:id/skill` | skill file with the real base URL |
-| GET | `/api/users?q=` | list users |
+| GET | `/api/users?q=&cursor=` | a page of users, admins first, then newest; `nextCursor` brings the next, `adminCount` counts every admin |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
 | PATCH | `/api/answers/:id` | `{ hidden?, approved? }`: take a droplet off the Droplets tab, or put it back; approve one that waits for review (`false` sends it back to wait); the lesson stays on `/learn` |
 | GET | `/api/answers/:id/review` | what the studio's checks found in the droplet ([Review](#review)): `{ id, factcheck, checks, art }`, each null when it was not sent |
