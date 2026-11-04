@@ -627,7 +627,7 @@ class CheckedLine(Strict):
     # painted from) and the song's "style" are judged only as fit to go out.
     # "frq" is a line of the exam question, in a fact-check made before it left the videos on Oct 28.
     kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion", "keyline", "caption", "title", "scene",
-                  "style", "avoid"]
+                  "style", "avoid", "headline"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
@@ -639,7 +639,7 @@ class CheckedLine(Strict):
 class Correction(Strict):
     round: int
     kind: Literal["lyric", "narration", "lesson", "frq", "keyline", "caption", "title", "scene",
-                  "style"]  # "frq": as for CheckedLine
+                  "style", "headline"]  # "frq": as for CheckedLine
     ids: list[str]
     before: str  # a couplet's lines joined by "\n"
     after: str

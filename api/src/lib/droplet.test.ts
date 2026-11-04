@@ -104,6 +104,8 @@ describe('the public droplet', () => {
     expect(dropletTitle(row.bundle)).toEqual({ title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase', headline: '' });
     expect(dropletTitle({ course: 'Physics', topic: 'noise cancellation', headline: ' How do noise-cancelling headphones work? ' }))
       .toMatchObject({ title: 'Physics: noise cancellation', headline: 'How do noise-cancelling headphones work?' });
+    expect(dropletTitle({ topic: 'DNA', headline: 'What\n  is   DNA?' }).headline).toBe('What is DNA?');
+    expect(dropletTitle({ topic: 'DNA', headline: 'x'.repeat(81) }).headline).toBe('');
     expect(dropletTitle({ topic: 'DNA' }).title).toBe('DNA');
     expect(dropletTitle(null).title).toBe('A droplet');
   });

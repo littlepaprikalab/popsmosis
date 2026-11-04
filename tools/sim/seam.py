@@ -41,16 +41,26 @@ def sql(db: str, query: str) -> str:
 def state(db: str, qid: str) -> dict:
     row = sql(db, f"""SELECT row_to_json(t) FROM (SELECT q.status, q.runs, q."failedReason", a.id AS answer,
         a."videoStatus", a."videoAttempts", a."videoError", a.model, a."lessonBreakdown" AS breakdown, a."videoBreakdown",
-        a."lessonVideoUrl", a."songVideoUrl"
+        a."lessonVideoUrl", a."songVideoUrl", q."songStyle" AS "songStyle", a.bundle->>'headline' AS headline
         FROM questions q LEFT JOIN answers a ON a."questionId" = q.id WHERE q.id = '{qid}') t""")
     return json.loads(row)
 
 
-def ask(db: str, topic: str) -> str:
+def ask(db: str, topic: str, style: str = "") -> str:
+    """A topic as /learn writes it; style: the song style field, in the learner's words ("": none)."""
     uid, qid = "u" + uuid.uuid4().hex[:20], "q" + uuid.uuid4().hex[:20]
+    song_style = f"'{style}'" if style else "NULL"
     sql(db, f"""INSERT INTO users (id, email, "googleId", "updatedAt") VALUES ('{uid}', '{uid}@seam.test', '{uid}', now());
-               INSERT INTO questions (id, "userId", content) VALUES ('{qid}', '{uid}', '{topic}')""")
+               INSERT INTO questions (id, "userId", content, "songStyle")
+               VALUES ('{qid}', '{uid}', '{topic}', {song_style})""")
     return qid
+
+
+def asked_style(sim: Path, qid: str) -> str | None:
+    """The song style the studio wrote into the job's request, on whichever machine made the lesson."""
+    for path in sim.glob(f"machine-*/{qid}/request.json"):
+        return json.loads(path.read_text(encoding="utf-8")).get("song_style")
+    return None
 
 
 def age(db: str, qid: str, minutes: int = 61) -> None:
@@ -63,11 +73,16 @@ def session_lines(bill: dict | None) -> int:
     return sum(1 for s in (bill or {}).get("steps", []) for m in s.get("models", []) if m.get("via") == "session")
 
 
+# The song style the baseline's topic is asked with: the field reaches the studio through the claim, and the lesson
+# it posts carries its headline back.
+BASELINE_STYLE = "lo-fi with soft rapped verses"
+
 # name -> (faults, env, how many heartbeats at most, the check on the end state)
 SCENARIOS = {
     "baseline": ({}, {}, 1, lambda s: s["status"] == "ANSWERED" and s["runs"] == 1 and s["videoStatus"] == "READY"
                  and s["videoAttempts"] == 1 and s["model"] == "claude-opus-5-5" and bool(s["breakdown"])
-                 and bool(s["videoBreakdown"]) and bool(s["lessonVideoUrl"])),
+                 and bool(s["videoBreakdown"]) and bool(s["lessonVideoUrl"])
+                 and s["songStyle"] == BASELINE_STYLE and s["askedStyle"] == BASELINE_STYLE and bool(s["headline"])),
     "brain-down-session": ({"brain": {"*": {"fault": "overloaded", "times": 999}}}, {}, 1,
                            lambda s: s["videoStatus"] == "READY" and session_lines(s["breakdown"]) > 0
                            and session_lines(s["videoBreakdown"]) > 0),
@@ -89,7 +104,7 @@ def run(name: str, api: str, key: str, db: str, root: Path) -> tuple[str, bool, 
     sim = root / name
     sim.mkdir(parents=True, exist_ok=True)
     (sim / "faults.json").write_text(json.dumps(faults))
-    qid = ask(db, f"seam check {name.replace('-', ' ')}")
+    qid = ask(db, f"seam check {name.replace('-', ' ')}", BASELINE_STYLE if name == "baseline" else "")
     teacher = Teacher(sim, api, {"STUDIO_SIM_STORAGE": "discard", **env}, api_key=key)
     started = time.monotonic()
     for n in range(1, beats + 1):
@@ -98,7 +113,7 @@ def run(name: str, api: str, key: str, db: str, root: Path) -> tuple[str, bool, 
         if s["videoStatus"] in ("READY", "FAILED") or s["status"] == "FAILED":
             break
         age(db, qid)
-    s = state(db, qid)
+    s = {**state(db, qid), "askedStyle": asked_style(sim, qid)}
     (sim / "operator.log").write_text("\n".join(teacher.log) + "\n\nend state:\n" + json.dumps(s, indent=1) + "\n")
     return name, bool(check(s)), s, time.monotonic() - started
 

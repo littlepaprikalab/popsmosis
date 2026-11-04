@@ -205,8 +205,12 @@ export function dropletTitle(bundle: unknown): { title: string; course: string; 
   const course = text('course');
   const topic = text('topic');
   const title = course && topic ? `${course}: ${topic}` : topic || course || 'A droplet';
-  return { title, course, topic, headline: text('headline') };
+  // One line, as the studio leaves it (checks.repair_once); past HEADLINE_MAX_LENGTH none, and the topic heads it.
+  const headline = text('headline').split(/\s+/).join(' ');
+  return { title, course, topic, headline: headline.length <= HEADLINE_MAX_LENGTH ? headline : '' };
 }
+
+export const HEADLINE_MAX_LENGTH = 80; // studio/checks.py, HEADLINE_MAX_CHARS
 
 function publicVideo(a: PublicDropletRow) {
   return {

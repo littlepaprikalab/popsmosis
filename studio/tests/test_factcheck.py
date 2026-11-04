@@ -652,9 +652,19 @@ def test_the_headline_is_sent_beside_the_title_and_one_about_the_learner_is_corr
 
     fixed = "How do plants make energy from light?"
     report, checked = check_bundle(bundle(personal), "", FakeChecker(public_rule({personal_headline(): fixed})))
-    assert "title:headline" in [line.kind + ":" + line.id for line in report.lines]
+    assert "headline:headline" in [line.kind + ":" + line.id for line in report.lines]
     assert report.status == "passed" and checked.headline == fixed
-    assert [(c.kind, c.before, c.after) for c in report.corrections] == [("title", personal_headline(), fixed)]
+    assert [(c.kind, c.before, c.after) for c in report.corrections] == [("headline", personal_headline(), fixed)]
+
+
+def test_an_unfit_headline_with_no_correction_is_cleared_and_never_fails_the_droplet():
+    def personal(data):
+        data["headline"] = personal_headline()
+
+    report, checked = check_bundle(bundle(personal), "", FakeChecker(public_rule({personal_headline(): ""})))
+    assert report.status == "passed"
+    assert checked.headline == ""  # the pages head it with the topic instead
+    assert (checked.course, checked.topic) == (bundle().course, bundle().topic)
 
 
 def personal_headline():
@@ -667,7 +677,7 @@ def test_no_headline_sends_none():
 
     fake = FakeChecker(public_rule({}))
     check_bundle(bundle(without), "", fake)
-    assert "title:headline" not in fake.ids(1)
+    assert "headline:headline" not in fake.ids(1)
 
 
 def test_a_style_that_names_an_artist_is_corrected_and_a_thing_to_avoid_that_fails_is_dropped():
