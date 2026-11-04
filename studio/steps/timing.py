@@ -49,9 +49,9 @@ well (KEEP_SCORE) keep MMS's timing, which is finer, and fence in where the othe
 sure of takes Whisper's timing when Whisper heard enough of its words (FOUND_SHARE), and a line sung again takes the
 time it is heard best (of times heard as well, the first). Whisper's words over no singing (it makes up lyrics over
 silence) are left out. A line neither of them heard, between two lines Whisper heard sung one after the other with
-no room for its words, was not sung: it is marked so, and the song fails as one that does not sing its lyrics, so
-the retry sings it again. Whisper is the aligner's backup: when faster-whisper is missing the step installs it
-(install_whisper()), and a model that will not load is loaded once more; only when that fails too is the song timed
+no room for its words, was not sung: it is marked so, never shown in the karaoke, and named in the summary; the
+song goes on without it (a song need not sing every line, the owner, Nov 4). Whisper is the aligner's backup: when
+faster-whisper is missing the step installs it (install_whisper()), and a model that will not load is loaded once more; only when that fails too is the song timed
 without it, and the step's line says WHISPER UNAVAILABLE, so the operator's record shows it. The report's `by_whisper`
 and `skipped` name the lines.
 
@@ -1028,12 +1028,10 @@ def song_report(timing: Timing, texts: dict[str, str], scores: dict[str, float |
 
 
 def lyric_mismatch(report: dict) -> str | None:
-    """Why the song is not its lyrics, or None: the singer skipped a line (Whisper heard the lines either side of it
-    sung one after the other), or more than MISMATCH_SHARE of its sung lines were sung differently (neither MMS nor
-    Whisper heard them)."""
-    if report.get("skipped"):
-        missed = report["skipped"]
-        return f"the song does not sing its lyrics: the singer skipped {', '.join(missed)}"
+    """Why the song is not its lyrics, or None: more than MISMATCH_SHARE of its sung lines were sung differently
+    (neither MMS nor Whisper heard them). A line the singer skipped does not fail the song (the owner, Nov 4: a song
+    need not be that strict; that day's Calvin cycle threw four songs away for one skipped chorus line each): it is
+    marked not sung, the karaoke never shows it, and the summary names it (SKIPPED by the singer)."""
     scored = [row for row in report.get("lines", []) if row.get("score") is not None and row.get("sung", True)]
     heard = set(report.get("by_whisper") or ())
     unsure = [row["line_id"] for row in scored if row["score"] < LOW_SCORE and row["line_id"] not in heard]
