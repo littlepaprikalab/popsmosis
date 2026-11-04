@@ -38,28 +38,33 @@ describe('parseArt', () => {
 });
 
 describe('brainFrom', () => {
-  it('is Claude at high effort with nothing stored', () => {
-    expect(DEFAULT_BRAIN).toEqual({ default: 'claude', effort: 'high' });
+  it('is Claude at high effort with nothing stored, and topics sent to a brain of their own go to it', () => {
+    expect(DEFAULT_BRAIN).toEqual({ default: 'claude', effort: 'high', defaultOnly: false });
     for (const stored of [undefined, null, 'claude', []]) expect(brainFrom(stored)).toEqual(DEFAULT_BRAIN);
   });
 
   it('takes what is stored, and drops what is no longer allowed', () => {
-    expect(brainFrom({ default: 'muse-spark' })).toEqual({ default: 'muse-spark', effort: 'high' });
-    expect(brainFrom({ default: 'muse-spark-1.3', effort: 'medium' })).toEqual({ default: 'claude', effort: 'medium' });
+    expect(brainFrom({ default: 'muse-spark' })).toEqual({ default: 'muse-spark', effort: 'high', defaultOnly: false });
+    expect(brainFrom({ default: 'muse-spark-1.3', effort: 'medium' })).toEqual({ default: 'claude', effort: 'medium', defaultOnly: false });
     expect(brainFrom({ effort: 'hihg' })).toEqual(DEFAULT_BRAIN);
+    expect(brainFrom({ default: 'muse-spark', defaultOnly: true })).toEqual({ default: 'muse-spark', effort: 'high', defaultOnly: true });
+    expect(brainFrom({ defaultOnly: 'yes' })).toEqual(DEFAULT_BRAIN);
   });
 });
 
 describe('parseBrainSettings', () => {
-  it('takes the default brain, the effort, or both', () => {
+  it('takes the default brain, the effort, whether the default makes every topic, or any of them', () => {
     expect(parseBrainSettings({ default: 'muse-wonder' })).toEqual({ brain: { default: 'muse-wonder' } });
     expect(parseBrainSettings({ default: 'claude', effort: 'max' })).toEqual({ brain: { default: 'claude', effort: 'max' } });
+    expect(parseBrainSettings({ defaultOnly: true })).toEqual({ brain: { defaultOnly: true } });
+    expect(parseBrainSettings({ default: 'claude', defaultOnly: false })).toEqual({ brain: { default: 'claude', defaultOnly: false } });
   });
 
   it('refuses what is not a brain or an effort', () => {
     expect(parseBrainSettings({ default: 'claude-haiku-5-5' }).error).toBe('brain.default must be one of claude, muse-wonder, muse-spark');
     expect(parseBrainSettings({ effort: 'hihg' }).error).toBe('brain.effort must be one of low, medium, high, xhigh, max');
-    expect(parseBrainSettings({ model: 'x' }).error).toBe('brain takes default and effort, not model');
+    expect(parseBrainSettings({ model: 'x' }).error).toBe('brain takes default, effort and defaultOnly, not model');
+    expect(parseBrainSettings({ defaultOnly: 'on' }).error).toBe('brain.defaultOnly must be true or false');
     expect(parseBrainSettings({}).error).toBe('brain names nothing to change');
     expect(parseBrainSettings('claude').error).toBe('brain must be an object');
   });

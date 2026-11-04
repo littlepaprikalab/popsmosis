@@ -32,7 +32,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 SETTINGS = {
-    "brain": {"default": "claude", "effort": "high"},
+    "brain": {"default": "claude", "effort": "high", "defaultOnly": False},
     "song": {"provider": "gemini"},
     "art": {"claude": "svg", "meta": "muse"},
     "spend": {"topicUsd": 20},

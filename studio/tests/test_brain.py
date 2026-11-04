@@ -486,8 +486,12 @@ def test_the_studio_settings_agree_with_the_api():
     assert {"claude": ts_list(choices.group(1)), "meta": ts_list(choices.group(2))} == brain.ART_CHOICES
     art = re.search(r"DEFAULT_ART: ArtSettings = \{ claude: '(\w+)', meta: '(\w+)' \}", source)
     assert art.groups() == (brain.ART_CHOICES["claude"][0], brain.ART_CHOICES["meta"][0])  # each default listed first
-    default = re.search(r"DEFAULT_BRAIN: BrainSettings = \{ default: '([\w-]+)', effort: '(\w+)' \}", source)
-    assert default.groups() == (brain.DEFAULT_BRAIN, brain.DEFAULT_EFFORT)
+    default = re.search(r"DEFAULT_BRAIN: BrainSettings = \{ default: '([\w-]+)', effort: '(\w+)', defaultOnly: (\w+) \}", source)
+    assert default.groups() == (brain.DEFAULT_BRAIN, brain.DEFAULT_EFFORT, "false")
+
+    from studio import run
+
+    assert run.default_only({}) is False  # with no settings, a topic's own brain is honoured, as the API's default
     assert ts_list(re.search(r"EFFORTS = \[(.*?)\] as const", source).group(1)) == brain.EFFORTS
 
     from studio.steps import audio

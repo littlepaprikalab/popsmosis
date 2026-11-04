@@ -60,7 +60,7 @@ d('studio settings', () => {
     const res = await get(adminCookie);
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({
-      brain: { default: 'claude', effort: 'high' },
+      brain: { default: 'claude', effort: 'high', defaultOnly: false },
       song: { provider: 'gemini' },
       art: { claude: 'gemini', meta: 'muse' },
       knobs: expect.any(Object),
@@ -68,7 +68,7 @@ d('studio settings', () => {
       review: { required: false },
       updatedAt: null,
       defaults: {
-        brain: { default: 'claude', effort: 'high' }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
+        brain: { default: 'claude', effort: 'high', defaultOnly: false }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
         spend: { topicUsd: 20 }, review: { required: false },
       },
       choices: {
@@ -84,7 +84,7 @@ d('studio settings', () => {
     const asTeacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
     expect(asTeacher.statusCode).toBe(200);
     expect(asTeacher.json()).toEqual({
-      brain: { default: 'claude', effort: 'high' }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
+      brain: { default: 'claude', effort: 'high', defaultOnly: false }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
       knobs: {},
       spend: { topicUsd: 20 },
     });
@@ -97,7 +97,7 @@ d('studio settings', () => {
   it('keeps the default brain and its effort, and refuses what is not one', async () => {
     const changed = await put(adminCookie, { brain: { default: 'muse-spark' } });
     expect(changed.statusCode).toBe(200);
-    expect(changed.json().brain).toEqual({ default: 'muse-spark', effort: 'high' });
+    expect(changed.json().brain).toEqual({ default: 'muse-spark', effort: 'high', defaultOnly: false });
     expect((await put(adminCookie, { brain: { effort: 'medium' }, art: { meta: 'gemini' } })).json()).toMatchObject({
       brain: { default: 'muse-spark', effort: 'medium' }, art: { claude: 'gemini', meta: 'gemini' },
     });
@@ -105,7 +105,32 @@ d('studio settings', () => {
     expect((await put(adminCookie, {})).statusCode).toBe(400);
     // A refused change leaves everything as it was, the art in the same request included.
     expect((await put(adminCookie, { brain: { effort: 'max' }, art: { meta: 'svg' } })).statusCode).toBe(400);
-    expect((await get(adminCookie)).json().brain).toEqual({ default: 'muse-spark', effort: 'medium' });
+    expect((await get(adminCookie)).json().brain).toEqual({ default: 'muse-spark', effort: 'medium', defaultOnly: false });
+  });
+
+  it('puts every topic on the default brain: a pick sent meanwhile is not kept, and anyone can read that picks are off', async () => {
+    const picks = () => app.inject({ method: 'GET', url: '/api/questions/brains' }); // signed out too
+    const send = (content: string, brain: string) =>
+      app.inject({ method: 'POST', url: '/api/questions', headers: asUser(learnerCookie), payload: { content, brain } });
+    expect((await picks()).json()).toEqual({ open: true });
+    const waiting = await prisma.question.create({ data: { userId, content: 'Sent to Spark before the switch', brain: 'muse-spark' } });
+
+    const on = await put(adminCookie, { brain: { defaultOnly: true } });
+    expect(on.json().brain).toEqual({ default: 'claude', effort: 'high', defaultOnly: true });
+    expect((await picks()).json()).toEqual({ open: false });
+    const sent = await send('Osmosis, on Spark', 'muse-spark');
+    expect(sent.statusCode).toBe(201);
+    expect(sent.json().brain).toBeNull(); // the default's, and stays so once the switch is off
+    expect((await send('Osmosis, on Wonder', 'muse-wonder')).statusCode).toBe(403); // still not a learner's to pick
+    // A topic picked before the switch keeps its pick; the studio reads the switch from the claim and makes it on
+    // the default (studio/run.py).
+    const claim = await app.inject({ method: 'POST', url: `/api/questions/${waiting.id}/claim`, headers: asAgent });
+    expect(claim.json()).toMatchObject({ brain: 'muse-spark', studio: { brain: { default: 'claude', defaultOnly: true } } });
+
+    expect((await put(adminCookie, { brain: { defaultOnly: false } })).json().brain.defaultOnly).toBe(false);
+    expect((await picks()).json()).toEqual({ open: true });
+    expect((await send('Diffusion, on Spark', 'muse-spark')).json().brain).toBe('muse-spark');
+    expect((await put(adminCookie, { brain: { defaultOnly: 'yes' } })).statusCode).toBe(400);
   });
 
   it('keeps a change, leaves the other brain as it was, and refuses a painter that brain may not use', async () => {
@@ -168,7 +193,7 @@ d('studio settings', () => {
   it('reaches the studio on the claim of a topic and of its videos', async () => {
     const pending = await prisma.question.create({ data: { userId, content: 'ATP synthesis' } });
     const claim = () => app.inject({ method: 'POST', url: `/api/questions/${pending.id}/claim`, headers: asAgent });
-    const brain = { default: 'claude', effort: 'high' };
+    const brain = { default: 'claude', effort: 'high', defaultOnly: false };
     const song = { provider: 'gemini' };
     expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' }, knobs: {}, spend: { topicUsd: 20 } });
     await put(adminCookie, { art: { claude: 'svg' }, knobs: { ELEVENLABS_VOICE_ID: 'Voice42' }, spend: { topicUsd: 3 } });

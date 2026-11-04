@@ -205,6 +205,7 @@ page and remove it, so nothing changes without anyone seeing why.
 | Setting | Choices | Default |
 |---|---|---|
 | Default brain: writes and fact-checks every topic not sent to a brain of its own | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
+| Brains picked on `/learn`: each topic goes to the brain picked for it, or the default brain makes every topic (for when a brain's account is over its quota: `/learn` hides the picker, and topics already waiting on another brain are made on the default from the next run) | picks, default only | picks |
 | Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
 | Song and narration: who makes the audio | ElevenLabs: Eleven Music and its text-to-speech (credits), or Google: Lyria 3.5 ($0.08 a song) and Gemini 3.8 Flash TTS (about 4 cents a narration: $0.50 / $9 per million tokens in and out, 25 audio tokens a second; $1 / $18 from 2027) | Google (Lyria) |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
@@ -271,6 +272,12 @@ the pick's provider: a topic sent to a brain whose key is missing fails at its f
 with `the studio cannot run this topic's brain here: ...`, and the teacher gives it up with
 that reason, so the queue moves on. For a local job, `python -m studio plan ... --brain muse-spark`.
 Follow-ups are answered by the teacher itself, whatever the brain.
+
+While an admin has **The default brain makes every topic** on (the Studio page, under the default
+brain), `/learn` shows no buttons (an admin sees a line saying why), the API keeps no pick sent
+meanwhile, and the studio makes every topic it claims on the default brain: one sent to another
+brain before the switch, and a lesson begun on another, included. Videos of a lesson already
+written still follow the brain that wrote it; its pictures go by that provider's painter.
 
 ### Knobs
 

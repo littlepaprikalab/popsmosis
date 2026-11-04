@@ -477,6 +477,9 @@ function LearnContent() {
   // The pick of the brain for the next topic (lib/brains.ts), remembered on this browser; null: the default.
   const [brain, setBrain] = useState<Brain | null>(null);
   const [defaultBrain, setDefaultBrain] = useState<Brain | null>(null); // the Studio page's, for the Default button
+  // Whether a topic may go to a brain of its own (GET /api/questions/brains): false while an admin has the default make
+  // every topic, when the picker is hidden and no pick is sent. Null until known, or when the API could not say.
+  const [picksOpen, setPicksOpen] = useState<boolean | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   // For a topic with a lesson: whether the lesson goes too (the API's /everything route), or only the request.
   const [deleteLesson, setDeleteLesson] = useState(true);
@@ -533,6 +536,11 @@ function LearnContent() {
     if (!isAdmin) return;
     api.getStudioSettings().then((s) => setDefaultBrain(s.brain.default)).catch(() => {}); // the note says less without it
   }, [isAdmin]);
+
+  const readPicks = useCallback(() => {
+    api.getBrainPicks().then((r) => setPicksOpen(r.open)).catch(() => {}); // the picker shows; the API drops a pick if it must
+  }, []);
+  useEffect(readPicks, [readPicks]);
 
   const pickBrain = (value: Brain | null) => {
     setBrain(value);
@@ -671,16 +679,18 @@ function LearnContent() {
     if (!user) { setAskSignIn(true); return; }
     try {
       await guard(async () => {
-        const picked = chosen?.value ?? null;
+        const picked = picksOpen === false ? null : chosen?.value ?? null;
         const q = await api.askQuestion(content, picked);
+        const sentTo = q.brain === undefined ? picked : q.brain; // the API's word: a pick is dropped while picks are off
         setQuestions((prev) => [q, ...prev]);
         if (!latestSeenRef.current || q.createdAt > latestSeenRef.current) latestSeenRef.current = q.createdAt;
         changeQuestion('');
         // Too long to read in a few seconds, so it stays until the learner closes it; so does a refusal below. Each
         // Submit's word replaces the last one's.
-        showToast(`Topic sent${picked ? ` to ${brainLabel(picked)}` : ''}. The teacher picks it up on its next pass; `
+        showToast(`Topic sent${sentTo ? ` to ${brainLabel(sentTo)}` : ''}. The teacher picks it up on its next pass; `
           + `a droplet takes about ${USUAL_MINUTES} minutes to make.`, 'success', { persistent: true, key: 'ask' });
         readAllowance();
+        if (picked && !sentTo) readPicks(); // turned off since the page read it: the picker goes
       });
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to send topic', 'error', { persistent: true, key: 'ask' });
@@ -846,30 +856,38 @@ function LearnContent() {
             {submitting ? '...' : 'SUBMIT'}
           </button>
         </div>
-        <div className="mt-3" data-testid="brain-picker">
-          <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brain for this topic">
-            <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Brain:</span>
-            {brainOptions.map((option) => {
-              const on = option.value === brain;
-              return (
-                <button key={option.label} type="button" role="radio" aria-checked={on}
-                  title={isAdmin && option.adminNote ? `${option.note} ${option.adminNote}` : option.note}
-                  onClick={() => pickBrain(option.value)}
-                  className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-full border ${
-                    on ? 'text-[var(--btn-filled-text)] border-transparent' : 'text-[var(--accent-purple)] border-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/10'
-                  }`}
-                  style={on ? { background: 'var(--accent-purple)' } : {}}>
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="brain-note">
-            {chosen?.note}
-            {isAdmin && chosen?.adminNote && ` ${chosen.adminNote}`}
-            {isAdmin && brain === null && defaultBrain && ` Now: ${BRAIN_MODELS[defaultBrain] ?? defaultBrain}.`}
+        {picksOpen === false ? isAdmin && (
+          <p className="text-[10px] mt-3" style={{ color: 'var(--text-muted)' }} data-testid="brain-picks-off">
+            Brain: every topic goes to the default brain{defaultBrain ? `, ${BRAIN_MODELS[defaultBrain] ?? defaultBrain}` : ''}, as
+            set on the <Link href="/admin/studio" className="underline">Studio page</Link>. Learners see no picker until it is
+            turned off there.
           </p>
-        </div>
+        ) : (
+          <div className="mt-3" data-testid="brain-picker">
+            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brain for this topic">
+              <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Brain:</span>
+              {brainOptions.map((option) => {
+                const on = option.value === brain;
+                return (
+                  <button key={option.label} type="button" role="radio" aria-checked={on}
+                    title={isAdmin && option.adminNote ? `${option.note} ${option.adminNote}` : option.note}
+                    onClick={() => pickBrain(option.value)}
+                    className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-full border ${
+                      on ? 'text-[var(--btn-filled-text)] border-transparent' : 'text-[var(--accent-purple)] border-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/10'
+                    }`}
+                    style={on ? { background: 'var(--accent-purple)' } : {}}>
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="brain-note">
+              {chosen?.note}
+              {isAdmin && chosen?.adminNote && ` ${chosen.adminNote}`}
+              {isAdmin && brain === null && defaultBrain && ` Now: ${BRAIN_MODELS[defaultBrain] ?? defaultBrain}.`}
+            </p>
+          </div>
+        )}
         <p className="text-[10px] mt-2 flex justify-between" style={{ color: 'var(--text-muted)' }}>
           <span>No personal info: the lesson will be public. Min {QUESTION_MIN} characters. Enter adds a line; Ctrl+Enter (⌘+Enter) or Submit sends.</span>
           <span>{newQuestion.length}/{QUESTION_MAX}</span>

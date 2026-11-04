@@ -676,6 +676,31 @@ def test_a_topic_without_a_brain_of_its_own_is_made_on_the_default_at_its_effort
     assert (operator_run.job_brain(jobs_root / "q1"), operator_run.job_effort(jobs_root / "q1")) == ("muse-wonder", "medium")
 
 
+def test_while_the_default_makes_every_topic_a_topic_sent_to_its_own_brain_is_made_on_the_default(jobs_root):
+    """An admin's switch on /admin/studio, for when a brain's account is over its quota: the topic was sent to Muse
+    Spark (before the switch, or by a page that still showed the picker), and the default makes it all the same."""
+    only = {"brain": {"default": "claude", "effort": "medium", "defaultOnly": True}}
+    api = FakeApi({**QUESTION, "brain": "muse-spark"}, studio=only)
+    ask = SpyBrain()
+    assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
+    assert ask.brains == [("claude", "claude-opus-5-5")] * 5
+    assert (operator_run.job_brain(jobs_root / "q1"), operator_run.job_effort(jobs_root / "q1")) == ("claude", "medium")
+
+
+def test_while_the_default_makes_every_topic_a_lesson_begun_on_another_brain_goes_on_with_it(jobs_root):
+    """Spending on the brain the switch was turned on to stop: a retry of a lesson whose bundle Muse Spark wrote
+    has its fact-check made on the default too, rather than on the brain that began it."""
+    api = FakeApi({**QUESTION, "brain": "muse-spark"}, studio={"brain": {"default": "claude"}})
+    ask = DownForTheFactCheck()
+    assert operator_run.run("q1", api=api, ask=ask)[:2] == ("FAILED", "factcheck")
+    assert {provider for provider, _ in ask.brains} == {"meta"}
+    api.studio = {"brain": {"default": "claude", "defaultOnly": True}}  # an admin turns the switch on meanwhile
+    ask.down, ask.brains = False, []
+    assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
+    assert {provider for provider, _ in ask.brains} == {"claude"}
+    assert operator_run.job_brain(jobs_root / "q1") == "claude"  # and its videos follow it
+
+
 def test_with_no_settings_from_the_api_the_brain_is_claude_opus(jobs_root):
     api, ask = FakeApi(), SpyBrain()  # an API too old to send them
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"

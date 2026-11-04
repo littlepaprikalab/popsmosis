@@ -1,7 +1,8 @@
 /**
  * The brains a topic may be sent to on /learn (api/src/lib/brains.ts). Null is the default brain set on
  * /admin/studio. Anyone may pick Claude or Muse Spark; Muse Wonder is shown to admins alone. The brain writes and
- * fact-checks the lesson; who paints the pictures goes by its provider, as set on /admin/studio too.
+ * fact-checks the lesson; who paints the pictures goes by its provider, as set on /admin/studio too. While an admin has
+ * the default brain make every topic (BrainSettings.defaultOnly), /learn hides the picker.
  */
 
 export type Brain = 'claude' | 'muse-wonder' | 'muse-spark';
