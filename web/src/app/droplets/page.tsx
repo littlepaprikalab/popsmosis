@@ -263,11 +263,13 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const href = `/droplets/${d.id}`;
   const heading = dropletHeading(d);
-  // The song first, as it is the hook, then the lesson: each with its own still, else the other video's.
+  // The song first, as it is the hook, then the lesson, each with its own still. A card with one video may show the
+  // other's still rather than none; with both, the song's picture never stands in under the Lesson tab.
   const slides = ([
-    { kind: 'song', src: d.video.songVideoUrl, poster: d.video.songPosterUrl || d.video.lessonPosterUrl },
-    { kind: 'lesson', src: d.video.lessonVideoUrl, poster: d.video.lessonPosterUrl || d.video.songPosterUrl },
-  ] as const).filter((s): s is Slide => !!s.src);
+    { kind: 'song', src: d.video.songVideoUrl, poster: d.video.songPosterUrl },
+    { kind: 'lesson', src: d.video.lessonVideoUrl, poster: d.video.lessonPosterUrl },
+  ] as const).filter((s): s is Slide => !!s.src)
+    .map((s, _, all) => (all.length > 1 ? s : { ...s, poster: s.poster || d.video.songPosterUrl || d.video.lessonPosterUrl }));
   const [shown, setShown] = useState<CardKind>(slides[0]?.kind ?? 'song');
   // The views of the video on show, as YouTube puts them under a title.
   const songViews = useViews(d.views?.song ?? 0);
@@ -403,12 +405,13 @@ function CardVideos({ dropletId, heading, slides, shown, onShow, onStart }: {
               </button>
             );
           })}
-          <span ref={bar} aria-hidden className="absolute top-0 left-0 h-0.5 transition-colors"
+          {/* High contrast paints every background the page's own colour: the bar keeps the system's highlight. */}
+          <span ref={bar} aria-hidden className="absolute top-0 left-0 h-0.5 transition-colors forced-colors:[forced-color-adjust:none] forced-colors:bg-[Highlight]!"
             style={{ width: `${100 / slides.length}%`, background: showing.color }} />
         </div>
       ) : (
         <p className="flex items-center justify-center gap-1.5 py-2 text-[10px] uppercase tracking-wider font-bold"
-          style={{ color: showing.color, borderBottom: '1px solid var(--border)' }}>
+          style={{ color: showing.color, borderBottom: '1px solid var(--border)' }} data-testid="card-video-name">
           <showing.Icon className="w-3.5 h-3.5" aria-hidden /> {showing.label}
         </p>
       )}

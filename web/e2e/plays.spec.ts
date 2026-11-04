@@ -232,6 +232,26 @@ test.describe('views', () => {
     await expect(views).toHaveText(viewsText(song + 1));
   });
 
+  test("a card's lesson, tabbed to, shows its own views, and its play counts as the lesson's, not the song's", async ({ page, request }) => {
+    const song = (await countsOf(request, 'song')).started;
+    const lesson = (await countsOf(request, 'lesson')).started;
+    const counts = watchCounts(page);
+    await page.goto('/droplets');
+    const card = page.getByTestId('droplet-card').filter({ has: page.locator(`a[href="/droplets/${S.droplet}"]`) });
+    const views = card.getByTestId('view-count');
+    await expect(views).toHaveText(viewsText(song));
+    await card.getByRole('tab', { name: 'Lesson' }).click();
+    await expect(views).toHaveText(viewsText(lesson));
+    await card.getByTestId('card-lesson').getByTestId('card-play').click();
+    await expect(views).toHaveText(viewsText(lesson + 1));
+    await expect.poll(() => counts.sent).toEqual(['lesson started']);
+    // Back on the song: its own count, untouched by the lesson's play.
+    await card.getByRole('tab', { name: 'Song' }).click();
+    await expect(views).toHaveText(viewsText(song));
+    await expect.poll(async () => (await countsOf(request, 'lesson')).started).toBe(lesson + 1);
+    expect((await countsOf(request, 'song')).started).toBe(song);
+  });
+
   test('with no views from the API (one older than them, or a read that failed), the videos show and play as before', async ({ page }) => {
     // The API's answers with `views` taken out, as an API from before them sends them.
     const withoutViews = async (route: Route) => {

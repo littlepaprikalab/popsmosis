@@ -178,6 +178,51 @@ test.describe('the Droplets tab, signed out', () => {
     await showing('song');
   });
 
+  test("a card with one video shows it alone, named, and a missing still is never the other video's", async ({ page, request }) => {
+    const { views } = await (await request.get(apiUrl(`/api/droplets/${S.droplet}`))).json();
+    // The list as the API sends it, with the seeded droplet's videos changed for each case.
+    let edit: (video: Record<string, string | null>) => void = () => {};
+    await page.route(/\/api\/droplets(\?[^/]*)?$/, async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const res = await route.fetch();
+      const body = await res.json();
+      for (const d of body.data) if (d.id === S.droplet) edit(d.video);
+      await route.fulfill({ response: res, json: body });
+    });
+    const card = page.getByTestId('droplet-card').filter({ has: page.locator(`a[href="/droplets/${S.droplet}"]`) });
+    const still = (kind: 'song' | 'lesson') => card.getByTestId(`card-${kind}`).locator('img');
+
+    // The song alone: no tabs, its name under it.
+    edit = (v) => { v.lessonVideoUrl = null; };
+    await page.goto('/droplets');
+    await expect(card.getByLabel('ATP synthesis: song video')).toBeAttached();
+    await expect(card.getByTestId('card-lesson')).toHaveCount(0);
+    await expect(card.getByRole('tablist')).toHaveCount(0);
+    await expect(card.getByTestId('card-video-name')).toHaveText('Song');
+
+    // The lesson alone, as a droplet made with no song has it: it plays, with the lesson's views.
+    edit = (v) => { v.songVideoUrl = null; };
+    await page.reload();
+    await expect(card.getByTestId('card-song')).toHaveCount(0);
+    await expect(card.getByTestId('card-video-name')).toHaveText('Lesson');
+    await expect(card.getByTestId('view-count')).toHaveText(`${views.lesson} ${views.lesson === 1 ? 'view' : 'views'}`);
+    await expect(still('lesson')).toHaveAttribute('src', '/samples/lesson.jpg');
+    await card.getByRole('button', { name: 'Play the lesson video: ATP synthesis' }).click();
+    await expect.poll(() => playedTo(card.getByLabel('ATP synthesis: lesson video'))).toBeGreaterThan(0);
+
+    // One video with no still of its own shows the other's rather than none...
+    edit = (v) => { v.songVideoUrl = null; v.lessonPosterUrl = null; };
+    await page.reload();
+    await expect(still('lesson')).toHaveAttribute('src', '/samples/song.jpg');
+    // ...but with both videos, the lesson's missing still is left out, not the song's put under the Lesson tab.
+    edit = (v) => { v.lessonPosterUrl = null; };
+    await page.reload();
+    await expect(still('song')).toHaveAttribute('src', '/samples/song.jpg');
+    await expect(card.getByRole('tab', { name: 'Lesson' })).toBeVisible();
+    await expect(still('lesson')).toHaveCount(0);
+    await expect(card.getByTestId('card-lesson').getByTestId('card-play')).toHaveCount(1);
+  });
+
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
@@ -186,11 +231,15 @@ test.describe('the Droplets tab, signed out', () => {
       const card = page.getByTestId('droplet-card').filter({ has: page.locator(`a[href="/droplets/${S.droplet}"]`) });
       const lessonTab = card.getByRole('tab', { name: 'Lesson' });
       const row = card.getByTestId('card-videos');
-      await row.scrollIntoViewIfNeeded();
-      const box = (await row.boundingBox())!;
-      // A finger dragged across the video, from one side towards the other, halfway down it unless told.
+      // A finger dragged across the video, from one side towards the other, halfway down it unless told. The video is
+      // measured just before, all of it on screen and done fading in: the timeline is a thin strip at its foot.
       const cdp = await page.context().newCDPSession(page);
       const swipe = async (from: number, to: number, down = 0.5) => {
+        await row.evaluate(async (el) => {
+          el.scrollIntoView({ block: 'center' });
+          await Promise.all(el.closest('article')!.getAnimations().map((a) => a.finished));
+        });
+        const box = (await row.boundingBox())!;
         const at = (share: number) => [{ x: box.x + box.width * share, y: box.y + box.height * down }];
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(from) });
         for (let i = 1; i <= 10; i++) {
@@ -208,17 +257,20 @@ test.describe('the Droplets tab, signed out', () => {
       await expect(card.getByRole('tab', { name: 'Song' })).toHaveAttribute('aria-selected', 'true');
       await expect(card.getByTestId('card-song')).toBeInViewport({ ratio: 0.9 });
 
-      // Once it plays, a drag back along its timeline rewinds it, and leaves the card on the song.
+      // Once it has played, a drag back along its timeline rewinds it, and leaves the card on the song. Paused, as the
+      // player hides its controls a moment into a play until it is tapped.
       await card.getByTestId('card-song').getByTestId('card-play').click();
       const song = card.getByLabel('ATP synthesis: song video');
       await song.evaluate((v: HTMLVideoElement) => { v.muted = true; });
       await expect.poll(() => playedTo(song)).toBeGreaterThan(2);
+      await song.evaluate((v: HTMLVideoElement) => v.pause());
+      await page.waitForTimeout(300);
       const before = await playedTo(song);
       await swipe(0.8, 0.2, 0.95); // the timeline, along the foot of the player
       await expect.poll(() => playedTo(song)).toBeLessThan(before);
       await page.waitForTimeout(500);
       await expect(lessonTab).toHaveAttribute('aria-selected', 'false');
-      expect(await paused(song)).toBe(false);
+      await expect(card.getByTestId('card-song')).toBeInViewport({ ratio: 0.9 });
     });
   });
 
