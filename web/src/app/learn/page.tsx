@@ -91,16 +91,36 @@ function isArmed(q: Question, now = Date.now()): boolean {
 }
 
 /**
+ * A song style on a card, folded to its label until it is asked for: written out whole, one runs to a few lines.
+ * The click stays here, as the request's line sits in the card's header, where a click folds the card.
+ */
+function StyleLine({ label, style, className, testId }: { label: string; style?: string | null; className: string; testId: string }) {
+  const [open, setOpen] = useState(false);
+  if (!style) return null;
+  return (
+    <div className={`text-[10px] ${className}`} style={{ color: 'var(--text-muted)' }} data-testid={testId}>
+      <button type="button" onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} aria-expanded={open}
+        className="group/style inline-flex items-center gap-2 select-none" data-testid={`${testId}-toggle`}>
+        <span className="inline-flex items-center gap-1 uppercase tracking-wider">
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+            className={`shrink-0 transition-transform duration-200 ${open ? '' : '-rotate-90'}`}>
+            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {label}
+        </span>
+        <span className="underline underline-offset-2 group-hover/style:text-[var(--text-hover)]">{open ? 'hide' : 'show'}</span>
+      </button>
+      {open && <p className="mt-1 tracking-wider break-words" data-testid={`${testId}-text`}>{style}</p>}
+    </div>
+  );
+}
+
+/**
  * The style the song was made from, which the teacher wrote from the learner's suggestion (or from the studio's
  * rotation): known once the lesson is posted, before the song is made.
  */
 function SongStyle({ style }: { style?: string | null }) {
-  if (!style) return null;
-  return (
-    <p className="mt-2 text-[10px] uppercase tracking-wider break-words" style={{ color: 'var(--text-muted)' }} data-testid="song-style">
-      Song style: <span className="normal-case">{style}</span>
-    </p>
-  );
+  return <StyleLine label="Song style" style={style} className="mt-2" testId="song-style" />;
 }
 
 /** Whether a re-fetched card differs from the one on screen in anything a card shows. */
@@ -404,11 +424,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
               The learner took this request back. Their words, files and follow-ups are deleted; the lesson stays.
             </p>
           )}
-          {q.user && q.songStyle && (
-            <p className="mt-1.5 text-[10px] uppercase tracking-wider break-words" style={{ color: 'var(--text-muted)' }} data-testid="request-style">
-              Suggested style: <span className="normal-case">{q.songStyle}</span>
-            </p>
-          )}
+          {q.user && <StyleLine label="Suggested style" style={q.songStyle} className="mt-1.5" testId="request-style" />}
           {/* On a line of its own: the header row is full on a phone. */}
           {brain && (
             <p className="mt-1.5 text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
@@ -587,6 +603,7 @@ function LearnContent() {
   const signInRef = useRef<HTMLAnchorElement>(null);
   const { submitting, guard } = useGuardedSubmit();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const styleRef = useRef<HTMLTextAreaElement>(null);
   const latestSeenRef = useRef<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -771,11 +788,17 @@ function LearnContent() {
     return () => io.disconnect();
   }, [cursor]);
 
-  // The box grows with what is in it: typed, brought back from before a sign-in, or cleared once sent.
+  // The boxes grow with what is in them: typed, picked from a chip, brought back from before a sign-in, or cleared
+  // once sent. The song style wraps rather than running off the end of one line; a narrower window refits both.
   useLayoutEffect(() => {
-    const ta = textareaRef.current;
-    if (ta) { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight}px`; }
-  }, [newQuestion, authLoading, unreachable]);
+    const fit = (ta: HTMLTextAreaElement | null) => { // scrollHeight leaves out the border, which the height counts
+      if (ta) { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight + ta.offsetHeight - ta.clientHeight}px`; }
+    };
+    const fitAll = () => { fit(textareaRef.current); fit(styleRef.current); };
+    fitAll();
+    window.addEventListener('resize', fitAll);
+    return () => window.removeEventListener('resize', fitAll);
+  }, [newQuestion, songStyle, authLoading, unreachable]);
 
   // A topic typed before a sign-in (or a reload) is back in the box. Back from a sign-in that Submit asked for,
   // the page says so: it waits for Submit rather than sending itself, so nothing goes out unseen.
@@ -1012,15 +1035,17 @@ function LearnContent() {
           <label htmlFor="song-style" className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>
             Suggest a song style <span className="normal-case font-normal">(optional)</span>
           </label>
-          <input
+          {/* One line of text, wrapped to show all of it: Enter still sends, and a pasted line break is a space. */}
+          <textarea
             id="song-style"
-            type="text"
+            ref={styleRef}
+            rows={1}
             value={songStyle}
             maxLength={SONG_STYLE_MAX}
-            onChange={(e) => changeStyle(e.target.value)}
+            onChange={(e) => changeStyle(e.target.value.replace(/[\r\n]+/g, ' '))}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAsk(); } }}
             placeholder="e.g. K-pop with rapped verses"
-            className="mt-1 w-full text-sm outline-none px-3 py-1.5 rounded"
+            className="block mt-1 w-full text-sm outline-none px-3 py-1.5 rounded resize-none overflow-hidden"
             style={{ border: '1px solid var(--border)', color: 'var(--text-primary)', background: 'var(--bg-tertiary)' }}
           />
           <div className="flex flex-wrap items-center gap-2 mt-2">
