@@ -2286,6 +2286,48 @@ longer): a shorter close-up shows the whole scene with its part still lit, and a
 of one part stays close (`timeline._calm()`): 2.5 and 0.5. The headphones' song, rendered both ways on stand-in
 pictures: 24 moves and 7 slides in 194 s, against 11 and none.
 
+## Nov 4: the seven song rules back, tested
+
+The owner felt the lyrics had got worse since Nov 3's trims. One suspect: the seven song rules cut that evening
+(`ef1c0ca`) went in on top of the syllable count's removal, and that pair was judged once, 3 against 4 on every
+topic, before it shipped. So the brief as it is (A) was tested against it with the seven put back (B, `ef1c0ca`'s
+cut undone and nothing else; neither gives a count). In the session: four topics, two with a bridge (the pump, the
+light reactions, the French Revolution, the Moon's phases). One subagent script per topic; from it, one subagent
+writer per brief wrote the song (`music` and `lyrics`), with the bundle call's own system prompt
+(`bundle_step.with_script`) and user prompt. The code's song checks counted each song. A blind Opus judge per topic
+read the two, labelled X and Y at random, on a checklist written before any song existed. All eight were sung by
+Lyria for the owner to hear ($0.72: nine calls, one song lost to a test script that had not made its audio folder).
+
+| | A, the brief as it is | B, the seven back |
+|---|---|---|
+| Preferred | 3 of 4 (the pump, the light reactions, the French Revolution) | 1 (the Moon, narrowly, for its chorus) |
+| Overall (judge, 1 to 5) | 4.25 | 3.5 |
+| Verses / rapped lines | 4.0 / 4.0 | 3.25 / 3.0 |
+| Title / bridge / teaching | 4.0 / 4.0 / 4.25 | 4.25 / 4.5 / 4.5 |
+| Rapped syllables a line, median | 12 to 12.5 | 13.5 to 16.5 |
+| Rapped lines of 16 or more, a song | 0 to 2 | 2 to 12 |
+| Lines the judge said a learner could take wrongly | 3, all mild | none |
+
+- **The seven make the verses walk the lesson.** "A couplet a step" and "follow one thing through the steps" brought
+  back lesson sentences crammed into bars: "Many in the middle class read Enlightenment writers: power comes from
+  you", "Down the electron transport chain it slides, giving energy up on the ride". The French song had 12 rapped
+  lines of 16 syllables or more against A's 1. A's verses stayed in their voice: "Tax the priest and the noble? Nah,
+  they won't chip in", "One vote per estate? That's two against us / One vote per deputy, that's the count we trust".
+- **A bridge comes out an exam question without its rule.** Both briefs' pump and light-reactions bridges name one
+  break (a stroke, a weedkiller) and walk its effects in order: the script's case plans it.
+- **The chorus's middle lines come out built alike without their rule too**: "Pay to push the sodium out / Pay to
+  bring potassium in", "Charge up ATP while the sun shines bright / Charge up NADPH with that same sunlight". B's won
+  only on the Moon ("See more of that half, the Moon looks bright / See less of that half, a sliver of light").
+- What B did better was small and is the fact-check's to hold: no line the judge thought misleading, where A had
+  "Richest kingdom in Europe" (the facts say one of the richest) and a "we" that names itself the Assembly and then
+  storms the Bastille.
+
+Not shipped: the brief stays as it is. Against the real songs of Oct 30, A's read no worse: that French song spent
+its bridge on Charles I, and the pump's leaned on a water tower. So if the songs the owner hears have got worse, the
+cause is not these seven rules, and this round did not find it in the writer's words. Not covered: what the
+fact-check and the songwriter change after the writer, how Lyria sings the lines, the Muse brains, and the voice
+and the syllable count, which both briefs share. Four topics, one run each, Opus only.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
