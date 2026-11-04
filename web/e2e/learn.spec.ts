@@ -1054,7 +1054,9 @@ test.describe('studio settings', () => {
       await expect(learner.getByTestId('brain-picker')).toHaveCount(0);
       await expect(learner.getByTestId('brain-picks-off')).toHaveCount(0);
       let sent: Record<string, unknown> | null = null;
-      await learner.route(apiUrl('/api/questions'), (route) => {
+      // By its path: the page sends through the web app's own /api, not to the API's port.
+      const questions = (url: URL) => url.pathname === '/api/questions';
+      await learner.route(questions, (route) => {
         if (route.request().method() !== 'POST') return route.continue();
         sent = route.request().postDataJSON();
         return route.abort();
@@ -1063,7 +1065,7 @@ test.describe('studio settings', () => {
       await learner.getByRole('button', { name: 'SUBMIT' }).click();
       await expect.poll(() => sent).not.toBeNull();
       expect(sent).not.toHaveProperty('brain');
-      await learner.unroute(apiUrl('/api/questions'));
+      await learner.unroute(questions);
 
       // Off again, the picker is back, with the learner's remembered pick.
       await settings({ defaultOnly: false });
