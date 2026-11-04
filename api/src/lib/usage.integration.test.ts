@@ -85,7 +85,7 @@ describe.runIf(RUN)('usage limits', () => {
     const inHours = (seconds: number) => seconds / 3600;
 
     // None used: all left, nothing coming back.
-    expect(await allowance()).toEqual({ perDay: 3, left: 3, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null });
+    expect(await allowance()).toEqual({ perDay: 3, left: 3, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null, sitePerDay: 30 });
 
     // Two used: one left, and the older's place comes back first, 24 hours after it was taken. A row past the
     // window, or someone else's, counts for nothing.
@@ -119,7 +119,7 @@ describe.runIf(RUN)('usage limits', () => {
     process.env.QUESTIONS_PER_USER_PER_DAY = '10';
     process.env.TOPICS_PER_DAY = '4';
     const full = await allowance();
-    expect(full).toMatchObject({ left: 7, siteFull: true });
+    expect(full).toMatchObject({ left: 7, siteFull: true, sitePerDay: 4 });
     expect(inHours(full.siteOpensInSeconds)).toBeCloseTo(1, 1); // the other learner's, 23 hours ago
     process.env.TOPICS_PER_DAY = '0';
     expect(await allowance()).toMatchObject({ siteFull: false, siteOpensInSeconds: null });
@@ -135,7 +135,7 @@ describe.runIf(RUN)('usage limits', () => {
     const allowance = async () =>
       (await app.inject({ method: 'GET', url: '/api/questions/allowance', headers: asUser(ola.cookie) })).json();
 
-    expect(await allowance()).toEqual({ perDay: 1, left: null, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null });
+    expect(await allowance()).toEqual({ perDay: 1, left: null, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null, sitePerDay: 3 });
     expect((await ask(ola.cookie)).statusCode).toBe(201);
     expect((await ask(ola.cookie)).statusCode).toBe(201); // past the learners' 1
     expect(await allowance()).toMatchObject({ left: null, siteFull: false });
@@ -145,7 +145,8 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await ask(pia.cookie)).statusCode).toBe(201);
     const refused = await ask(ola.cookie);
     expect(refused.statusCode).toBe(429);
-    expect(refused.json().error.message).toBe((await import('./usage.js')).SITE_FULL);
+    expect(refused.json().error.message)
+      .toBe('Popsmosis has reached its daily limit of 3 new topics. The limit is shared by everyone, not just you. Please try again later.');
     expect(await allowance()).toMatchObject({ left: null, siteFull: true });
 
     // The role taken away, the learners' limit holds them from the next request.
@@ -181,7 +182,8 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await ask(di.cookie)).statusCode).toBe(201);
     const over = await ask(di.cookie);
     expect(over.statusCode).toBe(429);
-    expect(over.json().error.message).toBe((await import('./usage.js')).SITE_FULL);
+    expect(over.json().error.message)
+      .toBe('Popsmosis has reached its daily limit of 3 new topics. The limit is shared by everyone, not just you. Please try again later.');
 
     process.env.TOPICS_PER_DAY = '0'; // 0: no ceiling
     expect((await ask(di.cookie)).statusCode).toBe(201);

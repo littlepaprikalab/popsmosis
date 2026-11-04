@@ -331,14 +331,16 @@ function ApologyPrompt({ typed, onType, onDone }: { typed: string; onType: (type
  * what the learner can do ("You can send 3 more of your 5 topics"), not as a count ("3 of 5 topics left").
  */
 function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
-  const { perDay, left, nextAt, siteFull, siteOpensAt } = allowance;
+  const { perDay, left, nextAt, siteFull, siteOpensAt, sitePerDay } = allowance;
   const when = (at: number | null) => (at ? clockLabel(at) : 'soon');
   const topics = (n: number) => `${n} topic${n === 1 ? '' : 's'}`;
   let text: string;
   // Everyone's topics together reached the site's day (TOPICS_PER_DAY): said as a limit shared by everyone, so the
-  // learner knows it is not their own, with when topics open again. An admin is told where to raise it.
+  // learner knows it is not their own, with its number and when topics open again. An admin is told where to raise it.
+  // An API older than this page sends no number: said without one.
   if (siteFull) {
-    text = 'Popsmosis has reached its daily limit for new topics. The limit is shared by everyone, not just you. '
+    const limit = sitePerDay ? `of ${sitePerDay} new topic${sitePerDay === 1 ? '' : 's'}` : 'for new topics';
+    text = `Popsmosis has reached its daily limit ${limit}. The limit is shared by everyone, not just you. `
       + `New topics open again ${when(siteOpensAt)}.${left === null ? ' You can raise the limit on the Studio page.' : ''}`;
   }
   // An admin is not held to the learners' limit (api/src/lib/usage.ts), and is told what learners are held to.

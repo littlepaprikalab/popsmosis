@@ -102,10 +102,14 @@ async function bytesRefusal(db: Db, userId: string, bytes: number, env: NodeJS.P
 
 type Db = typeof prisma | TxClient;
 
-// Why a learner may not send a topic once everyone's together reach TOPICS_PER_DAY. No time: the window rolls, and the
-// page, which reads the allowance again on a 429, says when in the learner's own time zone.
-export const SITE_FULL = 'Popsmosis has reached its daily limit for new topics. The limit is shared by everyone, not just you. '
-  + 'Please try again later.';
+/**
+ * Why a learner may not send a topic once everyone's together reach TOPICS_PER_DAY (`limit`), with the number. No time:
+ * the window rolls, and the page, which reads the allowance again on a 429, says when in the learner's own time zone.
+ */
+export function siteFullMessage(limit: number): string {
+  return `Popsmosis has reached its daily limit of ${limit} new topic${limit === 1 ? '' : 's'}. `
+    + 'The limit is shared by everyone, not just you. Please try again later.';
+}
 
 /**
  * Admins test the site, so they have no topic limit of their own (the owner, Nov 4). Their topics are still taken,
@@ -127,7 +131,7 @@ async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Pro
   if (topicsPerDay > 0) {
     const all = await db.usageEvent.count({ where: { kind: 'TOPIC', createdAt: { gte: since } } });
     if (all >= topicsPerDay) {
-      return new AppError('RATE_LIMITED', SITE_FULL, { retryable: false });
+      return new AppError('RATE_LIMITED', siteFullMessage(topicsPerDay), { retryable: false });
     }
   }
   return null;
@@ -146,6 +150,7 @@ async function topicRefusal(db: Db, userId: string, env: NodeJS.ProcessEnv): Pro
  *   Null when nothing is coming back: none used, a limit of 0, or an admin.
  * - `siteFull`: every learner's topics together have reached TOPICS_PER_DAY, whatever this learner has left, and
  *   `siteOpensInSeconds` is until the site takes one again.
+ * - `sitePerDay`: that limit, TOPICS_PER_DAY, for the page to say; 0: no ceiling.
  *
  * Lock-free, like topicAllowed: a look, never what holds.
  */
@@ -155,6 +160,7 @@ export interface TopicAllowance {
   nextInSeconds: number | null;
   siteFull: boolean;
   siteOpensInSeconds: number | null;
+  sitePerDay: number;
 }
 
 export async function topicAllowance(userId: string, env: NodeJS.ProcessEnv = process.env): Promise<TopicAllowance> {
@@ -186,7 +192,7 @@ export async function topicAllowance(userId: string, env: NodeJS.ProcessEnv = pr
     siteFull = all >= topicsPerDay;
     if (siteFull) siteOpensInSeconds = await placeBackIn({}, all - topicsPerDay);
   }
-  return { perDay, left, nextInSeconds, siteFull, siteOpensInSeconds };
+  return { perDay, left, nextInSeconds, siteFull, siteOpensInSeconds, sitePerDay: topicsPerDay };
 }
 
 /** Why the caller may not post a follow-up now, or null. */

@@ -376,6 +376,7 @@ export interface TopicAllowance {
   nextAt: number | null; // with some left, when one more comes back; with none, when they may ask again; null: none coming
   siteFull: boolean; // every learner's topics together reached the site's day, whatever this one has left
   siteOpensAt: number | null; // siteFull: when the site takes topics again
+  sitePerDay?: number; // the site's limit, everyone's topics together (0: none); missing from an API older than the page
 }
 
 interface TopicAllowanceAnswer extends Omit<TopicAllowance, 'nextAt' | 'siteOpensAt'> {
