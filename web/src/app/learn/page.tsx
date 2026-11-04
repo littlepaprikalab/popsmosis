@@ -335,7 +335,12 @@ function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
   const when = (at: number | null) => (at ? clockLabel(at) : 'soon');
   const topics = (n: number) => `${n} topic${n === 1 ? '' : 's'}`;
   let text: string;
-  if (siteFull) text = `Popsmosis has made all the droplets it can for now. It takes topics again ${when(siteOpensAt)}.`;
+  // Everyone's topics together reached the site's day (TOPICS_PER_DAY): said as a limit shared by everyone, so the
+  // learner knows it is not their own, with when topics open again. An admin is told where to raise it.
+  if (siteFull) {
+    text = 'Popsmosis has reached its daily limit for new topics. The limit is shared by everyone, not just you. '
+      + `New topics open again ${when(siteOpensAt)}.${left === null ? ' You can raise the limit on the Studio page.' : ''}`;
+  }
   // An admin is not held to the learners' limit (api/src/lib/usage.ts), and is told what learners are held to.
   else if (left === null) {
     text = `As an admin, you have no topic limit. ${perDay === 0

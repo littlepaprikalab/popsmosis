@@ -145,7 +145,7 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await ask(pia.cookie)).statusCode).toBe(201);
     const refused = await ask(ola.cookie);
     expect(refused.statusCode).toBe(429);
-    expect(refused.json().error.message).toMatch(/all the droplets it can/);
+    expect(refused.json().error.message).toBe((await import('./usage.js')).SITE_FULL);
     expect(await allowance()).toMatchObject({ left: null, siteFull: true });
 
     // The role taken away, the learners' limit holds them from the next request.
@@ -164,6 +164,15 @@ describe.runIf(RUN)('usage limits', () => {
     expect(await prisma.question.count({ where: { userId: ben.id } })).toBe(3);
   });
 
+  it("topics from many learners sent at once cannot all pass the site's count", async () => {
+    process.env.TOPICS_PER_DAY = '3';
+    const learners = await Promise.all(Array.from({ length: 8 }, (_, i) => learner(`crowd${i}`)));
+    const results = await Promise.all(learners.map((l) => ask(l.cookie)));
+    expect(results.filter((r) => r.statusCode === 201)).toHaveLength(3);
+    expect(results.filter((r) => r.statusCode === 429)).toHaveLength(5);
+    expect(await prisma.usageEvent.count({ where: { kind: 'TOPIC' } })).toBe(3);
+  });
+
   it("stops new topics once the site's day is used up, whoever asks", async () => {
     process.env.TOPICS_PER_DAY = '3';
     const [cy, di] = [await learner('cy'), await learner('di')];
@@ -172,7 +181,7 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await ask(di.cookie)).statusCode).toBe(201);
     const over = await ask(di.cookie);
     expect(over.statusCode).toBe(429);
-    expect(over.json().error.message).toMatch(/all the droplets it can for today/);
+    expect(over.json().error.message).toBe((await import('./usage.js')).SITE_FULL);
 
     process.env.TOPICS_PER_DAY = '0'; // 0: no ceiling
     expect((await ask(di.cookie)).statusCode).toBe(201);
