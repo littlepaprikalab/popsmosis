@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onExpired = () => {
       if (handled || !userRef.current) return;
       handled = true;
+      forgetSorry(); // as a logout does: whoever signs in next on this tab says sorry for themselves
       setUser(null);
       api.logout().catch(() => {});
       const returnTo = `${window.location.pathname}${window.location.search}`;

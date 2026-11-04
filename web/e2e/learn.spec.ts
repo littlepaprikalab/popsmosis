@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page, type Route } from '@playwright/test';
 import { seed, signIn, agent, apiUrl, sessionToken } from './helpers';
 
 const S = seed();
@@ -787,6 +787,43 @@ test.describe('signed in', () => {
     expect(await page.evaluate(() => sessionStorage.getItem('popsmosis.brain.sorry'))).toBeNull();
     await page.reload();
     await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  test('an apology is the account\'s own: another account on the tab is asked again, and an expired session forgets it', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const picker = page.getByTestId('brain-picker');
+    const wonder = picker.getByRole('radio', { name: 'Muse Wonder' });
+    await wonder.click();
+    await page.getByTestId('apology-text').fill('I know this is costing the developer 4x more than Muse Spark, I am sorry.');
+    await page.getByRole('dialog').getByRole('button', { name: 'Pick Muse Wonder' }).click();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+
+    // Another learner signed in on this tab with no logout between (the sign-in page takes any account): the page
+    // knows them by their id, so the API's answer for who is signed in is swapped for one with another id.
+    const other = (route: Route) => route.fetch()
+      .then(async (res) => route.fulfill({ response: res, json: { ...(await res.json()), id: 'another-learner' } }));
+    const me = (url: URL) => url.pathname === '/api/auth/me';
+    await page.route(me, other);
+    await page.reload();
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await wonder.click();
+    await expect(page.getByTestId('apology-text')).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+    // Ben again: his apology is still his.
+    await page.unroute(me, other);
+    await page.reload();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+
+    // His session expires (the API client's 401): the apology goes with it, as with a logout, and he is asked again.
+    await page.evaluate(() => window.dispatchEvent(new Event('session-expired')));
+    await expect(page).toHaveURL(/reason=session_expired/);
+    expect(await page.evaluate(() => sessionStorage.getItem('popsmosis.brain.sorry'))).toBeNull();
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await wonder.click();
+    await expect(page.getByTestId('apology-text')).toBeVisible();
   });
 
   test('a browser whose storage is full still takes the apology, for as long as the page is open', async ({ page, context }) => {

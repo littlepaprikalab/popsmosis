@@ -49,32 +49,46 @@ export const APOLOGY = 'I know this is costing the developer 4x more than Muse S
 const letters = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '');
 export const typedApology = (typed: string) => letters(typed) === letters(APOLOGY);
 
+// Whose apology this tab holds: the account id it was typed under, or VISITOR for one typed signed out, which the
+// account signed in next in this tab takes over (the trip to sign in and back). So a session that expires, or a sign-in
+// as someone else without a logout, leaves the next account to say sorry for itself.
 const SORRY_KEY = 'popsmosis.brain.sorry';
-// Said on this page: what holds the apology when sessionStorage is blocked or full and keeps nothing.
-let sorryHere = false;
+const VISITOR = 'visitor';
+// The same, on this page: what holds the apology when sessionStorage is blocked or full and keeps nothing.
+let sorryHere: string | null = null;
 
-/** Whether this tab has said sorry already: once is enough until the tab is closed, a reload or a sign-in included. */
-function saidSorry(): boolean {
-  if (sorryHere) return true;
+function sorryBy(): string | null {
+  if (sorryHere) return sorryHere;
   try {
-    return window.sessionStorage.getItem(SORRY_KEY) === '1';
+    return window.sessionStorage.getItem(SORRY_KEY);
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function saySorry(): void {
-  sorryHere = true;
+/** Whether `userId` (null: signed out) has said sorry in this tab: once is enough until the tab is closed. */
+function saidSorry(userId: string | null): boolean {
+  const by = sorryBy();
+  if (by === VISITOR && userId) {
+    saySorry(userId); // the visitor who said it has signed in: theirs from now on
+    return true;
+  }
+  return !!by && by === (userId ?? VISITOR);
+}
+
+/** `userId` has typed APOLOGY: null when signed out. */
+export function saySorry(userId: string | null): void {
+  sorryHere = userId ?? VISITOR;
   try {
-    window.sessionStorage.setItem(SORRY_KEY, '1');
+    window.sessionStorage.setItem(SORRY_KEY, sorryHere);
   } catch {
     // Blocked or full: the apology holds until the page is left.
   }
 }
 
-/** On a logout: the apology was theirs, not the next person's on this tab. */
+/** On a logout, or a session that expired: the apology was theirs, not the next person's on this tab. */
 export function forgetSorry(): void {
-  sorryHere = false;
+  sorryHere = null;
   try {
     window.sessionStorage.removeItem(SORRY_KEY);
   } catch {
@@ -82,9 +96,9 @@ export function forgetSorry(): void {
   }
 }
 
-/** Whether this viewer must type APOLOGY before `value` is picked. */
-export function needsApology(value: Brain | null, isAdmin: boolean): boolean {
-  return !isAdmin && !!BRAIN_OPTIONS.find((o) => o.value === value)?.apology && !saidSorry();
+/** Whether this viewer (`userId` null: signed out) must type APOLOGY before `value` is picked. */
+export function needsApology(value: Brain | null, isAdmin: boolean, userId: string | null): boolean {
+  return !isAdmin && !!BRAIN_OPTIONS.find((o) => o.value === value)?.apology && !saidSorry(userId);
 }
 
 const STORAGE_KEY = 'popsmosis.brain';
@@ -93,10 +107,10 @@ const STORAGE_KEY = 'popsmosis.brain';
  * The brain picked last on this browser, so a run of topics stays on it. Muse Wonder comes back only to an admin, or
  * to a learner who has said sorry in this tab: a new tab, or another learner on a shared browser, is asked again.
  */
-export function rememberedBrain(isAdmin: boolean): Brain | null {
+export function rememberedBrain(isAdmin: boolean, userId: string | null): Brain | null {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY) as Brain | null;
-    return BRAIN_OPTIONS.some((o) => o.value === saved && saved) && !needsApology(saved, isAdmin) ? saved : null;
+    return BRAIN_OPTIONS.some((o) => o.value === saved && saved) && !needsApology(saved, isAdmin, userId) ? saved : null;
   } catch {
     return null;
   }

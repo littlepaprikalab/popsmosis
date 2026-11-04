@@ -495,6 +495,7 @@ function LearnContent() {
   const router = useRouter();
   const mine = searchParams.get('mine') === '1';
   const isAdmin = user?.role === 'ADMIN';
+  const userId = user?.id ?? null; // whose apology for Muse Wonder counts (lib/brains.ts)
   // The API shows a learner only their own topics (lib/privacy.ts); an admin sees everyone's unless they filter.
   const ownOnly = mine || !isAdmin;
 
@@ -565,7 +566,10 @@ function LearnContent() {
 
   const chosen = BRAIN_OPTIONS.find((o) => o.value === brain);
   useEffect(() => {
-    setBrain(rememberedBrain(isAdmin)); // read again once an admin is known, as Muse Wonder asks them for no apology
+    // Read again whenever the viewer changes: Muse Wonder asks an admin for no apology, and a learner's is their own.
+    setBrain(rememberedBrain(isAdmin, userId));
+  }, [isAdmin, userId]);
+  useEffect(() => {
     if (!isAdmin) return;
     api.getStudioSettings().then((s) => setDefaultBrain(s.brain.default)).catch(() => {}); // the note says less without it
   }, [isAdmin]);
@@ -576,14 +580,14 @@ function LearnContent() {
   useEffect(readPicks, [readPicks]);
 
   const pickBrain = (value: Brain | null) => {
-    if (needsApology(value, isAdmin)) { setTypedSorry(''); setAskSorry(true); return; } // the pick waits for it
+    if (needsApology(value, isAdmin, userId)) { setTypedSorry(''); setAskSorry(true); return; } // the pick waits for it
     setBrain(value);
     rememberBrain(value);
   };
   const sorryTyped = typedApology(typedSorry);
   const acceptSorry = () => {
     if (!sorryTyped) return;
-    saySorry();
+    saySorry(userId);
     setAskSorry(false);
     setBrain('muse-wonder');
     rememberBrain('muse-wonder');
@@ -706,8 +710,7 @@ function LearnContent() {
     if (signedIn.current && !user) {
       setNewQuestion('');
       setAskSignIn(false);
-      setAskSorry(false);
-      setBrain(rememberedBrain(false)); // their apology went with the logout (lib/auth.tsx), so Muse Wonder goes too
+      setAskSorry(false); // and the brain is read again for whoever is here now (above)
     }
     signedIn.current = !!user;
   }, [user]);
