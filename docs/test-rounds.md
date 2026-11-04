@@ -2214,9 +2214,23 @@ general style last. Six subagent writers on the same topics, the bundle call alo
 | Light reactions | bright, sun-washed flat vector | bright 1930s fruit-crate-label lithograph |
 
 Five families in place of two, every scene still in the form. Two picks are the same fruit-crate label (both hooks
-are fruit: a market's strawberries, an apple tree), and three name a decade as the brief's second example does. Not
-painted yet: a fresco's faded colours and a history painting's dark ground are the kind the locate step loses, if the
-light-and-colour line does not hold them.
+are fruit: a market's strawberries, an apple tree), and three name a decade as the brief's second example does.
+
+Painted in the new looks (the same six scenes and words; $0.41) and segmented ($0.11):
+
+| | Old wording | Writer: general style | Writer: topic's own world |
+|---|---|---|---|
+| Parts found | 16 of 23 | 22 of 23 | 20 of 23 |
+| By SAM's first words | 9 | 18 | 12 |
+| In the helper's box | 7 | 4 | 8 |
+
+The neoclassical history painting (the French Revolution's three scenes) and the fruit-crate label (the pondweed)
+lost nothing: 14 of 14. The Renaissance fresco lost what was lost: its colours came back pale, the tomb found 2 of 4,
+and on the Romeo and Juliet hook the period look turned the modern teenager watching a horror film into a Renaissance
+youth in front of a flat-screen television. Blind beside the general styles (Opus judge), the topic's own world was
+preferred 2 times in 6 (appeal 3.5 vs 4.0, clarity 3.8 vs 4.2, correct 3.2 vs 3.5). The judge was told a hook is the
+learner's world today, which marked down the 1789 bakery the scene itself asks for. A period look fits the story
+scenes but leaks into a hook set today, and a faded medium loses parts.
 
 ## Not tested
 
