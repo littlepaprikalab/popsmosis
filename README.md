@@ -252,11 +252,13 @@ studio/tests/test_live_gemini.py -s` paints one scene, about 7 cents.
 #### One topic on another brain
 
 Anyone signed in can send a topic to a brain of its own: the **Brain** buttons under the box on
-`/learn`. Muse Wonder costs the most by far (about $4 a droplet, [its test round](docs/test-rounds.md)),
-so before a learner can pick it they type *I know this is costing the developer even more, I am
-sorry.* (any case and punctuation), once a tab; an admin is not asked. That is the page's alone:
-the API takes any brain from anyone. The pick is remembered on that browser, and the topic's card
-shows it. Only an admin's note under the buttons says whose key pays and who paints.
+`/learn`. Muse Wonder costs the most by far: about $4 a droplet, where Muse Spark's cost about $1
+([the Nov 3 test rounds](docs/test-rounds.md); the lesson alone is 4 to 5 times Spark's). So
+before a learner can pick it they type *I know this is costing the developer 4x more than Muse
+Spark, I am sorry.* (any case, punctuation and spacing), once a tab; an admin is not asked. That
+is the page's alone: the API takes any brain from anyone, and the daily topic limits are what cap
+the spend. The pick is remembered on that browser, and the topic's card shows it. Only an admin's
+note under the buttons says whose key pays and who paints.
 
 | Button | Brain: writes and fact-checks the lesson | Brain bills to |
 |---|---|---|

@@ -77,6 +77,20 @@ test.describe('signed out', () => {
     expect(sent).toEqual([]);
   });
 
+  test('a visitor who says sorry signed out keeps Muse Wonder through the sign-in', async ({ page, context }) => {
+    await page.goto('/learn');
+    const wonder = page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' });
+    await wonder.click();
+    await page.getByTestId('apology-text').fill('I know this is costing the developer 4x more than Muse Spark, I am sorry.');
+    await page.getByRole('dialog').getByRole('button', { name: 'Pick Muse Wonder' }).click();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    // Google and back in the same tab, as the sign-in page would end it.
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    await expect(page.getByText('@Ben')).toBeVisible();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+  });
+
   test('shows an example droplet: its videos and lesson, no follow-ups, and nothing of who asked or how', async ({ page, request }) => {
     await onlySeededDroplet(page, request);
     await page.goto('/learn');
@@ -715,7 +729,8 @@ test.describe('signed in', () => {
     await wonder.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('Muse Wonder costs the most');
-    await expect(dialog).toContainText('I know this is costing the developer even more, I am sorry.');
+    await expect(page.getByTestId('apology-cost')).toContainText('about $4 each, where a Muse Spark droplet costs about $1');
+    await expect(dialog).toContainText('I know this is costing the developer 4x more than Muse Spark, I am sorry.');
     const pick = dialog.getByRole('button', { name: 'Pick Muse Wonder' });
     await expect(pick).toBeDisabled();
     await page.getByTestId('apology-text').fill('sorry');
@@ -725,10 +740,11 @@ test.describe('signed in', () => {
     await expect(picker.getByRole('radio', { name: 'Claude' })).toHaveAttribute('aria-checked', 'true');
     await expect(wonder).toHaveAttribute('aria-checked', 'false');
 
-    // Asked again, the box starts empty. The words in any case, the commas and the period left out, and Enter takes them.
+    // Asked again, the box starts empty. The words in any case, the commas, the period and a space left out or put in,
+    // and Enter takes them.
     await wonder.click();
     await expect(page.getByTestId('apology-text')).toHaveValue('');
-    await page.getByTestId('apology-text').fill('i know this is costing the developer even more i am sorry');
+    await page.getByTestId('apology-text').fill('i know this is costing the developer 4 x more than muse spark i am sorry');
     await expect(pick).toBeEnabled();
     await page.getByTestId('apology-text').press('Enter');
     await expect(dialog).toBeHidden();
@@ -745,6 +761,8 @@ test.describe('signed in', () => {
     const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
     const sent = own.data.find((q: { content: string }) => q.content === text);
     expect(sent.brain).toBe('muse-wonder');
+    // The studio makes it on Wonder: who asked is not its business (studio/run.py reads the brain from the claim).
+    expect((await (await agent(request, S.POPSMOSIS_API_KEY).claim(sent.id)).json()).brain).toBe('muse-wonder');
 
     // Sorry once is enough for this tab, a reload included; a new tab asks again.
     await page.reload();
@@ -758,7 +776,42 @@ test.describe('signed in', () => {
     await expect(other.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
     await other.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' }).click();
     await expect(other.getByTestId('apology-text')).toBeVisible();
+    await other.close();
     expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).status()).toBe(204);
+
+    // A logout takes the apology with it, and Muse Wonder off the page, for whoever uses this tab next.
+    await page.getByRole('button', { name: 'LOGOUT' }).click();
+    await expect(page.getByTestId('sign-in-to-send')).toBeVisible();
+    await expect(wonder).toHaveAttribute('aria-checked', 'false');
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    expect(await page.evaluate(() => sessionStorage.getItem('popsmosis.brain.sorry'))).toBeNull();
+    await page.reload();
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  test('a browser whose storage is full still takes the apology, for as long as the page is open', async ({ page, context }) => {
+    await page.addInitScript(() => {
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === 'popsmosis.brain.sorry') throw new DOMException('full', 'QuotaExceededError');
+        return setItem.call(this, key, value);
+      };
+    });
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const wonder = page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' });
+    await wonder.click();
+    await page.getByTestId('apology-text').fill('I know this is costing the developer 4x more than Muse Spark, I am sorry.');
+    await page.getByRole('dialog').getByRole('button', { name: 'Pick Muse Wonder' }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    // Away and back on the same page, it is not asked again; a reload, which kept nothing, asks again.
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Claude' }).click();
+    await wonder.click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    await page.reload();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
   });
 
   test('a topic asked with files shows them: a picture as its thumbnail, a text file as a link', async ({ page, context, request }) => {

@@ -29,7 +29,8 @@ import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
 import { topicDraft } from '@/lib/topicDraft';
 import {
-  APOLOGY, BRAIN_MODELS, BRAIN_OPTIONS, brainLabel, needsApology, rememberedBrain, rememberBrain, saySorry, typedApology, type Brain,
+  APOLOGY, BRAIN_MODELS, BRAIN_OPTIONS, DROPLET_USD, brainLabel, needsApology, rememberedBrain, rememberBrain, saySorry,
+  typedApology, type Brain,
 } from '@/lib/brains';
 
 const PAGE_SIZE = 20;
@@ -233,16 +234,20 @@ const typedDeleteWord = (typed: string) => typed.trim().toLowerCase() === DELETE
 function ApologyPrompt({ typed, onType, onDone }: { typed: string; onType: (typed: string) => void; onDone: () => void }) {
   return (
     <div>
-      <p>
-        Every lesson costs the developer money, and Muse Wonder&rsquo;s cost the most: it writes long, so one of its
-        droplets costs several times what another brain&rsquo;s does.
+      <p data-testid="apology-cost">
+        Every droplet costs the developer money, and Muse Wonder&rsquo;s cost the most: about ${DROPLET_USD.wonder} each,
+        where a Muse Spark droplet costs about ${DROPLET_USD.spark}.
       </p>
       <label htmlFor="apology-text" className="block mt-3 mb-1.5 text-[13px]">
         To pick it anyway, type <strong style={{ color: 'var(--text-primary)' }}>{APOLOGY}</strong>
       </label>
-      {/* Two lines, so the whole sentence shows as it is typed, on a phone too; Enter adds no line. */}
-      <textarea id="apology-text" data-testid="apology-text" rows={2} value={typed} onChange={(e) => onType(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (typedApology(typed)) onDone(); } }}
+      {/* Three lines, so the whole sentence shows as it is typed, on a phone too; Enter adds no line. */}
+      <textarea id="apology-text" data-testid="apology-text" rows={3} value={typed} onChange={(e) => onType(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+          e.preventDefault();
+          if (typedApology(typed)) onDone();
+        }}
         placeholder="Type it here" autoComplete="off" autoCorrect="off" spellCheck={false} maxLength={120}
         className="w-full px-3 py-2 rounded text-sm outline-none focus:ring-1 resize-none"
         style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
@@ -580,7 +585,8 @@ function LearnContent() {
     if (!sorryTyped) return;
     saySorry();
     setAskSorry(false);
-    pickBrain('muse-wonder');
+    setBrain('muse-wonder');
+    rememberBrain('muse-wonder');
   };
 
   // What the learner has left of their topics, shown in the box: read on sign-in, after each send, and again when
@@ -697,7 +703,12 @@ function LearnContent() {
   // A logout empties the box too (its stored copy goes in lib/auth.tsx), for whoever uses this computer next.
   const signedIn = useRef(false);
   useEffect(() => {
-    if (signedIn.current && !user) { setNewQuestion(''); setAskSignIn(false); }
+    if (signedIn.current && !user) {
+      setNewQuestion('');
+      setAskSignIn(false);
+      setAskSorry(false);
+      setBrain(rememberedBrain(false)); // their apology went with the logout (lib/auth.tsx), so Muse Wonder goes too
+    }
     signedIn.current = !!user;
   }, [user]);
 

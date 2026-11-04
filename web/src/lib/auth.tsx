@@ -72,9 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (u: User) => { setUser(u); setUnreachable(false); }; // cookie already set by the API
 
   const logout = async () => {
+    // Their apology for Muse Wonder (lib/brains.ts) goes first: if the call below fails, it costs only another apology.
+    forgetSorry();
     await api.logout();
     topicDraft.clear(); // an unsent topic is theirs: not for whoever uses this tab next
-    forgetSorry(); // and so is an apology for Muse Wonder (lib/brains.ts)
     setUser(null);
   };
 
