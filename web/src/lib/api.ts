@@ -206,7 +206,7 @@ export interface Video {
   lessonPosterUrl: string | null;
   hookVideoUrl?: string | null; // the hook cut: the song's pre-chorus and first chorus, upright, to share
   hookPosterUrl?: string | null;
-  error: string | null;
+  error: string | null; // FAILED: why; READY: why a video is missing, or null
   updatedAt: string | null;
 }
 
@@ -502,6 +502,7 @@ export interface DropletVideos {
   lessonPosterUrl: string | null;
   hookVideoUrl?: string | null; // the hook cut: the song's pre-chorus and first chorus, upright, to share
   hookPosterUrl?: string | null;
+  note?: string | null; // why a video is missing ("The song could not be made: …"); absent from an older API
 }
 
 /**

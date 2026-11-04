@@ -177,6 +177,21 @@ d('droplet endpoints', () => {
     expect(lessonOnly[0].answer.context).toMatchObject({ coreIdea: BUNDLE.core_idea, lyrics: [] });
   });
 
+  it('takes a note with READY on why a video is missing, and shows it on the card and the Droplets tab', async () => {
+    const answerId = (await answer()).json().id;
+    const lesson = 'https://media.popsmosis.com/a/out/lesson_h.mp4';
+    expect((await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson, error: ' ' })).statusCode).toBe(400);
+    const note = 'The song could not be made: the audio provider’s account is out of credit.';
+    const ready = await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson, error: note });
+    expect(ready.json()).toMatchObject({ status: 'READY', songVideoUrl: null, lessonVideoUrl: lesson, error: note });
+    const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
+    expect(card.answer.video).toMatchObject({ status: 'READY', error: note });
+    const droplet = (await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).json();
+    expect(droplet.video).toMatchObject({ lessonVideoUrl: lesson, note });
+    const list = (await app.inject({ method: 'GET', url: '/api/droplets' })).json().data;
+    expect(list.find((d: { id: string }) => d.id === answerId).video).toMatchObject({ note });
+  });
+
   it('keeps the video status: its own answers only, URLs kept between updates, a reason on failure', async () => {
     const answerId = (await answer()).json().id;
     expect((await video(keyB, answerId, { status: 'RENDERING' })).statusCode).toBe(403);

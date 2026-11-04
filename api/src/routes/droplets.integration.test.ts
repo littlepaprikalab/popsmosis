@@ -100,7 +100,7 @@ d('the Droplets tab', () => {
     expect(list.json().data[0]).toEqual({
       id: newer, title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase', headline: '', // a droplet made before headlines
       excerpt: 'Lesson 10: ATP synthase spins.',
-      video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null },
+      video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null, note: null },
       tags: { song: [], lesson: [] }, // a droplet made before there were tags
       madeWith: null, // and before the bills
       views: { song: 0, lesson: 0 }, // never played
@@ -380,7 +380,7 @@ d('the Droplets tab', () => {
     await patch({ status: 'RENDERING', songVideoUrl: SONG, songPosterUrl: POSTER });
     const ready = await patch({ status: 'READY', lessonVideoUrl: LESSON });
     expect(ready.json()).toMatchObject({ status: 'READY', songVideoUrl: SONG, songPosterUrl: POSTER, lessonVideoUrl: LESSON, lessonPosterUrl: null });
-    expect((await get(`/api/droplets/${id}`)).json().video).toEqual({ songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: POSTER, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null });
+    expect((await get(`/api/droplets/${id}`)).json().video).toEqual({ songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: POSTER, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null, note: null });
   });
 
   it('marks READY only for the attempt that holds the render, so a run that was taken over cannot', async () => {
