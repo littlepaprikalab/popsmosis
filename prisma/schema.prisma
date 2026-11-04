@@ -56,6 +56,11 @@ model User {
   dropletComments DropletComment[]
   usageEvents     UsageEvent[]
 
+  // The admin Users page (api/src/routes/users.ts): admins first, then newest first, a page at a time by cursor.
+  @@index([role(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  // Its search matches any part of an email or a name (ILIKE '%…%'), which only a trigram index can serve.
+  @@index([email(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("users")
 }
 
