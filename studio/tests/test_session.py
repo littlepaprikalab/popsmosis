@@ -85,6 +85,36 @@ def test_without_an_operator_waiting_or_with_the_knob_off_the_call_fails_as_befo
     assert not session.pending(job)
 
 
+def test_the_admin_can_send_a_claude_topic_to_the_session_before_the_api(quick, monkeypatch):
+    # The owner (Nov 4): when Claude is the brain, pick whether it is answered on the key or in the teacher's session.
+    job = quick / "q1"
+    job.mkdir()
+    asked = []
+    monkeypatch.setattr(brain, "ask", lambda *a, **k: asked.append(a[0]) or CHECK)
+    knobs.use({"knobs": {"STUDIO_CLAUDE_VIA": "session", "STUDIO_SESSION_FALLBACK": "off"}})
+    ask = operator_run.logged_ask(job, session_answers=True)
+    for role in ("brain", "checker"):  # every call of a Claude topic, never tried on the API
+        thread, said = answer_when_asked(job, CHECK)
+        with ledger.at_step("factcheck"):
+            assert ask(role, f'{{"{role}": 1}}', FactCheck, label=f"factcheck {role}") == FactCheck.model_validate(
+                CHECK).model_dump()
+        thread.join()
+        assert said[0].startswith("SAVED factcheck-")
+    assert asked == [] and [r["via"] for r in ledger.read(job)] == ["session", "session"]
+    assert "STUDIO_CLAUDE_VIA is session" in json.dumps(
+        [json.loads(p.read_text()) for p in (job / "session").rglob("request.json")])
+    # The brain needs no key of its own then, even with the fallback off.
+    assert session.answers()
+    # A Muse topic is unchanged: its calls go to the API, Claude's checks beside them too.
+    with brain.chosen("muse-spark"):
+        assert not session.answers() and not session.first("checker")
+        assert ask("checker", "{}", FactCheck, label="art check") == CHECK and asked == ["checker"]
+    # So is a run nobody waits on, and a Claude topic with the knob at api.
+    assert operator_run.logged_ask(job)("brain", "{}", FactCheck, label="x") == CHECK
+    knobs.use({"knobs": {"STUDIO_CLAUDE_VIA": "api"}})
+    assert ask("brain", "{}", FactCheck, label="y") == CHECK and asked == ["checker", "brain", "brain"]
+
+
 def test_an_answer_that_does_not_fit_is_handed_back_with_what_to_fix(quick, monkeypatch):
     job = quick / "q1"
     job.mkdir()

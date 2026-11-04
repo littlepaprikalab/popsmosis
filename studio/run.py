@@ -234,7 +234,7 @@ def run(question_id: str, api: Api | None = None, ask=None, note: str = "",
             # Down or failing, the API is no reason to fail this topic: nothing about it was tried.
             return STOPPED, "run", reason if result == STOPPED else f"the studio's settings could not be read: {reason}"
         knobs.use(studio)
-        keys = not (session_answers and session.allowed())
+        keys = not (session_answers and session.answers())
         with brain.chosen(*default_brain(studio)):
             problem = brain.settings_problem(keys=keys)
             missing = brain.settings_problem() if not keys and not problem else None
@@ -940,6 +940,9 @@ def logged_ask(job: Path, session_answers: bool = False):
         # Only this thread's calls: another thread may be asking at the same time.
         with brain.collect() as mine:
             try:
+                role = kwargs.get("role", args[0] if args else "")
+                if session_answers and session.first(role):  # the admin's choice: Claude in the session
+                    return session.ask(job, session.Chosen(f"{session.VIA} is session"), *args, **kwargs)
                 try:
                     return brain.ask(*args, **kwargs)
                 except brain.BrainError as e:

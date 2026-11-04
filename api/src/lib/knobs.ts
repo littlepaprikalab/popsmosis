@@ -66,6 +66,8 @@ export const KNOBS = {
   STUDIO_CLAUDE_DRAWS: { where: 'studio', kind: 'choice', default: 'math', choices: ['math', 'charts', 'brain'] },
   // Whether a model call the API fails waits for the teacher's own Claude session to answer it (studio/session.py).
   STUDIO_SESSION_FALLBACK: { where: 'studio', kind: 'choice', default: 'on', choices: ['on', 'off'] },
+  // Where the studio's Claude calls go in a run the teacher waits on: the Anthropic key, or straight to its session.
+  STUDIO_CLAUDE_VIA: { where: 'studio', kind: 'choice', default: 'api', choices: ['api', 'session'] },
   // The most a step of the studio may run before it is ended as failed (studio/retry.py): under the operator's hour.
   STUDIO_STEP_MINUTES: { where: 'studio', kind: 'int', default: 40, min: 0, max: 600 },
 } as const satisfies Record<string, Spec>;

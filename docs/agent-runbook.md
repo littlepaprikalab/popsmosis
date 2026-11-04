@@ -53,10 +53,11 @@ The runner needs these in its environment:
 | `STUDIO_VIDEOS` | optional: `lesson` leaves the song out from the start (a lesson written while it is set has no lyrics to write or fact-check; the lesson video alone, no hook clip); `off` makes text-only droplets (no claim, no media steps, no recovery) |
 | `STUDIO_CLAUDE_DRAWS` | optional: what Claude draws as SVG whoever paints the rest. `math` (default): charts, graphs and a math lesson's pictures; `charts`: charts and graphs; `brain`: only on Claude's brain. On a Muse topic it draws them on `POPSMOSIS_ANTHROPIC_API_KEY` |
 | `STUDIO_SESSION_FALLBACK` | optional: `on` (default) has a model call the API fails wait for the teacher's own session to answer it (`studio/session.py`; the skill file's "When the studio asks your session"); `off` fails the call, and the step |
+| `STUDIO_CLAUDE_VIA` | optional, only for a topic whose brain is Claude: `api` (default) asks Claude on `POPSMOSIS_ANTHROPIC_API_KEY`; `session` sends every model call of the topic straight to the teacher's own session, the API never tried, as `ASK` calls (`studio/session.py`). Only a run the teacher waits on can ask its session |
 | `STUDIO_STEP_MINUTES` | optional: the most one step of the studio may run before it is ended as failed, in minutes (default 40; 0: no limit) |
 
 `ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL`, `GEMINI_TTS_VOICE`, `STUDIO_VIDEOS`,
-`STUDIO_CLAUDE_DRAWS`, `STUDIO_SESSION_FALLBACK` and `STUDIO_STEP_MINUTES` are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the
+`STUDIO_CLAUDE_DRAWS`, `STUDIO_SESSION_FALLBACK`, `STUDIO_CLAUDE_VIA` and `STUDIO_STEP_MINUTES` are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the
 one here from the next run (README, [Knobs](../README.md#knobs)).
 
 The brain, the singer and the painters are not set here. Which brain writes the lessons,

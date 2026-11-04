@@ -90,7 +90,7 @@ def unavailable(job: Path | None = None, studio: dict | None = None, session_ans
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
     settings = jobs.studio_settings(job) if job else studio or {}
-    keys = not (session_answers and session.allowed())
+    keys = not (session_answers and session.answers())
     problem = brain.retired_problem() or brain.settings_problem(keys=keys) or brain.art_problem(settings.get("art"))
     song = settings.get("song") if isinstance(settings.get("song"), dict) else {}
     lyria = not media.lesson_only(job) and (song.get("provider") or media.DEFAULT_SONG_PROVIDER) == "gemini"  # the lesson alone has no song
