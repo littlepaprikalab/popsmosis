@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { api, isUnreachable, User } from './api';
 import { topicDraft } from '@/lib/topicDraft';
+import { forgetSorry } from '@/lib/brains';
 
 interface AuthContext {
   user: User | null;
@@ -73,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await api.logout();
     topicDraft.clear(); // an unsent topic is theirs: not for whoever uses this tab next
+    forgetSorry(); // and so is an apology for Muse Wonder (lib/brains.ts)
     setUser(null);
   };
 

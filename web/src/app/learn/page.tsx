@@ -28,7 +28,9 @@ import { DropletPill, Marked, SongChip } from '@/components/Highlights';
 import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
 import { topicDraft } from '@/lib/topicDraft';
-import { BRAIN_MODELS, brainLabel, brainOptionsFor, rememberedBrain, rememberBrain, type Brain } from '@/lib/brains';
+import {
+  APOLOGY, BRAIN_MODELS, BRAIN_OPTIONS, brainLabel, needsApology, rememberedBrain, rememberBrain, saySorry, typedApology, type Brain,
+} from '@/lib/brains';
 
 const PAGE_SIZE = 20;
 const POLL_MS = 10_000;
@@ -223,6 +225,30 @@ function DeleteChoice({ everything, onChange, typed, onType, likes = 0, comments
 /** The word Everything asks to be typed before it deletes; any case, so a phone's capital still counts. */
 const DELETE_WORD = 'delete';
 const typedDeleteWord = (typed: string) => typed.trim().toLowerCase() === DELETE_WORD;
+
+/**
+ * What a learner reads and types before Muse Wonder is theirs (lib/brains.ts, APOLOGY): it costs the most of the
+ * brains, and the developer pays. Enter takes it once the words are right.
+ */
+function ApologyPrompt({ typed, onType, onDone }: { typed: string; onType: (typed: string) => void; onDone: () => void }) {
+  return (
+    <div>
+      <p>
+        Every lesson costs the developer money, and Muse Wonder&rsquo;s cost the most: it writes long, so one of its
+        droplets costs several times what another brain&rsquo;s does.
+      </p>
+      <label htmlFor="apology-text" className="block mt-3 mb-1.5 text-[13px]">
+        To pick it anyway, type <strong style={{ color: 'var(--text-primary)' }}>{APOLOGY}</strong>
+      </label>
+      {/* Two lines, so the whole sentence shows as it is typed, on a phone too; Enter adds no line. */}
+      <textarea id="apology-text" data-testid="apology-text" rows={2} value={typed} onChange={(e) => onType(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (typedApology(typed)) onDone(); } }}
+        placeholder="Type it here" autoComplete="off" autoCorrect="off" spellCheck={false} maxLength={120}
+        className="w-full px-3 py-2 rounded text-sm outline-none focus:ring-1 resize-none"
+        style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+    </div>
+  );
+}
 
 /**
  * One topic request, its lesson, and the follow-ups under it. Memoized on purpose: the armed poll hands
@@ -480,6 +506,9 @@ function LearnContent() {
   // Whether a topic may go to a brain of its own (GET /api/questions/brains): false while an admin has the default make
   // every topic, when the picker is hidden and no pick is sent. Null until known, or when the API could not say.
   const [picksOpen, setPicksOpen] = useState<boolean | null>(null);
+  // A learner pressed Muse Wonder: the dialog asking for the apology is open, and what they typed in it.
+  const [askSorry, setAskSorry] = useState(false);
+  const [typedSorry, setTypedSorry] = useState('');
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   // For a topic with a lesson: whether the lesson goes too (the API's /everything route), or only the request.
   const [deleteLesson, setDeleteLesson] = useState(true);
@@ -529,10 +558,9 @@ function LearnContent() {
     load();
   }, [authLoading, user, load]);
 
-  const brainOptions = brainOptionsFor(isAdmin);
-  const chosen = brainOptions.find((o) => o.value === brain);
+  const chosen = BRAIN_OPTIONS.find((o) => o.value === brain);
   useEffect(() => {
-    setBrain(rememberedBrain(isAdmin)); // read again once an admin is known, as Muse Wonder is theirs alone
+    setBrain(rememberedBrain(isAdmin)); // read again once an admin is known, as Muse Wonder asks them for no apology
     if (!isAdmin) return;
     api.getStudioSettings().then((s) => setDefaultBrain(s.brain.default)).catch(() => {}); // the note says less without it
   }, [isAdmin]);
@@ -543,8 +571,16 @@ function LearnContent() {
   useEffect(readPicks, [readPicks]);
 
   const pickBrain = (value: Brain | null) => {
+    if (needsApology(value, isAdmin)) { setTypedSorry(''); setAskSorry(true); return; } // the pick waits for it
     setBrain(value);
     rememberBrain(value);
+  };
+  const sorryTyped = typedApology(typedSorry);
+  const acceptSorry = () => {
+    if (!sorryTyped) return;
+    saySorry();
+    setAskSorry(false);
+    pickBrain('muse-wonder');
   };
 
   // What the learner has left of their topics, shown in the box: read on sign-in, after each send, and again when
@@ -687,7 +723,8 @@ function LearnContent() {
         changeQuestion('');
         // Too long to read in a few seconds, so it stays until the learner closes it; so does a refusal below. Each
         // Submit's word replaces the last one's.
-        showToast(`Topic sent${sentTo ? ` to ${brainLabel(sentTo)}` : ''}. The teacher picks it up on its next pass; `
+        const sorry = sentTo === 'muse-wonder' && !isAdmin ? ' Apology accepted.' : '';
+        showToast(`Topic sent${sentTo ? ` to ${brainLabel(sentTo)}` : ''}.${sorry} The teacher picks it up on its next pass; `
           + `a droplet takes about ${USUAL_MINUTES} minutes to make.`, 'success', { persistent: true, key: 'ask' });
         readAllowance();
         if (picked && !sentTo) readPicks(); // turned off since the page read it: the picker goes
@@ -794,6 +831,15 @@ function LearnContent() {
         }}
         onCancel={() => setPendingDelete(null)}
       />
+      <ConfirmDialog
+        open={askSorry}
+        title="Muse Wonder costs the most"
+        message={<ApologyPrompt typed={typedSorry} onType={setTypedSorry} onDone={acceptSorry} />}
+        confirmLabel="Pick Muse Wonder"
+        confirmDisabled={!sorryTyped}
+        onConfirm={acceptSorry}
+        onCancel={() => setAskSorry(false)}
+      />
 
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-wider mb-1">LEARN</h2>
@@ -866,7 +912,7 @@ function LearnContent() {
           <div className="mt-3" data-testid="brain-picker">
             <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brain for this topic">
               <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Brain:</span>
-              {brainOptions.map((option) => {
+              {BRAIN_OPTIONS.map((option) => {
                 const on = option.value === brain;
                 return (
                   <button key={option.label} type="button" role="radio" aria-checked={on}

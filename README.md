@@ -252,15 +252,17 @@ studio/tests/test_live_gemini.py -s` paints one scene, about 7 cents.
 #### One topic on another brain
 
 Anyone signed in can send a topic to a brain of its own: the **Brain** buttons under the box on
-`/learn`. A learner sees Default, Claude and Muse Spark; Muse Wonder is shown to admins only, and
-the API refuses it from anyone else. The pick is remembered on that browser, and the topic's card
+`/learn`. Muse Wonder costs the most by far (about $4 a droplet, [its test round](docs/test-rounds.md)),
+so before a learner can pick it they type *I know this is costing the developer even more, I am
+sorry.* (any case and punctuation), once a tab; an admin is not asked. That is the page's alone:
+the API takes any brain from anyone. The pick is remembered on that browser, and the topic's card
 shows it. Only an admin's note under the buttons says whose key pays and who paints.
 
 | Button | Brain: writes and fact-checks the lesson | Brain bills to |
 |---|---|---|
 | Default | the default brain on the Studio page (the note under the buttons names it) | its key |
 | Claude | Claude Opus 5.5 (`claude-opus-5-5`) | `POPSMOSIS_ANTHROPIC_API_KEY` |
-| Muse Wonder (admins only) | Muse Wonder 1.0 (`muse-wonder-1.0`) | `MODEL_API_KEY` |
+| Muse Wonder (a learner apologizes first) | Muse Wonder 1.0 (`muse-wonder-1.0`) | `MODEL_API_KEY` |
 | Muse Spark | Muse Spark 1.3 (`muse-spark-1.3`) | `MODEL_API_KEY` |
 
 The pictures are painted by the Studio page's painter for the pick's provider: by default
@@ -400,7 +402,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
 | GET | `/api/questions/allowance` | the caller's topics left: `{ perDay, left, nextInSeconds, siteFull, siteOpensInSeconds }`. Each topic's place comes back 24 hours after it was asked for (no midnight reset), so the times are seconds from now: `nextInSeconds` is until one more comes back, or with none left until the caller may ask again; null when none is coming. The Learn page shows it in the topic box, by the browser's clock and time zone |
-| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`: `claude`, `muse-spark`, or `muse-wonder` from an admin (403 from anyone else), the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the default brain. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
+| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`: `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the default brain. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
 | DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one. `?expect=no-lesson` (the page showed none): 409 and nothing changes if one has landed since, so the learner is asked again with the choice |
 | DELETE | `/api/questions/:id/everything` | own topic, with its lesson: the droplet, its follow-ups, likes, comments and play counts, and its files in both R2 buckets ([Privacy](#privacy-and-the-legal-pages)); it leaves the tab. A route of its own, not a flag, so an API from before it answers 404 and deletes nothing |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars; 429 past `REPLIES_PER_USER_PER_HOUR` (30), or when its files would pass the learner's file limits |

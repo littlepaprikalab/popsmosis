@@ -56,8 +56,8 @@ test.describe('signed out', () => {
     page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/api/questions')) sent.push(r.url()); });
     await page.goto('/learn');
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill('How do vaccines train the immune system?');
-    // The brain is picked signed out too, from what a learner may pick.
-    await expect(page.getByTestId('brain-picker').getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Spark']);
+    // The brain is picked signed out too.
+    await expect(page.getByTestId('brain-picker').getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Wonder', 'Muse Spark']);
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' }).click();
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     await page.getByTestId('sign-in-prompt').getByRole('link', { name: 'Sign in with Google' }).click();
@@ -534,11 +534,14 @@ test.describe('signed in', () => {
     // Remembered on this browser, so a run of test topics stays on it.
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
-    // Muse Wonder too, though the page knows it is an admin's only once the sign-in is read.
+    // Muse Wonder too, with no apology from the one who pays for it, and remembered though the page knows it is an
+    // admin only once the sign-in is read.
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' }).click();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('apology-text')).toBeHidden();
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' })).toHaveAttribute('aria-checked', 'true');
-    await expect(page.getByTestId('brain-note')).toContainText('Admins only.');
+    await expect(page.getByTestId('brain-note')).toContainText('a learner types an apology to pick it');
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
@@ -688,30 +691,73 @@ test.describe('signed in', () => {
     await expect(note).toHaveText(new RegExp(`^Popsmosis has made all the droplets it can for now\\. It takes topics again ${await threeHoursOn()}\\.$`));
   });
 
-  test('a learner picks the brain too, from all but Muse Wonder, and is not told whose key pays', async ({ page, context, request }) => {
+  test('a learner picks the brain too, and is not told whose key pays', async ({ page, context }) => {
     await page.addInitScript(() => window.localStorage.setItem('popsmosis.brain', 'muse-wonder')); // an admin's, on this browser
     await signIn(context, S.users.ben);
     await page.goto('/learn');
     const picker = page.getByTestId('brain-picker');
-    await expect(picker.getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Spark']);
+    await expect(picker.getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Wonder', 'Muse Spark']);
+    // An admin's Muse Wonder on this browser is not the learner's: they have not said sorry.
     await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByTestId('brain-note')).toHaveText('The teacher’s usual brain.');
     await picker.getByRole('radio', { name: 'Claude' }).click();
     await expect(page.getByTestId('brain-note')).toHaveText('Claude Opus 5.5 writes and checks the lesson.');
+  });
 
-    const text = `E2E ${Date.now()}: osmosis, on Claude by a learner`;
+  test('a learner picks Muse Wonder only after typing their apology, once a tab', async ({ page, context, request }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const picker = page.getByTestId('brain-picker');
+    const wonder = picker.getByRole('radio', { name: 'Muse Wonder' });
+    await picker.getByRole('radio', { name: 'Claude' }).click();
+
+    // Pressed, it asks for the words first; Cancel leaves the pick as it was.
+    await wonder.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Muse Wonder costs the most');
+    await expect(dialog).toContainText('I know this is costing the developer even more, I am sorry.');
+    const pick = dialog.getByRole('button', { name: 'Pick Muse Wonder' });
+    await expect(pick).toBeDisabled();
+    await page.getByTestId('apology-text').fill('sorry');
+    await expect(pick).toBeDisabled();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(picker.getByRole('radio', { name: 'Claude' })).toHaveAttribute('aria-checked', 'true');
+    await expect(wonder).toHaveAttribute('aria-checked', 'false');
+
+    // Asked again, the box starts empty. The words in any case, the commas and the period left out, and Enter takes them.
+    await wonder.click();
+    await expect(page.getByTestId('apology-text')).toHaveValue('');
+    await page.getByTestId('apology-text').fill('i know this is costing the developer even more i am sorry');
+    await expect(pick).toBeEnabled();
+    await page.getByTestId('apology-text').press('Enter');
+    await expect(dialog).toBeHidden();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('brain-note')).toHaveText('Muse Wonder 1.0 writes and checks the lesson.');
+
+    const text = `E2E ${Date.now()}: osmosis, on Muse Wonder by a learner`;
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
     await page.getByRole('button', { name: 'SUBMIT' }).click();
+    await expect(page.getByText('Topic sent to Muse Wonder. Apology accepted.')).toBeVisible();
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
-    await expect(card.getByTestId('topic-brain')).toHaveText('Claude');
-
-    // The API takes Claude from a learner, never Muse Wonder.
+    await expect(card.getByTestId('topic-brain')).toHaveText('Muse Wonder');
     const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
     const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
     const sent = own.data.find((q: { content: string }) => q.content === text);
-    expect(sent.brain).toBe('claude');
-    const wonder = await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: `${text}, on Wonder`, brain: 'muse-wonder' } });
-    expect(wonder.status()).toBe(403);
+    expect(sent.brain).toBe('muse-wonder');
+
+    // Sorry once is enough for this tab, a reload included; a new tab asks again.
+    await page.reload();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    await picker.getByRole('radio', { name: 'Default' }).click();
+    await wonder.click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    const other = await context.newPage();
+    await other.goto('/learn');
+    await expect(other.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await other.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' }).click();
+    await expect(other.getByTestId('apology-text')).toBeVisible();
     expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).status()).toBe(204);
   });
 

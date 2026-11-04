@@ -1,8 +1,10 @@
 /**
  * The brains a topic may be sent to on /learn (api/src/lib/brains.ts). Null is the default brain set on
- * /admin/studio. Anyone may pick Claude or Muse Spark; Muse Wonder is shown to admins alone. The brain writes and
- * fact-checks the lesson; who paints the pictures goes by its provider, as set on /admin/studio too. While an admin has
- * the default brain make every topic (BrainSettings.defaultOnly), /learn hides the picker.
+ * /admin/studio. Anyone may pick any of them, but Muse Wonder costs the most by far (about $4 a droplet in its test
+ * round, docs/test-rounds.md, to Claude's 70¢ a lesson), so a learner first types APOLOGY. An admin pays the bill
+ * and is not asked. The brain writes and fact-checks the lesson; who paints the pictures goes by its provider, as
+ * set on /admin/studio too. While an admin has the default brain make every topic
+ * (BrainSettings.defaultOnly), /learn hides the picker.
  */
 
 export type Brain = 'claude' | 'muse-wonder' | 'muse-spark';
@@ -12,20 +14,15 @@ export type BrainOption = {
   label: string;
   note: string; // shown to everyone
   adminNote?: string; // after it, for admins: whose key pays, and who paints
-  adminOnly?: true;
+  apology?: true; // a learner types APOLOGY before it is picked
 };
 
 export const BRAIN_OPTIONS: BrainOption[] = [
   { value: null, label: 'Default', note: 'The teacher’s usual brain.', adminNote: 'The default brain set on the Studio page.' },
   { value: 'claude', label: 'Claude', note: 'Claude Opus 5.5 writes and checks the lesson.', adminNote: 'Billed to the Anthropic key. The pictures: the Studio page’s painter for Claude (Gemini 3.1 Flash Image by default).' },
-  { value: 'muse-wonder', label: 'Muse Wonder', adminOnly: true, note: 'Muse Wonder 1.0 writes and checks the lesson.', adminNote: 'Admins only. Billed to the Meta key. The pictures: the Studio page’s painter for Muse (Muse Image by default).' },
+  { value: 'muse-wonder', label: 'Muse Wonder', apology: true, note: 'Muse Wonder 1.0 writes and checks the lesson.', adminNote: 'Billed to the Meta key; a learner types an apology to pick it. The pictures: the Studio page’s painter for Muse (Muse Image by default).' },
   { value: 'muse-spark', label: 'Muse Spark', note: 'Muse Spark 1.3 writes and checks the lesson.', adminNote: 'At about a quarter of Wonder’s price, billed to the Meta key. The pictures: the Studio page’s painter for Muse (Muse Image by default).' },
 ];
-
-/** The options this viewer may pick from: every one for an admin, the rest without Muse Wonder. */
-export function brainOptionsFor(isAdmin: boolean): BrainOption[] {
-  return isAdmin ? BRAIN_OPTIONS : BRAIN_OPTIONS.filter((o) => !o.adminOnly);
-}
 
 export function brainLabel(value: string | null | undefined): string | null {
   return BRAIN_OPTIONS.find((o) => o.value === value && value)?.label ?? null;
@@ -38,13 +35,56 @@ export const BRAIN_MODELS: Record<Brain, string> = {
   'muse-spark': 'Muse Spark 1.3',
 };
 
+/** What a learner types before Muse Wonder is theirs. */
+export const APOLOGY = 'I know this is costing the developer even more, I am sorry.';
+
+// The words alone: any case, and the commas, the period and the spaces as they come out, on a phone too.
+const words = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+export const typedApology = (typed: string) => words(typed) === words(APOLOGY);
+
+const SORRY_KEY = 'popsmosis.brain.sorry';
+
+/** Whether this tab has said sorry already: once is enough until the tab is closed, a reload or a sign-in included. */
+function saidSorry(): boolean {
+  try {
+    return window.sessionStorage.getItem(SORRY_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function saySorry(): void {
+  try {
+    window.sessionStorage.setItem(SORRY_KEY, '1');
+  } catch {
+    // Blocked storage: the apology holds until the page is left.
+  }
+}
+
+/** On a logout: the apology was theirs, not the next person's on this tab. */
+export function forgetSorry(): void {
+  try {
+    window.sessionStorage.removeItem(SORRY_KEY);
+  } catch {
+    // Blocked storage: nothing was kept.
+  }
+}
+
+/** Whether this viewer must type APOLOGY before `value` is picked. */
+export function needsApology(value: Brain | null, isAdmin: boolean): boolean {
+  return !isAdmin && !!BRAIN_OPTIONS.find((o) => o.value === value)?.apology && !saidSorry();
+}
+
 const STORAGE_KEY = 'popsmosis.brain';
 
-/** The brain picked last on this browser, so a run of topics stays on it; one this viewer may not pick is dropped. */
+/**
+ * The brain picked last on this browser, so a run of topics stays on it. Muse Wonder comes back only to an admin, or
+ * to a learner who has said sorry in this tab: a new tab, or another learner on a shared browser, is asked again.
+ */
 export function rememberedBrain(isAdmin: boolean): Brain | null {
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    return brainOptionsFor(isAdmin).some((o) => o.value === saved) ? (saved as Brain) : null;
+    const saved = window.localStorage.getItem(STORAGE_KEY) as Brain | null;
+    return BRAIN_OPTIONS.some((o) => o.value === saved && saved) && !needsApology(saved, isAdmin) ? saved : null;
   } catch {
     return null;
   }
