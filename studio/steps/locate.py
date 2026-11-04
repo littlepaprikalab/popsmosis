@@ -385,9 +385,13 @@ class Colours:
         self.pixels = _lab(rgb)
         self.words = hue_codes(rgb)
         words = hue_codes(np.array(refs))
-        # A part's word is its own when no other part, nor the background unless the part is near it, has it.
-        near_paper = distance(self.refs, self.refs[-1:])[:, 0] <= CLOSE
-        self.word = [int(w) if (words[:-1] == w).sum() == 1 and (w != words[-1] or near_paper[i]) else -1
+        # The part the background is: the one in the background's colour word, the word the painter was told. Not one
+        # merely near its colour: to distance() the white page is a paler yellow, cyan or grey, and the repainted
+        # Calvin overview's ATP, G3P and sugar took all of it (Nov 4). Nor only one near it: the repainted
+        # fixation close-up's stroma, peach in the bundle and "orange" to the painter, was painted a deeper orange.
+        self.is_paper = words == words[-1]
+        # A part's word is its own when no other part, nor the background unless the part is it, has it.
+        self.word = [int(w) if (words[:-1] == w).sum() == 1 and (w != words[-1] or self.is_paper[i]) else -1
                      for i, w in enumerate(words[:-1])]
         self.dropped = 0
         self._counting = threading.Lock()  # the scene's structures are judged at the same time
@@ -409,7 +413,7 @@ class Colours:
         nearest, close = far.argmin(1), far.min(1) <= CLOSE
         apart = distance(self.refs, self.refs[mine:mine + 1])[:, 0]
         own_colour = apart <= SAME
-        own_colour[-1] = apart[-1] <= CLOSE  # the background is a structure's own colour only when it is near it
+        own_colour[-1] = self.is_paper[mine]  # the background is a structure's own colour only when it is the background
         backdrop = (nearest == len(self.refs) - 1) & close & ~own_colour[-1]
         background = 0.0 if apart[-1] <= CLOSE else float(backdrop.mean())
         words = self.words[mask]
@@ -431,7 +435,7 @@ class Colours:
         far = distance(window.reshape(-1, 3), self.refs).reshape(*window.shape[:2], -1)
         nearest, close = far.argmin(-1), far.min(-1) <= CLOSE
         paper = len(self.refs) - 1
-        mine_or_paper = (nearest == mine) | ((nearest == paper) & (far[..., mine] <= CLOSE))
+        mine_or_paper = (nearest == mine) | ((nearest == paper) & self.is_paper[mine])
         by_word = ~close & (self.words[y0:y1, x0:x1] == self.word[mine])
         mask[y0:y1, x0:x1] = (mine_or_paper & close) | by_word
         return mask

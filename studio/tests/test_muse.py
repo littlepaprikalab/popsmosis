@@ -807,6 +807,23 @@ def test_a_part_in_its_colour_word_and_a_space_that_is_the_background_count_as_t
     assert not shared.fits(g3p_at, g3p)
 
 
+def test_a_white_page_is_no_pale_part(tmp_path):
+    # To distance() a white page is a paler yellow, cyan or grey: on the repainted Calvin overview (Nov 4) ATP, G3P
+    # and sugar would each have taken the whole page. Only a part in the page's own colour word is the page.
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), (241, 241, 241), np.uint8)
+    atp_at = disc(700, 500, 60)
+    pixels[atp_at] = (240, 200, 40)
+    path = tmp_path / "art.png"
+    path.write_bytes(svg.png(pixels))
+    atp, sugar = (Structure(name="ATP", aliases=[], sam_phrase="yellow ball", color_hex="#FFD400"),
+                  Structure(name="sugar", aliases=[], sam_phrase="grey cubes", color_hex="#9AA5B1"))
+    colours = locate.Colours(path, Scene(id="overview", image_prompt="A chloroplast.", structures=[atp, sugar]))
+    page = ~atp_at
+    assert not colours.fits(page, atp) and colours.fits(atp_at, atp)
+    whole = Box(x0=0, y0=0, x1=media.ART_WIDTH, y1=media.ART_HEIGHT)
+    assert (colours.own(atp, whole) == atp_at).all() and not colours.own(sugar, whole).any()
+
+
 def box_mask(box: Box) -> np.ndarray:
     mask = np.zeros((media.ART_HEIGHT, media.ART_WIDTH), bool)
     mask[int(box.y0):int(box.y1), int(box.x0):int(box.x1)] = True
