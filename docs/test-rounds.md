@@ -2278,6 +2278,14 @@ style, one key line, a crowded overview. The headphones' writer marked both wave
 drawn, not painted. The rule changes what the writer does: kept. To watch: more close-ups where a lesson spotlights
 a part on most lines, as the Nov 3 round found without the camera's rule.
 
+**The camera that follows the spotlight, held steadier.** Built into real song timelines (the timeline step, a stand-in
+picture for each scene, each line two bars at the song's tempo), the 36 stored songs' cameras moved 5.2 times a minute
+as their writers set them, 1.0 of them sliding straight from one part to another. Following every spotlight: 5.8 and
+1.7. So each framing is now held at least two sung lines (`STEADY_S`, 6 s; 4 s changed nothing, a sung line being
+longer): a shorter close-up shows the whole scene with its part still lit, and a short pull-back between two close-ups
+of one part stays close (`timeline._calm()`): 2.5 and 0.5. The headphones' song, rendered both ways on stand-in
+pictures: 24 moves and 7 slides in 194 s, against 11 and none.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
