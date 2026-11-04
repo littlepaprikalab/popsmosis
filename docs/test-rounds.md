@@ -2197,8 +2197,9 @@ estates' green Third Estate, and marked down an Eiffel Tower behind the 1789 Bas
 table, the tomb's missing "Romeo" label and made-up writing on the hook's posters. One picture each, so the scores
 are close to noise; the segmentation gain held on four scenes of six and was lost on none.
 
-Not decided: how to widen the looks the writer picks (the brief without its gouache example, or a rotation that
-seeds a look the writer adapts to the topic, as the song style's does).
+The owner chose the writer's look (Nov 4), from the four versions side by side. Still open: how to widen the looks
+the writer picks (the brief without its gouache example, or a rotation that seeds a look the writer adapts to the
+topic, as the song style's does).
 
 ## Not tested
 
