@@ -995,6 +995,7 @@ model Answer {
   commentCount   Int          // comments on it (DropletComment), likewise
   songTags       String[]     // each video's hashtags, from the bundle when the lesson is posted; GIN-indexed
   lessonTags     String[]     // for the tab's search by tag
+  songStyle      String?      // the style the song was made from, from the bundle; shown on the lesson card
 }
 
 enum QuestionStatus { PENDING ANSWERED FAILED }

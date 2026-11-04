@@ -15,6 +15,7 @@ import { breakdownError } from '../lib/breakdown.js';
 import { checksError } from '../lib/review.js';
 import { progressError, storedProgress } from '../lib/progress.js';
 import { bundleTags } from '../lib/tags.js';
+import { bundleSongStyle } from '../lib/song-style.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { clearSoon, queueFileDeletion } from '../lib/storage-delete.js';
 import { parseBrain } from '../lib/brains.js';
@@ -509,9 +510,11 @@ export default async function questionRoutes(app: FastifyInstance) {
         const created = await tx.answer.create({
           data: {
             questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null,
-            // Each video's hashtags come with the bundle, and are kept on their own to be searched (lib/tags.ts).
+            // Each video's hashtags come with the bundle, and are kept on their own to be searched (lib/tags.ts), and
+            // so is the style the song was made from, for the lesson card (lib/song-style.ts).
             ...(bundle !== undefined && {
               bundle: bundle as Prisma.InputJsonObject, factcheck: factcheck as Prisma.InputJsonObject, ...bundleTags(bundle),
+              songStyle: bundleSongStyle(bundle),
             }),
             // What the code checks found in the bundle, for an admin's review (lib/review.ts); never shown to the learner.
             ...(checks !== undefined && { checks: checks as Prisma.InputJsonObject }),

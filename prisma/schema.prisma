@@ -193,6 +193,9 @@ model Answer {
   // and they are copied here, cleaned, when the lesson is posted. Shown under the videos; the Droplets tab searches by them.
   songTags   String[] @default([])
   lessonTags String[] @default([])
+  // The style the song was made from (lib/song-style.ts): the brain writes it into the bundle from the learner's
+  // suggestion, or from the rotation's seed, and it is copied here when the lesson is posted. Null: no song.
+  songStyle String?
 
   question Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
   agent    Agent            @relation(fields: [agentId], references: [id], onDelete: Cascade)

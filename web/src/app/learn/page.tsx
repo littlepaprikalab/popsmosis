@@ -90,6 +90,19 @@ function isArmed(q: Question, now = Date.now()): boolean {
   return !answer.video && now - new Date(answer.createdAt).getTime() < VIDEO_WATCH_MS;
 }
 
+/**
+ * The style the song was made from, which the teacher wrote from the learner's suggestion (or from the studio's
+ * rotation): known once the lesson is posted, before the song is made.
+ */
+function SongStyle({ style }: { style?: string | null }) {
+  if (!style) return null;
+  return (
+    <p className="mt-2 text-[10px] uppercase tracking-wider break-words" style={{ color: 'var(--text-muted)' }} data-testid="song-style">
+      Song style: <span className="normal-case">{style}</span>
+    </p>
+  );
+}
+
 /** Whether a re-fetched card differs from the one on screen in anything a card shows. */
 function videoKey(a: Answer | null): string {
   const v = a?.video;
@@ -393,7 +406,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
           )}
           {q.user && q.songStyle && (
             <p className="mt-1.5 text-[10px] uppercase tracking-wider break-words" style={{ color: 'var(--text-muted)' }} data-testid="request-style">
-              Song style: <span className="normal-case">{q.songStyle}</span>
+              Suggested style: <span className="normal-case">{q.songStyle}</span>
             </p>
           )}
           {/* On a line of its own: the header row is full on a phone. */}
@@ -443,6 +456,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                 <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }} data-testid="awaiting-videos">
                   The lesson is written and checked; the teacher is making its videos.
                 </p>
+                <SongStyle style={answer.songStyle} />
                 <DropletMeter progress={q.progress} />
                 <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={q.progress} endToEnd={answer.endToEnd} defaultOpen />
                 {isAdmin && <DropletReview answerId={answer.id} />}
@@ -463,6 +477,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                 </div>
                 {/* The videos first: the droplet is them, and the text is what they teach, to read after. */}
                 <LessonVideos answerId={answer.id} video={answer.video} tags={answer.tags} views={answer.views} />
+                {answer.video && <SongStyle style={answer.songStyle} />}
                 <div className={`md text-sm ${answer.video ? 'mt-3' : ''}`} style={{ color: 'var(--text-primary)' }}>
                   <Markdown>{answer.content}</Markdown>
                 </div>
@@ -995,7 +1010,7 @@ function LearnContent() {
         </div>
         <div className="mt-3" data-testid="style-picker">
           <label htmlFor="song-style" className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>
-            Song style <span className="normal-case font-normal">(optional)</span>
+            Suggest a song style <span className="normal-case font-normal">(optional)</span>
           </label>
           <input
             id="song-style"
@@ -1030,7 +1045,7 @@ function LearnContent() {
             </button>
           </div>
           <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="style-note">
-            {songStyle.trim() ? 'The song is written in this style.' : 'Left empty, the studio picks a style for the song.'}
+            {songStyle.trim() ? 'The teacher writes the song\'s style from your suggestion.' : 'Left empty, the studio picks a style for the song.'}
           </p>
         </div>
         {picksOpen === false ? isAdmin && (
