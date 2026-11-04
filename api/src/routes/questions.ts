@@ -163,10 +163,10 @@ export default async function questionRoutes(app: FastifyInstance) {
   // POST /api/questions — signed-in user asks a question. `attachments` are
   // files sent with it (lib/attachments.ts), which is why the body may be
   // large — and why the caller is checked before it is read. The caller may
-  // pick the `brain` that makes it (lib/brains.ts: Muse Wonder for admins
-  // only); left out, the default brain makes it. While an admin has the
-  // default make every topic (defaultOnly), a pick is not kept: the topic is
-  // the default's, and stays so once the switch is off.
+  // pick the `brain` that makes it (lib/brains.ts); left out, the default
+  // brain makes it. While an admin has the default make every topic
+  // (defaultOnly), a pick is not kept: the topic is the default's, and stays
+  // so once the switch is off.
   // A caller already at a limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
   const topicOpen = async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.viewer) return; // requireUser replied
@@ -180,8 +180,8 @@ export default async function questionRoutes(app: FastifyInstance) {
     };
     const err = validateString(content, 'content', { required: true, minLength: QUESTION_MIN_LENGTH, maxLength: QUESTION_MAX_LENGTH });
     if (err) return sendError(reply, 'VALIDATION_ERROR', err);
-    const { brain: picked, error: brainError, forbidden } = parseBrain(rawBrain, request.viewer!.role === 'ADMIN');
-    if (brainError) return sendError(reply, forbidden ? 'FORBIDDEN' : 'VALIDATION_ERROR', brainError);
+    const { brain: picked, error: brainError } = parseBrain(rawBrain);
+    if (brainError) return sendError(reply, 'VALIDATION_ERROR', brainError);
     const brain = picked && (await brainPicksOpen()) ? picked : null;
     const { attachments, error: attachmentsError } = parseAttachments(rawAttachments);
     if (attachmentsError) return sendError(reply, 'VALIDATION_ERROR', attachmentsError);

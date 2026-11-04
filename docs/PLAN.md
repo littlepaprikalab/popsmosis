@@ -111,7 +111,7 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 | **Helper**: image checks, SAM boxes, QA stills | Claude Sonnet 5.5 (`claude-sonnet-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
 The helper's models are set in `studio/brain.py`. Anyone can also send one topic to its own
-brain on `/learn` (Claude or Muse Spark; Muse Wonder for admins), which wins over the default for that
+brain on `/learn` (Claude, Muse Spark, or Muse Wonder after a learner's apology), which wins over the default for that
 topic, the painter its provider's: README, "One topic on another brain".
 
 The other jobs:

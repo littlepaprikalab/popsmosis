@@ -121,7 +121,9 @@ d('studio settings', () => {
     const sent = await send('Osmosis, on Spark', 'muse-spark');
     expect(sent.statusCode).toBe(201);
     expect(sent.json().brain).toBeNull(); // the default's, and stays so once the switch is off
-    expect((await send('Osmosis, on Wonder', 'muse-wonder')).statusCode).toBe(403); // still not a learner's to pick
+    const wonder = await send('Osmosis, on Wonder', 'muse-wonder'); // a learner's to pick now, and dropped all the same
+    expect(wonder.statusCode).toBe(201);
+    expect(wonder.json().brain).toBeNull();
     // A topic picked before the switch keeps its pick; the studio reads the switch from the claim and makes it on
     // the default (studio/run.py).
     const claim = await app.inject({ method: 'POST', url: `/api/questions/${waiting.id}/claim`, headers: asAgent });

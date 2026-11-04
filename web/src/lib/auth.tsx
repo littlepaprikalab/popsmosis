@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { api, isUnreachable, User } from './api';
 import { topicDraft } from '@/lib/topicDraft';
+import { forgetSorry } from '@/lib/brains';
 
 interface AuthContext {
   user: User | null;
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onExpired = () => {
       if (handled || !userRef.current) return;
       handled = true;
+      forgetSorry(); // as a logout does: whoever signs in next on this tab says sorry for themselves
       setUser(null);
       api.logout().catch(() => {});
       const returnTo = `${window.location.pathname}${window.location.search}`;
@@ -71,6 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (u: User) => { setUser(u); setUnreachable(false); }; // cookie already set by the API
 
   const logout = async () => {
+    // Their apology for Muse Wonder (lib/brains.ts) goes first: if the call below fails, it costs only another apology.
+    forgetSorry();
     await api.logout();
     topicDraft.clear(); // an unsent topic is theirs: not for whoever uses this tab next
     setUser(null);

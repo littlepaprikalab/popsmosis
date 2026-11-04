@@ -230,13 +230,10 @@ d('question / answer / reply flow', () => {
   });
 
   it('lets the sender pick the brain for a topic, and hands it to the studio with the claim', async () => {
-    // A learner may pick Claude or Muse Spark; Muse Wonder is an admin's alone.
-    const wonder = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} wonder picked by a learner`, brain: 'muse-wonder' } });
-    expect(wonder.statusCode).toBe(403);
-    expect(await prisma.question.count({ where: { content: `${tag} wonder picked by a learner` } })).toBe(0);
-    const learner = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} brain picked by a learner`, brain: 'claude' } });
+    // A learner may pick any brain, Muse Wonder too (the page asks them to apologize for it first, web/src/lib/brains.ts).
+    const learner = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} wonder picked by a learner`, brain: 'muse-wonder' } });
     expect(learner.statusCode).toBe(201);
-    expect(learner.json().brain).toBe('claude');
+    expect(learner.json().brain).toBe('muse-wonder');
     await prisma.question.delete({ where: { id: learner.json().id } });
     const unknown = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(adminCookie), payload: { content: `${tag} brain unknown`, brain: 'muse-spark-1.3' } });
     expect(unknown.statusCode).toBe(400);

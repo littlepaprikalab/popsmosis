@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page, type Route } from '@playwright/test';
 import { seed, signIn, agent, apiUrl, sessionToken } from './helpers';
 
 const S = seed();
@@ -56,8 +56,8 @@ test.describe('signed out', () => {
     page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/api/questions')) sent.push(r.url()); });
     await page.goto('/learn');
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill('How do vaccines train the immune system?');
-    // The brain is picked signed out too, from what a learner may pick.
-    await expect(page.getByTestId('brain-picker').getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Spark']);
+    // The brain is picked signed out too.
+    await expect(page.getByTestId('brain-picker').getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Wonder', 'Muse Spark']);
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' }).click();
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     await page.getByTestId('sign-in-prompt').getByRole('link', { name: 'Sign in with Google' }).click();
@@ -75,6 +75,20 @@ test.describe('signed out', () => {
     await expect(box).toBeFocused();
     await expect(page.getByTestId('sign-in-prompt')).toHaveCount(0);
     expect(sent).toEqual([]);
+  });
+
+  test('a visitor who says sorry signed out keeps Muse Wonder through the sign-in', async ({ page, context }) => {
+    await page.goto('/learn');
+    const wonder = page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' });
+    await wonder.click();
+    await page.getByTestId('apology-text').fill('I know this is costing the developer 4x more than Muse Spark, I am sorry.');
+    await page.getByRole('dialog').getByRole('button', { name: 'Pick Muse Wonder' }).click();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    // Google and back in the same tab, as the sign-in page would end it.
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    await expect(page.getByText('@Ben')).toBeVisible();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
   });
 
   test('shows an example droplet: its videos and lesson, no follow-ups, and nothing of who asked or how', async ({ page, request }) => {
@@ -534,11 +548,14 @@ test.describe('signed in', () => {
     // Remembered on this browser, so a run of test topics stays on it.
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
-    // Muse Wonder too, though the page knows it is an admin's only once the sign-in is read.
+    // Muse Wonder too, with no apology from the one who pays for it, and remembered though the page knows it is an
+    // admin only once the sign-in is read.
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' }).click();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('apology-text')).toBeHidden();
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' })).toHaveAttribute('aria-checked', 'true');
-    await expect(page.getByTestId('brain-note')).toContainText('Admins only.');
+    await expect(page.getByTestId('brain-note')).toContainText('a learner types an apology to pick it');
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
     await page.reload();
     await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
@@ -688,31 +705,150 @@ test.describe('signed in', () => {
     await expect(note).toHaveText(new RegExp(`^Popsmosis has made all the droplets it can for now\\. It takes topics again ${await threeHoursOn()}\\.$`));
   });
 
-  test('a learner picks the brain too, from all but Muse Wonder, and is not told whose key pays', async ({ page, context, request }) => {
+  test('a learner picks the brain too, and is not told whose key pays', async ({ page, context }) => {
     await page.addInitScript(() => window.localStorage.setItem('popsmosis.brain', 'muse-wonder')); // an admin's, on this browser
     await signIn(context, S.users.ben);
     await page.goto('/learn');
     const picker = page.getByTestId('brain-picker');
-    await expect(picker.getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Spark']);
+    await expect(picker.getByRole('radio')).toHaveText(['Default', 'Claude', 'Muse Wonder', 'Muse Spark']);
+    // An admin's Muse Wonder on this browser is not the learner's: they have not said sorry.
     await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByTestId('brain-note')).toHaveText('The teacher’s usual brain.');
     await picker.getByRole('radio', { name: 'Claude' }).click();
     await expect(page.getByTestId('brain-note')).toHaveText('Claude Opus 5.5 writes and checks the lesson.');
+  });
 
-    const text = `E2E ${Date.now()}: osmosis, on Claude by a learner`;
+  test('a learner picks Muse Wonder only after typing their apology, once a tab', async ({ page, context, request }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const picker = page.getByTestId('brain-picker');
+    const wonder = picker.getByRole('radio', { name: 'Muse Wonder' });
+    await picker.getByRole('radio', { name: 'Claude' }).click();
+
+    // Pressed, it asks for the words first; Cancel leaves the pick as it was.
+    await wonder.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Muse Wonder costs the most');
+    await expect(page.getByTestId('apology-cost')).toContainText('about $4 each, where a Muse Spark droplet costs about $1');
+    await expect(dialog).toContainText('I know this is costing the developer 4x more than Muse Spark, I am sorry.');
+    const pick = dialog.getByRole('button', { name: 'Pick Muse Wonder' });
+    await expect(pick).toBeDisabled();
+    await page.getByTestId('apology-text').fill('sorry');
+    await expect(pick).toBeDisabled();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(picker.getByRole('radio', { name: 'Claude' })).toHaveAttribute('aria-checked', 'true');
+    await expect(wonder).toHaveAttribute('aria-checked', 'false');
+
+    // Asked again, the box starts empty. The words in any case, the commas, the period and a space left out or put in,
+    // and Enter takes them.
+    await wonder.click();
+    await expect(page.getByTestId('apology-text')).toHaveValue('');
+    await page.getByTestId('apology-text').fill('i know this is costing the developer 4 x more than muse spark i am sorry');
+    await expect(pick).toBeEnabled();
+    await page.getByTestId('apology-text').press('Enter');
+    await expect(dialog).toBeHidden();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('brain-note')).toHaveText('Muse Wonder 1.0 writes and checks the lesson.');
+
+    const text = `E2E ${Date.now()}: osmosis, on Muse Wonder by a learner`;
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
     await page.getByRole('button', { name: 'SUBMIT' }).click();
+    await expect(page.getByText('Topic sent to Muse Wonder. Apology accepted.')).toBeVisible();
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
-    await expect(card.getByTestId('topic-brain')).toHaveText('Claude');
-
-    // The API takes Claude from a learner, never Muse Wonder.
+    await expect(card.getByTestId('topic-brain')).toHaveText('Muse Wonder');
     const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
     const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
     const sent = own.data.find((q: { content: string }) => q.content === text);
-    expect(sent.brain).toBe('claude');
-    const wonder = await request.post(apiUrl('/api/questions'), { headers: asBen, data: { content: `${text}, on Wonder`, brain: 'muse-wonder' } });
-    expect(wonder.status()).toBe(403);
+    expect(sent.brain).toBe('muse-wonder');
+    // The studio makes it on Wonder: who asked is not its business (studio/run.py reads the brain from the claim).
+    expect((await (await agent(request, S.POPSMOSIS_API_KEY).claim(sent.id)).json()).brain).toBe('muse-wonder');
+
+    // Sorry once is enough for this tab, a reload included; a new tab asks again.
+    await page.reload();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    await picker.getByRole('radio', { name: 'Default' }).click();
+    await wonder.click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    const other = await context.newPage();
+    await other.goto('/learn');
+    await expect(other.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await other.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' }).click();
+    await expect(other.getByTestId('apology-text')).toBeVisible();
+    await other.close();
     expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).status()).toBe(204);
+
+    // A logout takes the apology with it, and Muse Wonder off the page, for whoever uses this tab next.
+    await page.getByRole('button', { name: 'LOGOUT' }).click();
+    await expect(page.getByTestId('sign-in-to-send')).toBeVisible();
+    await expect(wonder).toHaveAttribute('aria-checked', 'false');
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    expect(await page.evaluate(() => sessionStorage.getItem('popsmosis.brain.sorry'))).toBeNull();
+    await page.reload();
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  test('an apology is the account\'s own: another account on the tab is asked again, and an expired session forgets it', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const picker = page.getByTestId('brain-picker');
+    const wonder = picker.getByRole('radio', { name: 'Muse Wonder' });
+    await wonder.click();
+    await page.getByTestId('apology-text').fill('I know this is costing the developer 4x more than Muse Spark, I am sorry.');
+    await page.getByRole('dialog').getByRole('button', { name: 'Pick Muse Wonder' }).click();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+
+    // Another learner signed in on this tab with no logout between (the sign-in page takes any account): the page
+    // knows them by their id, so the API's answer for who is signed in is swapped for one with another id.
+    const other = (route: Route) => route.fetch()
+      .then(async (res) => route.fulfill({ response: res, json: { ...(await res.json()), id: 'another-learner' } }));
+    const me = (url: URL) => url.pathname === '/api/auth/me';
+    await page.route(me, other);
+    await page.reload();
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await wonder.click();
+    await expect(page.getByTestId('apology-text')).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+    // Ben again: his apology is still his.
+    await page.unroute(me, other);
+    await page.reload();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+
+    // His session expires (the API client's 401): the apology goes with it, as with a logout, and he is asked again.
+    await page.evaluate(() => window.dispatchEvent(new Event('session-expired')));
+    await expect(page).toHaveURL(/reason=session_expired/);
+    expect(await page.evaluate(() => sessionStorage.getItem('popsmosis.brain.sorry'))).toBeNull();
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await wonder.click();
+    await expect(page.getByTestId('apology-text')).toBeVisible();
+  });
+
+  test('a browser whose storage is full still takes the apology, for as long as the page is open', async ({ page, context }) => {
+    await page.addInitScript(() => {
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === 'popsmosis.brain.sorry') throw new DOMException('full', 'QuotaExceededError');
+        return setItem.call(this, key, value);
+      };
+    });
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const wonder = page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Wonder' });
+    await wonder.click();
+    await page.getByTestId('apology-text').fill('I know this is costing the developer 4x more than Muse Spark, I am sorry.');
+    await page.getByRole('dialog').getByRole('button', { name: 'Pick Muse Wonder' }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    // Away and back on the same page, it is not asked again; a reload, which kept nothing, asks again.
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Claude' }).click();
+    await wonder.click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(wonder).toHaveAttribute('aria-checked', 'true');
+    await page.reload();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
   });
 
   test('a topic asked with files shows them: a picture as its thumbnail, a text file as a link', async ({ page, context, request }) => {
@@ -918,7 +1054,9 @@ test.describe('studio settings', () => {
       await expect(learner.getByTestId('brain-picker')).toHaveCount(0);
       await expect(learner.getByTestId('brain-picks-off')).toHaveCount(0);
       let sent: Record<string, unknown> | null = null;
-      await learner.route(apiUrl('/api/questions'), (route) => {
+      // By its path: the page sends through the web app's own /api, not to the API's port.
+      const questions = (url: URL) => url.pathname === '/api/questions';
+      await learner.route(questions, (route) => {
         if (route.request().method() !== 'POST') return route.continue();
         sent = route.request().postDataJSON();
         return route.abort();
@@ -927,7 +1065,7 @@ test.describe('studio settings', () => {
       await learner.getByRole('button', { name: 'SUBMIT' }).click();
       await expect.poll(() => sent).not.toBeNull();
       expect(sent).not.toHaveProperty('brain');
-      await learner.unroute(apiUrl('/api/questions'));
+      await learner.unroute(questions);
 
       // Off again, the picker is back, with the learner's remembered pick.
       await settings({ defaultOnly: false });
