@@ -331,11 +331,21 @@ function ApologyPrompt({ typed, onType, onDone }: { typed: string; onType: (type
  * what the learner can do ("You can send 3 more of your 5 topics"), not as a count ("3 of 5 topics left").
  */
 function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
-  const { perDay, left, nextAt, siteFull, siteOpensAt } = allowance;
+  const { perDay, left, nextAt, siteFull, siteOpensAt, sitePerDay } = allowance;
   const when = (at: number | null) => (at ? clockLabel(at) : 'soon');
   const topics = (n: number) => `${n} topic${n === 1 ? '' : 's'}`;
   let text: string;
-  if (siteFull) text = `Popsmosis has made all the droplets it can for now. It takes topics again ${when(siteOpensAt)}.`;
+  // Everyone's topics together reached the site's day (TOPICS_PER_DAY): said as a limit shared by everyone, so the
+  // learner knows it is not their own, with its number and when topics open again. An admin is told where to raise it.
+  // An API older than this page sends no number: said without one. A limit of 0 is an admin's pause, with no time.
+  if (siteFull && sitePerDay === 0) {
+    text = 'Popsmosis has paused new topics for now. This is for everyone, not just you. '
+      + (left === null ? 'You can resume them on the Studio page.' : 'Please check back later.');
+  } else if (siteFull) {
+    const limit = sitePerDay ? `of ${sitePerDay} new topic${sitePerDay === 1 ? '' : 's'}` : 'for new topics';
+    text = `Popsmosis has reached its daily limit ${limit}. The limit is shared by everyone, not just you. `
+      + `New topics open again ${when(siteOpensAt)}.${left === null ? ' You can raise the limit on the Studio page.' : ''}`;
+  }
   // An admin is not held to the learners' limit (api/src/lib/usage.ts), and is told what learners are held to.
   else if (left === null) {
     text = `As an admin, you have no topic limit. ${perDay === 0

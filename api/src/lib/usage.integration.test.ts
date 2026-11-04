@@ -85,7 +85,7 @@ describe.runIf(RUN)('usage limits', () => {
     const inHours = (seconds: number) => seconds / 3600;
 
     // None used: all left, nothing coming back.
-    expect(await allowance()).toEqual({ perDay: 3, left: 3, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null });
+    expect(await allowance()).toEqual({ perDay: 3, left: 3, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null, sitePerDay: 30 });
 
     // Two used: one left, and the older's place comes back first, 24 hours after it was taken. A row past the
     // window, or someone else's, counts for nothing.
@@ -119,10 +119,13 @@ describe.runIf(RUN)('usage limits', () => {
     process.env.QUESTIONS_PER_USER_PER_DAY = '10';
     process.env.TOPICS_PER_DAY = '4';
     const full = await allowance();
-    expect(full).toMatchObject({ left: 7, siteFull: true });
+    expect(full).toMatchObject({ left: 7, siteFull: true, sitePerDay: 4 });
     expect(inHours(full.siteOpensInSeconds)).toBeCloseTo(1, 1); // the other learner's, 23 hours ago
-    process.env.TOPICS_PER_DAY = '0';
+    process.env.TOPICS_PER_DAY = '100000';
     expect(await allowance()).toMatchObject({ siteFull: false, siteOpensInSeconds: null });
+    // 0 is an admin's pause: full, with no time it opens.
+    process.env.TOPICS_PER_DAY = '0';
+    expect(await allowance()).toMatchObject({ left: 7, siteFull: true, siteOpensInSeconds: null, sitePerDay: 0 });
 
     expect((await app.inject({ method: 'GET', url: '/api/questions/allowance' })).statusCode).toBe(401);
   });
@@ -135,7 +138,7 @@ describe.runIf(RUN)('usage limits', () => {
     const allowance = async () =>
       (await app.inject({ method: 'GET', url: '/api/questions/allowance', headers: asUser(ola.cookie) })).json();
 
-    expect(await allowance()).toEqual({ perDay: 1, left: null, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null });
+    expect(await allowance()).toEqual({ perDay: 1, left: null, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null, sitePerDay: 3 });
     expect((await ask(ola.cookie)).statusCode).toBe(201);
     expect((await ask(ola.cookie)).statusCode).toBe(201); // past the learners' 1
     expect(await allowance()).toMatchObject({ left: null, siteFull: false });
@@ -145,11 +148,12 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await ask(pia.cookie)).statusCode).toBe(201);
     const refused = await ask(ola.cookie);
     expect(refused.statusCode).toBe(429);
-    expect(refused.json().error.message).toMatch(/all the droplets it can/);
+    expect(refused.json().error.message)
+      .toBe('Popsmosis has reached its daily limit of 3 new topics. The limit is shared by everyone, not just you. Please try again later.');
     expect(await allowance()).toMatchObject({ left: null, siteFull: true });
 
     // The role taken away, the learners' limit holds them from the next request.
-    process.env.TOPICS_PER_DAY = '0';
+    process.env.TOPICS_PER_DAY = '100000';
     await prisma.user.update({ where: { id: ola.id }, data: { role: 'USER' } });
     expect((await ask(ola.cookie)).statusCode).toBe(429);
     expect(await allowance()).toMatchObject({ perDay: 1, left: 0 });
@@ -164,6 +168,15 @@ describe.runIf(RUN)('usage limits', () => {
     expect(await prisma.question.count({ where: { userId: ben.id } })).toBe(3);
   });
 
+  it("topics from many learners sent at once cannot all pass the site's count", async () => {
+    process.env.TOPICS_PER_DAY = '3';
+    const learners = await Promise.all(Array.from({ length: 8 }, (_, i) => learner(`crowd${i}`)));
+    const results = await Promise.all(learners.map((l) => ask(l.cookie)));
+    expect(results.filter((r) => r.statusCode === 201)).toHaveLength(3);
+    expect(results.filter((r) => r.statusCode === 429)).toHaveLength(5);
+    expect(await prisma.usageEvent.count({ where: { kind: 'TOPIC' } })).toBe(3);
+  });
+
   it("stops new topics once the site's day is used up, whoever asks", async () => {
     process.env.TOPICS_PER_DAY = '3';
     const [cy, di] = [await learner('cy'), await learner('di')];
@@ -172,10 +185,28 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await ask(di.cookie)).statusCode).toBe(201);
     const over = await ask(di.cookie);
     expect(over.statusCode).toBe(429);
-    expect(over.json().error.message).toMatch(/all the droplets it can for today/);
+    expect(over.json().error.message)
+      .toBe('Popsmosis has reached its daily limit of 3 new topics. The limit is shared by everyone, not just you. Please try again later.');
 
-    process.env.TOPICS_PER_DAY = '0'; // 0: no ceiling
+    process.env.TOPICS_PER_DAY = '100000'; // no value lifts it; a high one never binds
     expect((await ask(di.cookie)).statusCode).toBe(201);
+  });
+
+  it('pauses new topics for everyone at 0, admins too, and says so', async () => {
+    process.env.TOPICS_PER_DAY = '0';
+    const rae = await learner('rae');
+    const pam = await learner('pam');
+    await prisma.user.update({ where: { id: pam.id }, data: { role: 'ADMIN' } });
+    for (const who of [rae, pam]) {
+      const paused = await ask(who.cookie);
+      expect(paused.statusCode).toBe(429);
+      expect(paused.json().error.message)
+        .toBe('Popsmosis has paused new topics for now. This is for everyone, not just you. Please try again later.');
+    }
+    expect(await prisma.usageEvent.count({ where: { kind: 'TOPIC' } })).toBe(0);
+
+    process.env.TOPICS_PER_DAY = '5'; // resumed
+    expect((await ask(rae.cookie)).statusCode).toBe(201);
   });
 
   it('turns away a learner at the limit before reading what they sent', async () => {

@@ -148,8 +148,8 @@ transaction limit and the 5-connection pool from PR #52 hold.
 - **How many at once.** Two slots by default (`STUDIO_SLOTS`): a lesson is mostly waiting on
   the brain, a render is CPU and memory (Demucs and the renderer). Measured today, a topic is
   about 5 minutes and its videos about 10 more, so one slot makes about 4 droplets an hour.
-  `TOPICS_PER_DAY` (default 100) is the ceiling on demand; two slots make about 190 a day,
-  above it.
+  `TOPICS_PER_DAY` (default 30) is the ceiling on demand; two slots make about 190 a day,
+  well above it.
 - **Host.** A Render background worker built from a Dockerfile: Python 3.13, ffmpeg, libEGL,
   `studio/requirements.txt`, and the Demucs and MMS models baked into the image, so a deploy
   never downloads them and a build needs no secret. It wants about 4 GB of memory for a

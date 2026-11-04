@@ -634,7 +634,7 @@ test.describe('signed in', () => {
 
   test('the note after Submit stays until it is closed, and the next Submit\'s replaces it', async ({ page, context, request }) => {
     // The first Submit is refused, as at the daily limit; the two after it go through.
-    const refusal = 'Popsmosis has made all the droplets it can for today. Please try again tomorrow.';
+    const refusal = 'Popsmosis has reached its daily limit of 30 new topics. The limit is shared by everyone, not just you. Please try again later.';
     let refuse = true;
     await page.route('**/api/questions', (route) => {
       if (route.request().method() !== 'POST' || !refuse) return route.continue();
@@ -675,7 +675,7 @@ test.describe('signed in', () => {
 
   test('a refused Submit\'s note stays too, under the nav; another page, or signing out, closes it', async ({ page, context }) => {
     // The API's refusal at the daily limit, without spending the learner's topics.
-    const refusal = 'Popsmosis has made all the droplets it can for today. Please try again tomorrow.';
+    const refusal = 'Popsmosis has reached its daily limit of 30 new topics. The limit is shared by everyone, not just you. Please try again later.';
     await page.route('**/api/questions', (route) => (route.request().method() === 'POST'
       ? route.fulfill({ status: 429, json: { error: { code: 'RATE_LIMITED', message: refusal, retryable: false } } })
       : route.continue()));
@@ -759,7 +759,10 @@ test.describe('signed in', () => {
   });
 
   test('the box says when the next topic comes back once none are left, and when the site is full', async ({ page, context }) => {
-    let answer = { perDay: 10, left: 0, nextInSeconds: 3 * 3600, siteFull: false, siteOpensInSeconds: null as number | null };
+    let answer = {
+      perDay: 10, left: 0 as number | null, nextInSeconds: 3 * 3600, siteFull: false, siteOpensInSeconds: null as number | null,
+      sitePerDay: 30 as number | undefined,
+    };
     await page.route('**/api/questions/allowance', (route) => route.fulfill({ json: answer }));
     await signIn(context, S.users.ben);
     await page.goto('/learn');
@@ -797,8 +800,31 @@ test.describe('signed in', () => {
 
     answer = { ...answer, left: 7, siteFull: true, siteOpensInSeconds: 3 * 3600 };
     await page.reload();
-    await expect(note).toContainText('Popsmosis has made all the droplets it can');
-    await expect(note).toHaveText(new RegExp(`^Popsmosis has made all the droplets it can for now\\. It takes topics again ${await threeHoursOn()}\\.$`));
+    await expect(note).toContainText('Popsmosis has reached its daily limit of 30 new topics');
+    await expect(note).toHaveText(new RegExp('^Popsmosis has reached its daily limit of 30 new topics\\. The limit is shared by everyone, '
+      + `not just you\\. New topics open again ${await threeHoursOn()}\\.$`));
+    await expect(page.getByRole('button', { name: 'SUBMIT' })).toBeDisabled();
+
+    // An admin (no limit of their own: left is null) is held by the site's too, and told where to raise it.
+    answer = { ...answer, left: null };
+    await page.reload();
+    await expect(note).toHaveText(new RegExp('^Popsmosis has reached its daily limit of 30 new topics\\. The limit is shared by everyone, '
+      + `not just you\\. New topics open again ${await threeHoursOn()}\\. You can raise the limit on the Studio page\\.$`));
+
+    // An API older than this page sends no number (the web app deployed first): the note says it without one.
+    answer = { ...answer, left: 7, sitePerDay: undefined };
+    await page.reload();
+    await expect(note).toHaveText(new RegExp('^Popsmosis has reached its daily limit for new topics\\. The limit is shared by everyone, '
+      + `not just you\\. New topics open again ${await threeHoursOn()}\\.$`));
+
+    // A limit of 0 is an admin's pause: no time it opens. An admin is told where to resume them.
+    answer = { ...answer, sitePerDay: 0, siteOpensInSeconds: null };
+    await page.reload();
+    await expect(note).toHaveText('Popsmosis has paused new topics for now. This is for everyone, not just you. Please check back later.');
+    await expect(page.getByRole('button', { name: 'SUBMIT' })).toBeDisabled();
+    answer = { ...answer, left: null };
+    await page.reload();
+    await expect(note).toHaveText('Popsmosis has paused new topics for now. This is for everyone, not just you. You can resume them on the Studio page.');
   });
 
   test('a count past its time is read again, and one that cannot be read does not keep Submit grey', async ({ page, context }) => {
