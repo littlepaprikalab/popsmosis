@@ -2197,9 +2197,26 @@ estates' green Third Estate, and marked down an Eiffel Tower behind the 1789 Bas
 table, the tomb's missing "Romeo" label and made-up writing on the hook's posters. One picture each, so the scores
 are close to noise; the segmentation gain held on four scenes of six and was lost on none.
 
-The owner chose the writer's look (Nov 4), from the four versions side by side. Still open: how to widen the looks
-the writer picks (the brief without its gouache example, or a rotation that seeds a look the writer adapts to the
-topic, as the song style's does).
+The owner chose the writer's look (Nov 4), from the four versions side by side.
+
+**The look from the topic's own world** (Nov 4). The brief dropped its gouache example and asks for the art of the
+topic's time and place, or of the world it is about, with examples from no scorecard topic ("an Ancient Egyptian
+wall-painting illustration" for the pyramids, "a 1930s national-park travel-poster illustration" for erosion), a
+general style last. Six subagent writers on the same topics, the bundle call alone (their scripts kept):
+
+| Topic | Before (general style) | After (the topic's own world) |
+|---|---|---|
+| French Revolution | vivid painterly gouache history | bright 1780s French neoclassical history-painting |
+| Romeo and Juliet | warm, vivid gouache theatre-poster | Italian Renaissance fresco |
+| Supply and demand | cheerful, chunky flat-colour vector | bright 1930s fruit-crate-label |
+| Spanish subjunctive | warm, sunny flat-colour editorial | vibrant Latin American street-mural |
+| Classical conditioning | warm, friendly flat vector | 1920s lithographed science-poster |
+| Light reactions | bright, sun-washed flat vector | bright 1930s fruit-crate-label lithograph |
+
+Five families in place of two, every scene still in the form. Two picks are the same fruit-crate label (both hooks
+are fruit: a market's strawberries, an apple tree), and three name a decade as the brief's second example does. Not
+painted yet: a fresco's faded colours and a history painting's dark ground are the kind the locate step loses, if the
+light-and-colour line does not hold them.
 
 ## Not tested
 
