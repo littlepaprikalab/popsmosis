@@ -234,10 +234,11 @@ def run(question_id: str, api: Api | None = None, ask=None, note: str = "",
             # Down or failing, the API is no reason to fail this topic: nothing about it was tried.
             return STOPPED, "run", reason if result == STOPPED else f"the studio's settings could not be read: {reason}"
         knobs.use(studio)
-        keys = not (session_answers and session.allowed())
-        with brain.chosen(*default_brain(studio)):
-            problem = brain.settings_problem(keys=keys)
-            missing = brain.settings_problem() if not keys and not problem else None
+        keys = not session_answers  # no session waits on the run: the brain's key must be here, whatever the brain
+        with brain.chosen(*default_brain(studio)):  # what the session answers depends on the brain (session.chosen())
+            needed = keys or not session.answers()
+            problem = brain.settings_problem(keys=needed)
+            missing = brain.settings_problem() if not needed and not problem else None
         if problem:
             return STOPPED, "run", f"the studio's settings are wrong: {problem}"
         if missing:
@@ -321,11 +322,13 @@ def use_brain(job: Path, question: dict, check: bool, keys: bool = True) -> None
     jobs.keep_studio_settings(job, studio)  # who paints, for `videos`
     if not check:
         return
-    problem = brain.settings_problem(keys=keys)  # keys=False: the operator's session answers what the API cannot
+    # keys=False: a session waits on the run; whether it answers this brain's calls is known only with the brain in
+    # force (session.chosen() sends a Claude topic there, never a Muse one), so it is asked of each brain put in force.
+    problem = brain.settings_problem(keys=keys or not session.answers())
     if problem and begun and begun != (default or brain.DEFAULT_BRAIN):
         print(f"brain: {problem}; the lesson goes on with the default", file=sys.stderr)
         _put_brain(job, default, effort, "the default")
-        problem = brain.settings_problem(keys=keys)
+        problem = brain.settings_problem(keys=keys or not session.answers())
     if problem and own:
         raise StepFailed(f"the studio cannot run this topic's brain here: {problem}", code="brain cannot run here")
     if problem:
@@ -940,6 +943,9 @@ def logged_ask(job: Path, session_answers: bool = False):
         # Only this thread's calls: another thread may be asking at the same time.
         with brain.collect() as mine:
             try:
+                role = kwargs.get("role", args[0] if args else "")
+                if session_answers and session.first(role):  # the admin's choice: Claude in the session
+                    return session.ask(job, session.Chosen(f"{session.VIA} is session"), *args, **kwargs)
                 try:
                     return brain.ask(*args, **kwargs)
                 except brain.BrainError as e:

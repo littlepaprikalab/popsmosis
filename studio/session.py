@@ -48,6 +48,12 @@ from studio import brain, knobs, ledger, media
 
 DIR = "session"
 KNOB = "STUDIO_SESSION_FALLBACK"
+# Where Claude's brain is answered in a run the operator waits on: `api`, on the Anthropic key (the default), or
+# `session`, straight to the operator's session, the API never tried. An admin's knob on /admin/studio, so the owner
+# can pivot between the key's bill and the routine's plan for a Claude topic (Nov 4). With Claude the brain, every
+# call of the topic is Claude's, and each goes there. With Muse's, the knob changes nothing: its calls, and Claude's
+# checks beside them, stay on their keys. Painting, singing and reading aloud are no one's session's.
+VIA = "STUDIO_CLAUDE_VIA"
 OFF = ("off", "0", "false", "no")
 # How long a call waits for the session, in seconds. Long enough for a subagent to write a bundle. A run whose
 # operator went away dies with its machine before this runs out.
@@ -99,6 +105,27 @@ class NoAnswer(brain.BrainError):
 def allowed() -> bool:
     """Whether a background run may wait for the session (the knob, `on` unless an admin turned it off)."""
     return knobs.env(KNOB).strip().lower() not in OFF
+
+
+def chosen() -> bool:
+    """Whether the admin sent Claude's brain to the session rather than the API (VIA), and the brain in force is
+    Claude's."""
+    return knobs.env(VIA).strip().lower() == "session" and brain.provider() == "claude"
+
+
+def answers() -> bool:
+    """Whether the session answers any call in a run the operator waits on: the ones the API fails, or, chosen,
+    every call. Then the brain needs no key of its own here."""
+    return allowed() or chosen()
+
+
+def first(role: str) -> bool:
+    """Whether a call goes to the session before the API: chosen (every call of a Claude topic is Claude's)."""
+    return chosen()
+
+
+class Chosen(brain.BrainError):
+    """Not a failure: the admin sent the studio's Claude calls to the session (VIA)."""
 
 
 def root(job: Path) -> Path:
@@ -156,8 +183,9 @@ def ask(job: Path, why: BaseException, role: str, prompt: str, schema: type[Base
     started = time.monotonic()
     if not answer.exists() and not declined.exists():
         _write_call(job, base, name, role, label, prompt, schema, schema_json, images, system, why)
-        print(f"  {label}: the API failed ({type(why).__name__}: {str(why)[:200]}); "
-              f"waiting for the session to answer {base / 'pending' / name}", file=sys.stderr)
+        print(f"  {label}: " + (f"{VIA} is session" if isinstance(why, Chosen) else
+                                f"the API failed ({type(why).__name__}: {str(why)[:200]})")
+              + f"; waiting for the session to answer {base / 'pending' / name}", file=sys.stderr)
         while not answer.exists() and not declined.exists():
             if time.monotonic() - started > WAIT_S:
                 shutil.rmtree(base / "pending" / name, ignore_errors=True)  # no longer asked: `wait` says ASK no more

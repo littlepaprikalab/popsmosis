@@ -1191,6 +1191,15 @@ PROTEIN = re.compile(r"\w+ase\b|rubisco|photosystem|cytochrome|complex|pump|chan
                      r"|transporter|carrier|antibod|hemoglobin|haemoglobin|actin|myosin|spindle", re.I)
 
 
+def as_painted(bundle: Bundle, scene: Scene) -> str:
+    """The scene's words as paint_prompt() gives them to the painter, without the parts' colours and labels in place
+    and without the look a scene that is not a diagram is painted in: what the picture was asked to show. Without
+    ONE_SHAPE_EACH too, a note on the painting's style: shown it, the checker of Nov 4's measurement refused sugar
+    drawn as several cubes as "not one small glossy shape", and caught the stray sphere it was for without it."""
+    words = one_look(scene, campbell_styled(bundle, without_bilayer(scene, scene.described())))
+    return re.sub(r"[;,]?\s*" + re.escape(ONE_SHAPE_EACH), "", words)
+
+
 def one_look(scene: Scene, words: str) -> str:
     """The scene's words with the style said once (TEXTBOOK_LOOK and the rest): the opening's style, Campbell's
     in a biology picture, is the style, and the look the brief ends with keeps only what the picture has: its
@@ -1308,13 +1317,18 @@ REDRAW = ("Redraw this picture as a later stage of {process}: the same subject, 
 
 
 def check_prompt(bundle: Bundle, scene: Scene) -> str:
-    lines = [f"- {s.name}: {s.sam_phrase}" for s in scene.structures]
+    """What the checker is told the picture should show: the scene in the words the painter was given (as_painted()),
+    and each part by its name and the colour word it was painted in. Not its sam_phrase: a noun the writer picked
+    for SAM to search by ("purple bar", "blue puffs"), never shown to the painter. On Nov 4 the checker held the
+    Calvin cycle's pictures to those nouns and to the look the paint prompt had dropped, and refused a sphere RuBP as
+    "not a bar", a carbon dioxide as "not puffs" and a membrane as "not a phospholipid bilayer"."""
+    lines = [f"- {s.name}, {colour_word(s.color_hex)}" for s in scene.structures]
     stage = Stage.of(bundle, scene)
     kind = (STAGE.format(number=stage.number, count=stage.count, process=stage.process) if stage
             else SONG if scene.song_only else SCENE_KINDS.get(scene.id, DETAIL))
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
             + f"\nThe scene is {kind}"
-            + f"\nWhat the scene should show: {scene.described()}"
+            + f"\nWhat the scene should show: {as_painted(bundle, scene)}"
             + (f"\n{axes_line(scene.axes)} They are asked for, and are no part to find." if scene.axes else "")
             + "\nIt must show each of these:\n" + "\n".join(lines)
             + "\n\nThe lesson's facts:\n" + "\n".join(f"- {f.id}: {f.text}" for f in bundle.facts))

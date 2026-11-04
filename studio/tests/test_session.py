@@ -85,6 +85,57 @@ def test_without_an_operator_waiting_or_with_the_knob_off_the_call_fails_as_befo
     assert not session.pending(job)
 
 
+def test_the_admin_can_send_a_claude_topic_to_the_session_before_the_api(quick, monkeypatch):
+    # The owner (Nov 4): when Claude is the brain, pick whether it is answered on the key or in the teacher's session.
+    job = quick / "q1"
+    job.mkdir()
+    asked = []
+    monkeypatch.setattr(brain, "ask", lambda *a, **k: asked.append(a[0]) or CHECK)
+    knobs.use({"knobs": {"STUDIO_CLAUDE_VIA": "session", "STUDIO_SESSION_FALLBACK": "off"}})
+    ask = operator_run.logged_ask(job, session_answers=True)
+    for role in ("brain", "checker"):  # every call of a Claude topic, never tried on the API
+        thread, said = answer_when_asked(job, CHECK)
+        with ledger.at_step("factcheck"):
+            assert ask(role, f'{{"{role}": 1}}', FactCheck, label=f"factcheck {role}") == FactCheck.model_validate(
+                CHECK).model_dump()
+        thread.join()
+        assert said[0].startswith("SAVED factcheck-")
+    assert asked == [] and [r["via"] for r in ledger.read(job)] == ["session", "session"]
+    assert "STUDIO_CLAUDE_VIA is session" in json.dumps(
+        [json.loads(p.read_text()) for p in (job / "session").rglob("request.json")])
+    # The brain needs no key of its own then, even with the fallback off.
+    assert session.answers()
+    # A Muse topic is unchanged: its calls go to the API, Claude's checks beside them too.
+    with brain.chosen("muse-spark"):
+        assert not session.answers() and not session.first("checker")
+        assert ask("checker", "{}", FactCheck, label="art check") == CHECK and asked == ["checker"]
+    # So is a run nobody waits on, and a Claude topic with the knob at api.
+    assert operator_run.logged_ask(job)("brain", "{}", FactCheck, label="x") == CHECK
+    knobs.use({"knobs": {"STUDIO_CLAUDE_VIA": "api"}})
+    assert ask("brain", "{}", FactCheck, label="y") == CHECK and asked == ["checker", "brain", "brain"]
+
+
+def test_the_knob_spares_only_a_claude_brain_its_key(quick, monkeypatch):
+    # Review of #149: with the knob at session and the fallback off, a Muse default was spared its Meta key, since the
+    # exemption was worked out before the brain was in force (a fresh process's is Claude), and the topic was claimed.
+    monkeypatch.delenv(brain.META_KEY_VAR, raising=False)
+    for name in brain.CLAUDE_KEY_VARS:
+        monkeypatch.delenv(name, raising=False)
+    knobs_set = {"STUDIO_CLAUDE_VIA": "session", "STUDIO_SESSION_FALLBACK": "off"}
+    muse = FakeApi(studio={"brain": {"default": "muse-spark", "effort": "high"}, "knobs": knobs_set})
+    result, step, reason = operator_run.run("q1", api=muse, session_answers=True)
+    assert (result, step) == ("STOPPED", "run") and brain.META_KEY_VAR in reason
+    assert [c[0] for c in muse.calls] == ["studio_settings"]  # nothing claimed: the topic waits in the queue until the key is here
+    # A Claude topic in the same settings is answered in the session, so its missing key stops nothing.
+    job = quick / "q2"
+    job.mkdir()
+    knobs.use({"knobs": knobs_set})
+    operator_run.use_brain(job, {"studio": {"brain": {"default": "claude", "effort": "high"}}}, check=True, keys=False)
+    with pytest.raises(operator_run.StepFailed):  # its own Muse brain, though, still needs Meta's key
+        operator_run.use_brain(job, {"brain": "muse-spark", "studio": {"brain": {"default": "claude"}}}, check=True,
+                               keys=False)
+
+
 def test_an_answer_that_does_not_fit_is_handed_back_with_what_to_fix(quick, monkeypatch):
     job = quick / "q1"
     job.mkdir()

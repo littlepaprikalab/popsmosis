@@ -340,7 +340,9 @@ key missing or out of credit, an answer cut off, declined or out of its schema),
 does not give the step up: the call waits in the job folder for **your** session to answer
 it, and `wait` prints `ASK <step>: <n> model call(s) ...`. The run keeps its claim meanwhile.
 An admin can turn this off on `/admin/studio` (`STUDIO_SESSION_FALLBACK`); then the call fails
-the step, as it used to.
+the step, as it used to. An admin can also have your session answer every call of a topic whose
+brain is Claude, the API never tried (`STUDIO_CLAUDE_VIA` set to `session`): then a run asks
+many calls, the bundle among them, and you answer each the same way.
 
 1. List the calls:
 

@@ -820,6 +820,22 @@ def test_the_style_is_said_once_and_the_look_keeps_only_what_the_picture_has():
         bundle, scene.model_copy(update={"image_prompt": chart}))
 
 
+def test_the_checker_is_told_what_the_painter_was_told():
+    # Nov 4: the checker held the Calvin cycle's pictures to the writer's search nouns ("purple bar", "blue puffs") and
+    # to the look the paint prompt had dropped (a bilayer, organelles, glossy spheres), which the painter never saw.
+    bundle = Bundle.model_validate(bundle_data()).model_copy(update={"course": "AP Biology"})
+    words = ("Educational textbook illustration of RuBP in the stroma, close-up, clean scientific style: RuBP [[RuBP]] "
+             "in the centre; a clean, modern biology textbook illustration: semi-realistic organelles, soft gradient "
+             "shading; the membrane a phospholipid bilayer; a molecule the scene names as a small glossy sphere.")
+    rubp = Structure(name="RuBP", aliases=[], sam_phrase="purple bar", color_hex="#8338EC")
+    scene = bundle.scenes[1].model_copy(update={"image_prompt": words, "structures": [rubp]})
+    told = art.check_prompt(bundle, scene)
+    assert ("What the scene should show: Educational textbook illustration of RuBP in the stroma, close-up, "
+            f"{art.CAMPBELL_STYLE}: RuBP in the centre; soft gradient shading.") in told
+    assert art.ONE_SHAPE_EACH not in told  # a note on style, which the checker took for a shape it must have
+    assert "- RuBP, purple" in told and "bar" not in told and "bilayer" not in told and "organelles" not in told
+
+
 def test_a_biology_picture_is_asked_for_in_campbell_biologys_style():
     # The owner (Nov 2): Campbell-style pictures look much better. Added at paint time, never in the bundle, where the
     # fact-check struck the book's name as a claim.
@@ -938,7 +954,7 @@ def test_every_reader_but_the_painter_gets_the_picture_without_its_tags():
     for prompt in (art.check_prompt(tagged, scene), art.user_prompt(tagged, scene),
                    art.user_prompt(tagged, tagged.scenes[0])):
         assert "[[" not in prompt
-    assert plain in art.check_prompt(tagged, scene)
+    assert plain.replace("clean scientific style", art.CAMPBELL_STYLE) in art.check_prompt(tagged, scene)  # as painted
 
 
 def test_a_painting_is_not_made_again_for_a_tag_alone_but_is_for_new_words():
