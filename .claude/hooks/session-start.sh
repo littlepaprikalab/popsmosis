@@ -73,6 +73,25 @@ if [ ! -f "$STAMPS/models" ]; then
   fi
 fi
 
+# Whisper (faster-whisper's "small", about 0.5 GB), which the song's timing consults when MMS is unsure of a
+# line, fetched into the Hugging Face cache the container keeps, with its own stamp so a container stamped for
+# the models above fetches it too.
+fetch_whisper() {
+  python - >/dev/null 2>&1 <<'PY'
+import importlib.util, sys
+if not importlib.util.find_spec("faster_whisper"):
+    sys.exit(1)
+from faster_whisper import WhisperModel
+from studio.steps.timing import WHISPER_MODEL
+WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
+PY
+}
+if [ ! -f "$STAMPS/whisper" ]; then
+  if fetch_whisper || fetch_whisper; then touch "$STAMPS/whisper"
+  else log "could not fetch Whisper; the first song timing that needs it will download it"
+  fi
+fi
+
 # An environment that runs only the teacher routine sets POPSMOSIS_TEACHER_ONLY=1. The teacher
 # runs the studio against the live API and needs nothing below, so its runs skip the node
 # packages and the test database's start and migrations (docs/agent-runbook.md, Option A).

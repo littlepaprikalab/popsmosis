@@ -91,6 +91,8 @@ const MAKERS: [prefix: string, maker: string][] = [
   ['demucs', 'Meta'],
   ['mms-', 'Meta'], // the forced aligner from Meta's Massively Multilingual Speech
   ['torch', 'Meta'], // PyTorch and torchaudio: started at Meta, run by the PyTorch Foundation since 2022
+  ['whisper-', 'OpenAI'], // Whisper, which hears a song's lyrics when MMS cannot (studio/steps/timing.py)
+  ['faster-whisper', 'SYSTRAN'], // the package that runs Whisper on CPU (SYSTRAN/faster-whisper)
   ['lyria-', 'Google'],
   ['gemini-', 'Google'], // Gemini 3.1 Flash Image, when it paints the art (studio/gemini.py)
   ['skia-python', 'Google'], // Python bindings for Google's Skia

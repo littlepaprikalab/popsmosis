@@ -680,141 +680,155 @@ def test_a_narration_the_aligner_cannot_hear_fails_the_step_and_is_read_again(re
     assert (read_by_gemini / media.audio_path("song")).exists() and not audio.is_done(read_by_gemini)
 
 
-def test_a_chorus_sung_again_word_for_word_is_found_in_the_lyrics():
-    texts = {"i": "Carry silk from east to west", "v": "Soldiers guard the roads", "c1": "Carry silk from east to west",
-             "c2": "Faith and plague ride with the rest", "w": "Paper rolls west", "d1": "Carry silk from east to west",
-             "d2": "Faith and plague ride with the rest!", "o": "Carry silk from east to west"}
-    order = list(texts)
-    # One line sung again is not a run; the punctuation is not sung.
-    assert timing.repeated_runs(order, texts) == [[[2, 3], [5, 6]]]
+# --- Whisper, consulted where MMS is unsure ------------------------------------------------------
 
 
-def _notes(seconds, tunes):
-    """Pitch classes every frame: the (start, end, pitch) stretches in `tunes` sing one note each, the rest a
-    murmur of every note at once."""
-    notes = np.full((round(seconds / timing.FRAME_S), 12), 1 / np.sqrt(12), dtype=np.float32)
-    for start, end, pitch in tunes:
-        notes[round(start / timing.FRAME_S):round(end / timing.FRAME_S)] = np.eye(12)[pitch]
-    return notes
+def _line(line_id, text, start, end):
+    """A line whose words share its span evenly."""
+    words = [w for w, _, _ in words_of(text)]
+    step = (end - start) / len(words)
+    return TimedLine(line_id=line_id, start=start, end=end, words=[
+        Word(word=w, start=round(start + i * step, 3), end=round(start + (i + 1) * step, 3)) for i, w in enumerate(words)])
 
 
-def _two_lines(start, line_id):
-    """Two four-word lines sung from `start`, two seconds each."""
-    return [TimedLine(line_id=f"{line_id}{n}", start=start + 2 * n, end=start + 2 * n + 2, words=[
-        Word(word=w, start=start + 2 * n + 0.5 * i, end=start + 2 * n + 0.5 * (i + 1))
-        for i, w in enumerate(["Sodium", "out", "potassium", "in"])]) for n in range(2)]
+def _heard(text, start, end):
+    """Whisper's words for `text`, sung evenly from start to end."""
+    words = text.split()
+    step = (end - start) / len(words)
+    return [(start + i * step, start + (i + 0.9) * step, w) for i, w in enumerate(words)]
 
 
-def test_a_chorus_the_aligner_put_a_line_late_is_found_by_its_melody():
-    """Nov 3's Silk Roads song: the singer went from the line before the last chorus straight into the chorus, and
-    the aligner, hearing none of it, put the line it skipped where the chorus began and the chorus a line late."""
-    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]  # the chorus's two lines, each to its own note
-    lines = [*_two_lines(0.0, "c"), TimedLine(line_id="v", start=8.0, end=9.6, words=[
-        Word(word="Silk", start=8.0, end=9.6)]), TimedLine(line_id="s", start=10.0, end=12.0, words=[
-            Word(word=w, start=10.0 + i, end=11.0 + i) for i, w in enumerate(["Gods", "germs"])]),
-        *_two_lines(12.0, "d"), TimedLine(line_id="o", start=17.0, end=18.0, words=[
-            Word(word="West", start=17.0, end=18.0)])]
-    texts = {"c0": "Sodium out potassium in", "c1": "Sodium out potassium in.", "v": "Silk", "s": "Gods germs",
-             "d0": "Sodium out potassium in", "d1": "Sodium out potassium in", "o": "West"}
-    # Sung: the chorus at 0 s, the verse line, the chorus again from 10 s; "s" is not sung.
-    notes = _notes(20.0, [*tune, (8.0, 9.6, 3), *[(10.0 + a, 10.0 + b, p) for a, b, p in tune], (17.0, 18.0, 5)])
-    scores = {"c0": 0.9, "c1": 0.6, "v": 0.9, "s": 0.1, "d0": 0.1, "d1": 0.1, "o": 0.9}
-    runs = timing.repeated_runs([line.line_id for line in lines], {**texts, "c1": texts["c0"]})
-    assert runs == [[[0, 1], [4, 5]]]
-
-    def alone(ids, t0, t1):
-        pytest.fail("no room for the line the chorus now covers: it is not aligned again")
-
-    moved = timing.by_the_melody(lines, scores, runs, notes, alone, texts)
-    assert moved == ["d0", "d1"]
-    d0, d1, s = lines[4], lines[5], lines[3]
-    assert (d0.start, d0.end, d1.start, d1.end) == (10.0, 12.0, 12.0, 14.0)  # the heard chorus's timing
-    assert [w.start for w in d0.words] == [10.0, 10.5, 11.0, 11.5]
-    assert not s.sung and s.start == s.end == 9.6 and scores["s"] is None
-    Timing(audio="audio/song.mp3", duration=20.0, lines=lines)  # in order, every word inside its line
-    # Counted as heard: nothing left to spread over the singing.
-    assert timing.by_the_singing(lines, scores, _levels(20.0), placed=set(moved)) == []
+def test_whisper_times_the_lines_mms_could_not_hear_and_the_lines_it_heard_stay():
+    """Nov 4's Silk Road song: MMS heard the verses and none of the chorus, crammed after the verse; Whisper heard the
+    chorus, misheard ("Kerry's still far, ring paper hone"), its first line sung twice, and made up words over the
+    silence after it."""
+    texts = {"a": "Strong empires guard the road", "c": "Carry silk far, bring paper home",
+             "d": "Asia trades Europe, goods both ways", "e": "Markets shut down"}
+    lines = [_line("a", texts["a"], 0.0, 2.0), _line("c", texts["c"], 2.0, 2.5), _line("d", texts["d"], 2.5, 3.0),
+             _line("e", texts["e"], 12.0, 14.0)]
+    scores = {"a": 0.9, "c": 0.1, "d": 0.1, "e": 0.9}
+    heard = [*_heard("Strong empires guard the road", 0.1, 2.1), *_heard("Kerry's still far, ring paper hone", 3.0, 6.0),
+             *_heard("Kerry's still far, ring paper hone", 6.5, 9.0), *_heard("Asia trace Europe, goods both ways", 9.5, 11.5),
+             *_heard("Markets shut down", 12.0, 14.0), *_heard("la la la", 15.0, 16.0)]
+    found, skipped, _ = timing.by_whisper(lines, scores, heard, texts, _levels(18.0, silent=[(14.5, 17.0)]), 18.0)
+    assert found == ["c", "d"] and skipped == []
+    a, c, d, e = lines
+    assert (a.start, a.end, e.start, e.end) == (0.0, 2.0, 12.0, 14.0)  # MMS's timing, finer, kept
+    assert c.start == 3.0 and c.end < 6.0  # the first time it is sung
+    assert d.start == 9.5 and 11.0 < d.end <= 11.5
+    Timing(audio="audio/song.mp3", duration=18.0, lines=lines)  # in order, every word inside its line
+    assert scores["c"] == 0.1  # the report keeps what MMS made of it
 
 
-def test_a_chorus_where_its_melody_is_sung_stays_and_a_chorus_nobody_heard_is_left():
-    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]
-    lines = [*_two_lines(0.0, "c"), *_two_lines(8.0, "d")]
-    texts = {line.line_id: "Sodium out potassium in" for line in lines}
-    notes = _notes(14.0, [*tune, *[(8.0 + a, 8.0 + b, p) for a, b, p in tune]])
-    runs = timing.repeated_runs([line.line_id for line in lines], texts)
+def test_a_line_whisper_heard_too_little_of_is_left_to_mms():
+    texts = {"a": "Strong empires guard the road", "c": "Faiths ride with tools, no town stands alone",
+             "e": "Markets shut down"}
+    lines = [_line("a", texts["a"], 0.0, 2.0), _line("c", texts["c"], 2.0, 6.0), _line("e", texts["e"], 8.0, 10.0)]
     before = [line.model_copy() for line in lines]
-    scores = {"c0": 0.9, "c1": 0.9, "d0": 0.1, "d1": 0.1}
-    assert timing.by_the_melody(lines, scores, runs, notes, None, texts) == []  # already where its melody is
-    assert lines == before
-    scores = {line.line_id: 0.1 for line in lines}  # no repeat it heard to go by
-    late = [*lines[:2], *_two_lines(9.0, "d")]
-    assert timing.by_the_melody(late, scores, runs, notes, None, texts) == []
-    assert timing.by_the_melody(late, {**scores, "c0": 0.9, "c1": 0.9}, runs, None, None, texts) == []  # no vocals
+    heard = [*_heard("Strong empires guard the road", 0.0, 2.0), *_heard("They say you're wrong, what do we do", 2.5, 6.5),
+             *_heard("Markets shut down", 8.0, 10.0)]
+    found, skipped, _ = timing.by_whisper(lines, {"a": 0.9, "c": 0.1, "e": 0.9}, heard, texts, _levels(10.0), 10.0)
+    assert found == [] and skipped == [] and lines == before
 
 
-def test_a_line_a_chorus_found_by_its_melody_covers_is_aligned_again_where_there_is_room():
-    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]
-    lines = [*_two_lines(0.0, "c"), TimedLine(line_id="s", start=11.0, end=13.0, words=[
-        Word(word=w, start=11.0 + i, end=12.0 + i) for i, w in enumerate(["Gods", "germs"])]), *_two_lines(13.0, "d")]
-    texts = {"c0": "Sodium out potassium in", "c1": "Sodium out potassium in", "s": "Gods germs",
-             "d0": "Sodium out potassium in", "d1": "Sodium out potassium in"}
-    notes = _notes(18.0, [*tune, (8.0, 10.0, 4), *[(12.0 + a, 12.0 + b, p) for a, b, p in tune]])
-    scores = {"c0": 0.9, "c1": 0.9, "s": 0.1, "d0": 0.1, "d1": 0.1}
-    calls = []
-
-    def alone(ids, t0, t1):
-        calls.append((ids, t0, t1))
-        return [(TimedLine(line_id="s", start=8.0, end=10.0, words=[Word(word="Gods", start=8.0, end=9.0),
-                                                                  Word(word="germs", start=9.0, end=10.0)]), 0.7)]
-
-    runs = timing.repeated_runs([line.line_id for line in lines], texts)
-    assert timing.by_the_melody(lines, scores, runs, notes, alone, texts) == ["d0", "d1"]
-    assert calls == [(["s"], 4.0, 12.0)] and scores["s"] == 0.7
-    assert (lines[2].start, lines[2].end, lines[3].start) == (8.0, 10.0, 12.0)
-    Timing(audio="audio/song.mp3", duration=18.0, lines=lines)
+def test_a_line_the_singer_skipped_is_not_sung_and_fails_the_song():
+    """Nov 4: "That contact came with a deadly bill" never sung, the line after it straight after the one before."""
+    texts = {"a": "Markets shut down, the camels stand still", "b": "That contact came with a deadly bill",
+             "c": "Paper still moves west, but the cost is clear"}
+    lines = [_line("a", texts["a"], 0.0, 2.0), _line("b", texts["b"], 2.0, 2.6), _line("c", texts["c"], 2.6, 4.6)]
+    scores = {"a": 0.86, "b": 0.04, "c": 0.61}
+    heard = [*_heard("Markets shut down, with the camel stands still", 0.0, 2.0),
+             *_heard("Paper still moves glass, but the cost is clear", 2.05, 4.0)]
+    found, skipped, _ = timing.by_whisper(lines, scores, heard, texts, _levels(5.0), 5.0)
+    assert skipped == ["b"] and scores["b"] is None
+    b = lines[1]
+    assert not b.sung and b.start == b.end == 2.0
+    Timing(audio="audio/song.mp3", duration=5.0, lines=lines)
+    report = {"lines": [{"line_id": i, "score": scores[i], **({} if line.sung else {"sung": False})}
+                        for i, line in zip(texts, lines)], "skipped": skipped}
+    assert timing.lyric_mismatch(report) == "the song does not sing its lyrics: the singer skipped b"
 
 
-def test_the_notes_name_the_lines_placed_by_the_chorus_melody():
-    report = {"drift": [], "drifting": [], "unsure": [], "by_melody": ["c3-1", "c3-2"]}
-    assert "placed by the chorus melody: c3-1, c3-2" in timing.song_notes(report)
+def test_a_line_neither_heard_but_with_room_to_be_sung_is_not_called_skipped():
+    """Held notes Whisper heard no words in: the line may be sung there, so it is not taken for skipped."""
+    texts = {"a": "Markets shut down, the camels stand still", "b": "That contact came with a deadly bill",
+             "c": "Paper still moves west, but the cost is clear"}
+    lines = [_line("a", texts["a"], 0.0, 2.0), _line("b", texts["b"], 2.0, 2.6), _line("c", texts["c"], 6.0, 8.0)]
+    heard = [*_heard("Markets shut down, the camels stand still", 0.0, 2.0),
+             *_heard("Paper still moves west, but the cost is clear", 6.0, 8.0)]
+    assert timing.by_whisper(lines, {"a": 0.9, "b": 0.04, "c": 0.9}, heard, texts, _levels(8.0), 8.0) == ([], [], [])
+    assert lines[1].sung
 
 
-def test_the_chroma_of_a_sung_note_is_its_pitch_class():
-    t = np.arange(int(2.0 * timing.SAMPLE_RATE)) / timing.SAMPLE_RATE
-    notes = timing.chroma(np.sin(2 * np.pi * 440.0 * t)[None, :])  # an A
-    assert notes.shape[1] == 12 and notes[5:-5].argmax(axis=1).tolist() == [0] * (len(notes) - 10)
-    assert np.allclose(np.linalg.norm(notes, axis=1), 1.0, atol=1e-4)
+def test_lines_whisper_heard_count_as_sung_in_the_lyric_check():
+    rows = [{"line_id": i, "score": s} for i, s in (("a", 0.9), ("b", 0.1), ("c", 0.1), ("d", 0.1))]
+    assert timing.lyric_mismatch({"lines": rows}).startswith("the song does not sing its lyrics: the aligner could "
+                                                             "not hear 3 of its 4 lines")
+    assert timing.lyric_mismatch({"lines": rows, "by_whisper": ["b", "c"]}) is None
 
 
-def test_a_heard_chorus_at_the_end_of_the_song_is_heard_as_far_as_the_chroma_reaches():
-    """chroma() hears whole windows only, so it stops a little short of the song's end: the chorus heard last, sung to
-    the end, is matched over the frames it has rather than failing the step."""
-    tune = [(2.0, 4.0, 0), (4.0, 6.0, 7)]
-    lines = [*_two_lines(1.0, "c"), *_two_lines(6.0, "d")]  # c, unheard and a second early; d heard, to the end
-    texts = {line.line_id: "Sodium out potassium in" for line in lines}
-    notes = _notes(10.0, [*tune, *[(a + 4.0, b + 4.0, p) for a, b, p in tune]])[:-5]  # 0.25 s short
-    scores = {"c0": 0.1, "c1": 0.1, "d0": 0.9, "d1": 0.9}
-    runs = timing.repeated_runs([line.line_id for line in lines], texts)
-    assert timing.by_the_melody(lines, scores, runs, notes, None, texts, length=10.0) == ["c0", "c1"]
-    assert (lines[0].start, lines[1].end) == (2.0, 6.0)
+def test_whisper_is_consulted_only_when_mms_is_unsure(made):
+    bundle = sample_media.bundle()
+    vocals = _sung(30.1)
+    _, report = timing.song_timing(made, bundle, align=even_aligner([]), vocals=vocals,
+                                   hear=lambda v: pytest.fail("every line heard: Whisper is not asked"))
+    assert report["by_whisper"] == [] and report["skipped"] == []
+    asked = []
+    _, report = timing.song_timing(made, bundle, align=even_aligner([], score=0.1), vocals=vocals,
+                                   hear=lambda v: asked.append(v) or [])
+    assert len(asked) == 1 and report["by_whisper"] == []
+    # A test that stands in for MMS alone has no Whisper; nor has a machine without faster-whisper.
+    _, report = timing.song_timing(made, bundle, align=even_aligner([], score=0.1), vocals=vocals)
+    assert report["by_whisper"] == []
 
 
-def test_a_last_line_a_chorus_now_covers_is_aligned_again_up_to_the_end_of_the_song():
-    tune = [(0.0, 2.0, 0), (2.0, 4.0, 7)]
-    lines = [*_two_lines(0.0, "c"), *_two_lines(8.0, "d"), TimedLine(line_id="o", start=12.0, end=14.0, words=[
-        Word(word=w, start=12.0 + i, end=13.0 + i) for i, w in enumerate(["Gods", "germs"])])]
-    texts = {"c0": "Sodium out potassium in", "c1": "Sodium out potassium in", "d0": "Sodium out potassium in",
-             "d1": "Sodium out potassium in", "o": "Gods germs"}
-    notes = _notes(20.0, [*tune, *[(10.0 + a, 10.0 + b, p) for a, b, p in tune], (15.0, 17.0, 4)])
-    scores = {"c0": 0.9, "c1": 0.9, "d0": 0.1, "d1": 0.1, "o": 0.1}
-    calls = []
+def test_the_notes_name_the_lines_whisper_timed_and_the_lines_skipped():
+    report = {"drift": [], "drifting": [], "unsure": [], "by_whisper": ["c1", "c2"], "skipped": ["b6"]}
+    notes = timing.song_notes(report)
+    assert "timed by Whisper: c1, c2" in notes and "SKIPPED by the singer: b6" in notes
 
-    def alone(ids, t0, t1):
-        calls.append((ids, t0, t1))
-        return [(TimedLine(line_id="o", start=15.0, end=17.0, words=[Word(word="Gods", start=15.0, end=16.0),
-                                                                  Word(word="germs", start=16.0, end=17.0)]), 0.7)]
 
-    runs = timing.repeated_runs([line.line_id for line in lines], texts)
-    assert timing.by_the_melody(lines, scores, runs, notes, alone, texts, length=20.0) == ["d0", "d1"]
-    assert calls == [(["o"], 14.0, 20.0)] and lines[4].sung and lines[4].start == 15.0
-    Timing(audio="audio/song.mp3", duration=20.0, lines=lines)
+def test_the_bill_lists_whisper_and_what_runs_it_only_on_a_song_it_heard(tmp_path):
+    from studio import ledger
+
+    assert "faster-whisper" not in ledger.tools("timing", tmp_path, {"htdemucs", "mms-fa"})
+    assert "faster-whisper" in ledger.tools("timing", tmp_path, {"htdemucs", "mms-fa", ledger.WHISPER})
+    assert ledger.WHISPER == f"whisper-{timing.WHISPER_MODEL}"
+    assert ledger.task_of({"step": "timing", "label": "song lyrics heard"}) == "hears the lyrics the aligner could not"
+
+
+def test_a_line_whisper_misheard_in_places_is_found_and_starts_where_its_first_words_were_sung():
+    """Nov 4's second chorus, as Whisper heard it: words misheard between the ones it got right are not the line
+    sung again, and the misheard words before the first one it got right are where the line's first words were."""
+    texts = {"a": "Millions fall sick from town to town", "c": "Asia trades Europe, goods both ways roam",
+             "d": "Faiths ride with tools, no town stands alone", "e": "Same road brings riches"}
+    lines = [_line("a", texts["a"], 0.0, 2.0), _line("c", texts["c"], 2.0, 2.3), _line("d", texts["d"], 2.3, 2.6),
+             _line("e", texts["e"], 14.0, 16.0)]
+    heard = [*_heard("Millions fall sick from town to town", 0.0, 2.0),
+             *_heard("Asia trace your eyes, cause both legs roll", 3.0, 7.0),
+             *_heard("They say you're running with tools, no time stands for none", 7.5, 13.0),
+             *_heard("Same road brings riches", 14.0, 16.0)]
+    found, _, _ = timing.by_whisper(lines, {"a": 0.9, "c": 0.1, "d": 0.1, "e": 0.9}, heard, texts, _levels(16.0), 16.0)
+    assert found == ["c", "d"]
+    c, d = lines[1:3]
+    assert c.start == 3.0 and c.end <= 7.0
+    assert d.start == 7.5  # from "They": the four words misheard for "Faiths ride", two more than it has
+    Timing(audio="audio/song.mp3", duration=16.0, lines=lines)
+
+
+def test_a_line_whisper_found_is_not_cut_short_by_a_line_before_it_that_neither_placed():
+    """From review: MMS crammed b after where Whisper hears c sung, and Whisper heard too little of b to place it. c
+    keeps where it was heard, and b is fitted into the singing between the lines placed either side of it."""
+    texts = {"a": "Strong empires guard the road", "b": "Faiths ride with tools, no town stands alone",
+             "c": "Carry silk far, bring paper home", "e": "Markets shut down"}
+    lines = [_line("a", texts["a"], 0.0, 2.0), _line("b", texts["b"], 7.0, 8.0), _line("c", texts["c"], 8.0, 8.5),
+             _line("e", texts["e"], 12.0, 14.0)]
+    heard = [*_heard("Strong empires guard the road", 0.0, 2.0), *_heard("La da dee", 2.5, 4.5),
+             *_heard("Carry silk far, bring paper home", 5.0, 7.8), *_heard("Markets shut down", 12.0, 14.0)]
+    found, skipped, fitted = timing.by_whisper(lines, {"a": 0.9, "b": 0.1, "c": 0.1, "e": 0.9}, heard, texts,
+                                               _levels(14.0), 14.0)
+    assert found == ["c"] and skipped == [] and fitted == ["b"]
+    b, c = lines[1:3]
+    assert c.start == 5.0 and c.end == pytest.approx(7.8, abs=0.1)  # where it was heard, not cut to 8.0
+    assert 2.0 <= b.start < b.end <= c.start  # between the lines placed either side
+    Timing(audio="audio/song.mp3", duration=14.0, lines=lines)

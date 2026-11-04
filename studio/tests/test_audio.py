@@ -315,7 +315,9 @@ def test_gemini_sings_the_song_from_one_prompt_and_reads_the_narration(job, monk
     prompt = body["contents"][0]["parts"][0]["text"]
     # the style and the lyrics: nothing to avoid (the owner, Nov 2), no length and no timings, so the singer takes
     # the time it needs
-    assert prompt.startswith(f"Style: upbeat pop, 112 bpm, {audio.DICTION}.\n\nLyrics:\n")  # a sung style: no more
+    # a sung style: the style, then each line once and in order (Nov 4), and no more
+    assert prompt.startswith(f"Style: upbeat pop, 112 bpm, {audio.DICTION}.\n{audio.AS_WRITTEN}\n\nLyrics:\n")
+    assert "ad-lib" not in prompt and "exactly as written" not in prompt  # nothing of how the words are sung
     assert "Avoid" not in prompt
     assert "Length" not in prompt and "Structure" not in prompt and "0:0" not in prompt
     assert prompt.endswith("Lyrics:\n[Verse]\nLight lands on the thylakoid\nEach electron hand-off pumps a proton"

@@ -65,14 +65,17 @@ TOOLS = {
     # ffprobe reads each file's length; ffmpeg re-encodes a Lyria song
     "audio": {"ffmpeg": "measures and converts the audio"},
     # Demucs's package runs its model; torchaudio has the MMS aligner; ffmpeg decodes the audio they hear
-    "timing": {"demucs": "runs htdemucs", "torchaudio": "runs mms-fa", "torch": "runs the models",
-               "ffmpeg": "decodes the audio for them"},
+    # faster-whisper runs Whisper only when MMS is unsure of a line (studio/steps/timing.py): listed when it did
+    "timing": {"demucs": "runs htdemucs", "torchaudio": "runs mms-fa", "faster-whisper": "runs whisper-small",
+               "torch": "runs the models", "ffmpeg": "decodes the audio for them"},
     "arrows": {"skia-python": "draws each arrow to check"},  # a still of each arrow, to look at (studio/steps/arrows.py)
     "render": {"skia-python": "draws the frames", "ffmpeg": "encodes the videos"},  # studio/render/
 }
 SONG_TOOLS = {"timing"}  # steps whose tools work on the song: the lesson video alone has none to separate
 ALIGNER = "mms-fa"  # studio/steps/timing.py's MMS_MODEL, which a voice with no timings of its own is aligned by
 ALIGNER_TOOLS = ("torchaudio", "torch", "ffmpeg")  # what it runs on, Demucs's package aside
+WHISPER = "whisper-small"  # studio/steps/timing.py's Whisper, consulted when MMS is unsure of a song line
+WHISPER_TOOLS = ("faster-whisper",)  # what it runs on, listed only on a bill where it ran
 
 
 def tools(step: str, job: Path | None = None, models: set[str] = frozenset()) -> tuple[str, ...]:
@@ -82,7 +85,7 @@ def tools(step: str, job: Path | None = None, models: set[str] = frozenset()) ->
     Demucs's package."""
     if step in SONG_TOOLS and media.lesson_only(job):
         return ALIGNER_TOOLS if ALIGNER in models else ()
-    return tuple(TOOLS.get(step, {}))
+    return tuple(tool for tool in TOOLS.get(step, {}) if tool not in WHISPER_TOOLS or WHISPER in models)
 # How a call logged before calls were tagged with their step is told apart: by its label.
 LABEL_STEPS = {"bundle": "bundle", "factcheck": "factcheck", "art": "art",
                "song": "audio", "narration": "audio", "frq": "audio"}
@@ -398,6 +401,8 @@ TASKS = {
     # Demucs takes the singing out of the mix; MMS then lines the lyrics up with it
     ("timing", "song vocals"): "separates the vocals so the words can be timed",
     ("timing", "song"): "times the song", ("timing", "narration"): "times the narration",
+    # Whisper, when MMS could not hear every line: it hears the words sung, so those lines are timed by them
+    ("timing", "song lyrics"): "hears the lyrics the aligner could not",
     "judge": "grades the droplet",
 }
 
