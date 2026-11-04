@@ -787,10 +787,37 @@ def test_the_looks_bilayer_is_asked_for_only_where_a_part_is_a_membrane():
     cell = Structure(name="Red blood cell", aliases=[], sam_phrase="red disc", color_hex="#D92323")
     capillary = bundle.scenes[1].model_copy(update={"image_prompt": look, "structures": [cell]})
     prompt = art.paint_prompt(bundle, capillary)
-    assert "bilayer" not in prompt and "vibrant colour coding; a molecule the scene names" in prompt
+    assert "bilayer" not in prompt and f"vibrant colour coding; {art.ONE_SHAPE_EACH}" in prompt
     membrane = Structure(name="Thylakoid", aliases=["thylakoid membrane"], sam_phrase="green band", color_hex="#2E7D32")
     pump = capillary.model_copy(update={"structures": [cell, membrane]})
     assert "the membrane a phospholipid bilayer" in art.paint_prompt(bundle, pump)
+
+
+def test_the_style_is_said_once_and_the_look_keeps_only_what_the_picture_has():
+    # Nov 4: the Calvin cycle's close-up of four molecules in the stroma was asked for as an "Educational textbook
+    # illustration", in "clean biology Campbell style", and as "a clean, modern biology textbook illustration" of
+    # "semi-realistic organelles" and protein complexes it did not have; "a molecule the scene names as a small
+    # glossy sphere" painted a grey sphere that named nothing, on both tries.
+    bundle = Bundle.model_validate(bundle_data()).model_copy(update={"course": "AP Biology"})
+    look = ("Educational textbook illustration of G3P in the stroma, close-up, clean scientific style: G3P [[G3P]] in "
+            "the centre; a clean, modern biology textbook illustration: semi-realistic organelles, each protein complex "
+            "a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; a molecule the scene "
+            "names as a small glossy sphere.")
+    g3p = Structure(name="G3P", aliases=[], sam_phrase="green drops", color_hex="#06D6A0")
+    scene = bundle.scenes[1].model_copy(update={"image_prompt": look, "structures": [g3p]})
+    prompt = art.paint_prompt(bundle, scene)
+    assert prompt.startswith(f"Educational textbook illustration of G3P in the stroma, close-up, {art.CAMPBELL_STYLE}: "
+                             'G3P (green, label "G3P") in the centre; soft gradient shading, clean outlines, vibrant '
+                             f"colour coding; {art.ONE_SHAPE_EACH}.")
+    rubisco = Structure(name="Rubisco", aliases=[], sam_phrase="red blob", color_hex="#E63946")
+    chloroplast = Structure(name="Chloroplast", aliases=[], sam_phrase="green oval", color_hex="#31B44A")
+    kept = art.paint_prompt(bundle, scene.model_copy(update={"structures": [g3p, rubisco, chloroplast]}))
+    assert "semi-realistic organelles, each protein complex a smooth rounded shape, soft" in kept
+    assert "modern biology textbook illustration" not in kept
+    # Without Campbell's style, the brief's look is the only style said, and stays.
+    chart = look.replace("clean scientific style", "clean textbook style")
+    assert "a clean, modern biology textbook illustration: soft" in art.paint_prompt(
+        bundle, scene.model_copy(update={"image_prompt": chart}))
 
 
 def test_a_biology_picture_is_asked_for_in_campbell_biologys_style():

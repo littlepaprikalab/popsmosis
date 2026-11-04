@@ -1000,22 +1000,49 @@ def test_sam_is_asked_for_each_colour_in_the_word_the_picture_is_painted_in():
     assert phrased("pale lime blob", "coral wedge") == (["green blob", "orange wedge"],
                                                         [("structures", "colours", True)])
     assert phrased("green blob", "man in orange") == (["green blob", "man in orange"], [])  # as it is painted
+    assert phrased("mint drops", "peach wash")[0] == ["green drops", "orange wash"]  # Nov 4
     assert phrased("the thylakoid", "red light") == (["the thylakoid", "orange light"],  # only the colour word
                                                      [("structures", "colours", True)])
 
 
-def test_two_parts_in_one_colour_word_are_recorded():
+def test_two_parts_in_one_colour_word_are_moved_apart():
     # Nov 1: water (#00ACC1) and carbon dioxide (#00897B) were both "teal" to the illustrator, and were painted alike;
-    # Louis XVI and Charles I, both a "king in blue", were sung as one king.
+    # Louis XVI and Charles I, both a "king in blue", were sung as one king. Nov 4: the Calvin cycle's stroma and sugar,
+    # both "orange", were painted as orange cubes on an orange fluid, and the locate step could not find the sugar.
     def coloured(overview):
         def change(data):
             for structure, colour in zip(data["scenes"][1]["structures"], overview):
                 structure["color_hex"] = colour
-        return [(p.line_id, p.detail) for p in review(change)[2].problems if p.rule == "colours"]
+        report = review(change)[2]
+        return [(p.line_id, p.detail, p.repaired) for p in report.problems if p.rule == "colours"]
 
     assert coloured(["#2E8B57", "#E07A2F"]) == []
-    assert coloured(["#2E8B57", "#43A047"]) == [
-        ("scene:overview", 'Thylakoid and Cytochrome b6f are both "green" to the illustrator')]
+    [(line, detail, repaired)] = coloured(["#2E8B57", "#43A047"])
+    assert line == "structures" and repaired and detail.startswith(
+        "two parts of a scene in one colour word are painted alike: Cytochrome b6f green as ")
+    assert detail.endswith(", clear of Thylakoid")  # the first the scene lists keeps its colour
+
+
+def test_a_part_moved_apart_takes_a_hue_free_on_every_scene_it_is_on():
+    def part(name, colour, phrase="ball"):
+        return {"name": name, "aliases": [], "sam_phrase": phrase, "color_hex": colour}
+
+    data = {"scenes": [
+        {"id": "overview", "image_prompt": "", "structures": [
+            part("Chloroplast", "#31B44A"), part("Stroma", "#F4845F", "peach wash"), part("G3P", "#06D6A0"),
+            part("Sugar", "#E9A426", "orange cubes")]},
+        {"id": "detail", "image_prompt": "", "structures": [
+            part("Stroma", "#F4845F", "peach wash"), part("Sugar", "#E9A426", "orange cubes"),
+            part("ATP", "#FFD400"), part("RuBP", "#8338EC")]}], "direction": []}
+    problems = []
+    checks._check_colours(data, problems)
+    hues = [[checks._hue(s["color_hex"]) for s in scene["structures"]] for scene in data["scenes"]]
+    assert all(len(set(on)) == len(on) for on in hues)
+    assert hues[0][:2] == ["green", "orange"]  # the chloroplast and the stroma, first listed, keep theirs
+    sugar = [s for scene in data["scenes"] for s in scene["structures"] if s["name"] == "Sugar"]
+    assert sugar[0]["color_hex"] == sugar[1]["color_hex"] != "#E9A426"  # one colour on every scene
+    assert sugar[0]["sam_phrase"] == f'{checks.colour_word(sugar[0]["color_hex"])} cubes'  # SAM asks for the new one
+    assert not [p for p in problems if not p.repaired]  # nothing left alike to record
 
     def alike(data):
         data["scenes"][1]["structures"][1].update(sam_phrase="king in blue", color_hex="#2F6FDB")

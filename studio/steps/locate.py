@@ -260,6 +260,15 @@ def find(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
     """A structure's mask on the art, where it is, and how it was found ("sam" or "sam-box"); None
     when SAM cannot find enough of it to point a label at."""
     colours = colours or Colours(picture, scene)
+    if colours.is_paper[colours.names.index(structure.name)]:
+        # A space that fills the view is the background: SAM traces things, not what is behind them, and found
+        # nothing for the repainted Calvin close-ups' "orange wash" or "orange region" (Nov 4), while the helper's box
+        # was the whole picture, which tells SAM nothing. It is the pixels in its colour.
+        whole = Box(x0=0, y0=0, x1=media.ART_WIDTH, y1=media.ART_HEIGHT)
+        mask = colours.own(structure, whole)
+        found = svg.locate(mask) if mask.sum() >= OWN_PIXELS_MIN else None
+        if found is not None:
+            return mask, found, "helper"
     label = f"locate {scene.id} {structure.name}"
     for n, phrase in enumerate(phrases(structure)):
         sure = [m for m in muse.segment(job, label + (f" try {n + 1}" if n else ""), picture, phrase=phrase)
@@ -311,6 +320,33 @@ def phrases(structure: Structure) -> list[str]:
 # --- holding a match to its structure's colour --------------------------------------------------
 
 
+HUE_WORDS = ("white", "black", "grey", "brown", *dict.fromkeys(word for _, word in checks.HUES))
+
+
+def hue_codes(rgb: np.ndarray) -> np.ndarray:
+    """Each pixel's hue as the illustrator would be told it (checks.colour_word, the shade dropped: checks._hue), as an index into
+    HUE_WORDS, for a whole picture at once (... x 3, 0-255). The locate step holds a part to the word it was painted
+    from, as well as to its colour (Colours)."""
+    c = rgb[..., :3].astype(np.float64) / 255.0  # in float64 and as colorsys works it, to agree at a band's edge
+    top, low = c.max(-1), c.min(-1)
+    spread = top - low
+    saturation = np.where(top > 0, spread / np.maximum(top, 1e-12), 0)
+    safe = np.maximum(spread, 1e-12)
+    rc, gc, bc = ((top - c[..., i]) / safe for i in range(3))
+    r, g = c[..., 0], c[..., 1]
+    hue = (np.where(r == top, bc - gc, np.where(g == top, 2.0 + rc - bc, 4.0 + gc - rc)) / 6.0) % 1.0 * 360
+    band = np.zeros(hue.shape, np.int64)
+    for limit, _ in checks.HUES[:-1]:
+        band += hue >= limit
+    name = np.array([HUE_WORDS.index(word) for _, word in checks.HUES])[band]
+    red, orange, pink = (HUE_WORDS.index(w) for w in ("red", "orange", "pink"))
+    name = np.where(((name == orange) & (top < checks.BROWN_VALUE)) | ((name == red) & (top < 0.55)), HUE_WORDS.index("brown"),
+                    np.where((name == red) & (saturation < 0.5) & (top > 0.6), pink, name))
+    grey = np.where(top > 0.85, HUE_WORDS.index("white"), np.where(top < 0.2, HUE_WORDS.index("black"),
+                                                                     HUE_WORDS.index("grey")))
+    return np.where(saturation < 0.15, grey, name)
+
+
 def _lab(rgb: np.ndarray) -> np.ndarray:
     """sRGB (0-255, ... x 3) to CIE Lab (D65)."""
     c = rgb.astype(np.float32) / 255.0
@@ -334,10 +370,39 @@ def distance(pixels: np.ndarray, refs: np.ndarray) -> np.ndarray:
     return np.sqrt((lightness / 2) ** 2 + (duller / (1 + 0.045 * chroma)) ** 2 + hue_squared)
 
 
+# A part the picture's words make a space: what fills it, a wash, its background (the brief has a space asked for as "an
+# even wash of its own colour", prompts/bundle.md), or one named as a space is.
+SPACE_WORDS = re.compile(r"\b(?:fill(?:s|ing|ed)?|wash|background|behind)\b", re.I)
+SPACE_NAMES = re.compile(r"\b(?:stroma|matrix|cytoplasm|cytosol|lumen|space|fluid|plasma|sky|air|atmosphere|sea|ocean"
+                         r"|water|background)\b", re.I)
+
+
+def is_space(scene: Scene, structure: Structure) -> bool:
+    """Whether the scene shows the part as a space: named as one, or tagged (schemas.PART_TAG) in words that say so,
+    in its clause of the picture's words."""
+    if any(SPACE_NAMES.search(name) for name in (structure.name, *structure.aliases)):
+        return True
+    names = {n.casefold() for n in (structure.name, *structure.aliases)}
+    for clause in re.split(r"[,;:.]", scene.image_prompt):
+        tags = [t.strip().casefold() for t in re.findall(r"\[\[([^\[\]]*)\]\]", clause)]
+        if names & set(tags) and SPACE_WORDS.search(clause):
+            return True
+    return False
+
+
 class Colours:
     """Which structure each pixel of a scene's art is coloured as: the nearest of the scene's
     structure colours and the art's background (white, or the dark slate Muse Image paints), when it is
-    near enough to count as any."""
+    near enough to count as any.
+
+    Or, when it is near none of them, the one whose colour word it has (hue_codes), if that word is the part's alone
+    on the scene: the illustrator is told the word, never the colour, and paints it in a shade of its own. On Nov 4
+    the Calvin cycle's G3P, mint (#06D6A0) in the bundle, "green" to the illustrator, was painted sage green, another
+    hue to distance(), and was left out.
+
+    A part whose colour is near the background's is the background where the picture paints it so: a space that fills
+    the view (the stroma behind the Calvin cycle's molecules, Nov 4) is what media.paper reads off the edge, and was
+    counted as background, never as itself."""
 
     def __init__(self, picture: Path, scene: Scene):
         import skia
@@ -347,6 +412,18 @@ class Colours:
         self.names = [s.name for s in scene.structures]
         self.refs = _lab(np.array(refs))
         self.pixels = _lab(rgb)
+        self.words = hue_codes(rgb)
+        words = hue_codes(np.array(refs))
+        # The part the background is: a space (is_space()) in the background's colour word, the word the painter was
+        # told. Not one merely near its colour: to distance() the white page is a paler yellow, cyan or grey, and the
+        # repainted Calvin overview's ATP, G3P and sugar took all of it (Nov 4). Nor only one near it: the repainted
+        # fixation close-up's stroma, peach in the bundle and "orange" to the painter, was painted a deeper orange.
+        # Nor any part in its word: white oxygen spheres on a white page are not the page.
+        self.is_paper = np.append(words[:-1] == words[-1], True) & np.append(
+            [is_space(scene, s) for s in scene.structures], True)
+        # A part's word is its own when no other part, nor the background unless the part is it, has it.
+        self.word = [int(w) if (words[:-1] == w).sum() == 1 and (w != words[-1] or self.is_paper[i]) else -1
+                     for i, w in enumerate(words[:-1])]
         self.dropped = 0
         self._counting = threading.Lock()  # the scene's structures are judged at the same time
         sample = self.pixels[::2, ::2].reshape(-1, 3)  # every fourth pixel is plenty to see what is painted
@@ -367,11 +444,14 @@ class Colours:
         nearest, close = far.argmin(1), far.min(1) <= CLOSE
         apart = distance(self.refs, self.refs[mine:mine + 1])[:, 0]
         own_colour = apart <= SAME
-        own_colour[-1] = False  # the background is never a structure's own colour here
-        backdrop = (nearest == len(self.refs) - 1) & close
+        own_colour[-1] = self.is_paper[mine]  # the background is a structure's own colour only when it is the background
+        backdrop = (nearest == len(self.refs) - 1) & close & ~own_colour[-1]
         background = 0.0 if apart[-1] <= CLOSE else float(backdrop.mean())
-        own = (own_colour[nearest] & close).sum()
-        other = (~own_colour[nearest] & ~backdrop & close).sum()
+        words = self.words[mask]
+        by_word = ~close & (words == self.word[mine])
+        by_others = ~close & ~by_word & np.isin(words, [w for i, w in enumerate(self.word) if w >= 0 and i != mine])
+        own = (own_colour[nearest] & close).sum() + by_word.sum()
+        other = (~own_colour[nearest] & ~backdrop & close).sum() + by_others.sum()
         if own + other < JUDGED * len(pixels):
             return background, (0.0 if (self.painted & own_colour).any() else None)
         return background, float(own / (own + other))
@@ -384,7 +464,11 @@ class Colours:
         x0, y0, x1, y1 = (int(v) for v in (box.x0, box.y0, box.x1, box.y1))
         window = self.pixels[y0:y1, x0:x1]
         far = distance(window.reshape(-1, 3), self.refs).reshape(*window.shape[:2], -1)
-        mask[y0:y1, x0:x1] = (far.argmin(-1) == mine) & (far.min(-1) <= CLOSE)
+        nearest, close = far.argmin(-1), far.min(-1) <= CLOSE
+        paper = len(self.refs) - 1
+        mine_or_paper = (nearest == mine) | ((nearest == paper) & self.is_paper[mine])
+        by_word = ~close & (self.words[y0:y1, x0:x1] == self.word[mine])
+        mask[y0:y1, x0:x1] = (mine_or_paper & close) | by_word
         return mask
 
     def fits(self, mask: np.ndarray, structure: Structure) -> bool:
