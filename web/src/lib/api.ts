@@ -522,11 +522,20 @@ export interface MadeWithMaker {
   models: string[]; // as the studio ran them: claude-opus-5-5, gemini-3.1-flash-image...
 }
 
+/**
+ * What heads a droplet: its headline, one line in the learner's terms ("How do noise-cancelling headphones work?");
+ * for a droplet made before headlines, or from an API older than them, its topic, or its title with no course.
+ */
+export function dropletHeading(d: { headline?: string; course: string; topic: string; title: string }): string {
+  return d.headline || (d.course && d.topic ? d.topic : d.title);
+}
+
 export interface DropletCard {
   id: string;
   title: string; // "AP Biology: ATP synthesis"
   course: string;
   topic: string;
+  headline?: string; // what heads it (dropletHeading); "" before Nov 4, absent from an older API
   excerpt: string; // the lesson's first lines, plain text
   video: DropletVideos;
   tags?: DropletTags; // absent from an API older than the tags
@@ -573,7 +582,7 @@ export interface Droplet extends DropletCard {
  * differs by viewer (likes, comments), so the web server can hand every visitor the same copy. Its views are the same
  * for everyone, up to a minute old.
  */
-export type DropletExample = Pick<Droplet, 'id' | 'title' | 'course' | 'topic' | 'excerpt' | 'content' | 'video' | 'tags' | 'views' | 'createdAt'>;
+export type DropletExample = Pick<Droplet, 'id' | 'title' | 'course' | 'topic' | 'headline' | 'excerpt' | 'content' | 'video' | 'tags' | 'views' | 'createdAt'>;
 
 /**
  * One video's play counts on a droplet (api/src/lib/plays.ts): totals, nothing about who watched. Each step counts
@@ -596,7 +605,7 @@ export type PlayVideo = 'song' | 'lesson' | 'hook';
 export interface PlayRanking {
   video: PlayVideo;
   min: number; // the fewest starts a droplet needs to be ranked
-  data: { id: string; title: string; course: string; topic: string; hidden: boolean; createdAt: string; plays: PlayCounts }[];
+  data: { id: string; title: string; course: string; topic: string; headline?: string; hidden: boolean; createdAt: string; plays: PlayCounts }[];
   fewer: number; // droplets with plays of this video, but fewer than min
   // Each video's counts over every droplet, whatever min: the drop-off curve. Only when asked (?totals=1), and absent
   // when they could not be read or from an API older than them.

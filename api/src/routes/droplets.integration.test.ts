@@ -98,7 +98,7 @@ d('the Droplets tab', () => {
     expect(list.statusCode).toBe(200);
     expect(list.json().data.map((x: { id: string }) => x.id)).toEqual([newer, older]);
     expect(list.json().data[0]).toEqual({
-      id: newer, title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase',
+      id: newer, title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase', headline: '', // a droplet made before headlines
       excerpt: 'Lesson 10: ATP synthase spins.',
       video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null },
       tags: { song: [], lesson: [] }, // a droplet made before there were tags

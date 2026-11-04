@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import type { DropletCard } from '@/lib/api';
+import { dropletHeading, type DropletCard } from '@/lib/api';
 import { LikeButton } from '@/components/LikeButton';
 import { countPlays } from '@/lib/plays';
 import { SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/react/24/solid';
@@ -33,7 +33,7 @@ function Clip({ droplet: d, muted, setMuted, last, onEnd }: {
 }) {
   const box = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
-  const heading = d.course && d.topic ? d.topic : d.title;
+  const heading = dropletHeading(d);
   useEffect(() => {
     const el = box.current;
     if (!el) return;

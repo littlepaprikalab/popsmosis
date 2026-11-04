@@ -646,6 +646,30 @@ def test_a_title_about_the_learner_and_a_picture_with_an_instruction_are_correct
     assert sorted(c.kind for c in report.corrections) == ["scene", "title"]
 
 
+def test_the_headline_is_sent_beside_the_title_and_one_about_the_learner_is_corrected():
+    def personal(data):
+        data["headline"] = "How do plants make energy? Ben's homework for Ms Lee"
+
+    fixed = "How do plants make energy from light?"
+    report, checked = check_bundle(bundle(personal), "", FakeChecker(public_rule({personal_headline(): fixed})))
+    assert "title:headline" in [line.kind + ":" + line.id for line in report.lines]
+    assert report.status == "passed" and checked.headline == fixed
+    assert [(c.kind, c.before, c.after) for c in report.corrections] == [("title", personal_headline(), fixed)]
+
+
+def personal_headline():
+    return "How do plants make energy? Ben's homework for Ms Lee"
+
+
+def test_no_headline_sends_none():
+    def without(data):
+        data["headline"] = ""
+
+    fake = FakeChecker(public_rule({}))
+    check_bundle(bundle(without), "", fake)
+    assert "title:headline" not in fake.ids(1)
+
+
 def test_a_style_that_names_an_artist_is_corrected_and_a_thing_to_avoid_that_fails_is_dropped():
     learner = "Bright pop in the voice of Taylor Swift, 104 bpm"
     corrected = "Bright pop with a clear female vocal, 104 bpm"

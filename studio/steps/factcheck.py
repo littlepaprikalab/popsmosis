@@ -198,9 +198,10 @@ def title_text(bundle: Bundle) -> str:
 
 
 def public_lines(bundle: Bundle) -> list[Line]:
-    """What goes out with the droplet besides its lines: the title, each picture's description, the song's style and
+    """What goes out with the droplet besides its lines: the title and the headline, each picture's description, the song's style and
     what it must avoid."""
     return ([Line(TITLE, "title", title_text(bundle))]
+            + ([Line(TITLE, "headline", bundle.headline)] if bundle.headline.strip() else [])
             + [Line(SCENE, scene.id, scene.described()) for scene in bundle.scenes]
             + [Line(STYLE, str(i), style) for i, style in enumerate(bundle.music.positive_styles, 1)]
             + [Line(AVOID, str(i), style, at=("negative_styles", i - 1))
@@ -587,6 +588,8 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     if title:
         course, sep, topic = title.partition(":")
         data["course"], data["topic"] = (course.strip(), topic.strip()) if sep and topic.strip() else ("", title.strip())
+    if data["headline"].strip():
+        data["headline"] = fixes.get((TITLE, data["headline"]), data["headline"])
     for key in data["key_lines"]:
         key["text"] = fixes.get((KEY, key["text"]), key["text"])
     data["key_lines"] = [key for key in data["key_lines"] if key["text"].strip()]

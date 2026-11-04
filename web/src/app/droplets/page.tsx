@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, isUnreachable, DropletCard } from '@/lib/api';
+import { api, dropletHeading, isUnreachable, DropletCard } from '@/lib/api';
 import PageContainer from '@/components/PageContainer';
 import { LoadingMessage } from '@/components/LoadingMessage';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
@@ -262,7 +262,7 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
   const [commentCount, setCommentCount] = useState(d.commentCount ?? 0);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const href = `/droplets/${d.id}`;
-  const heading = d.course && d.topic ? d.topic : d.title;
+  const heading = dropletHeading(d);
   // The song if it has one: it is the hook. Its own still, else the other video's.
   const song = !!d.video.songVideoUrl;
   const src = d.video.songVideoUrl || d.video.lessonVideoUrl;

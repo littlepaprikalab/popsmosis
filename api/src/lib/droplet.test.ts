@@ -101,7 +101,9 @@ describe('the public droplet', () => {
   };
 
   it('is titled from the bundle, never the request', () => {
-    expect(dropletTitle(row.bundle)).toEqual({ title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase' });
+    expect(dropletTitle(row.bundle)).toEqual({ title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase', headline: '' });
+    expect(dropletTitle({ course: 'Physics', topic: 'noise cancellation', headline: ' How do noise-cancelling headphones work? ' }))
+      .toMatchObject({ title: 'Physics: noise cancellation', headline: 'How do noise-cancelling headphones work?' });
     expect(dropletTitle({ topic: 'DNA' }).title).toBe('DNA');
     expect(dropletTitle(null).title).toBe('A droplet');
   });
@@ -110,7 +112,7 @@ describe('the public droplet', () => {
     const card = serializeDropletCard(row);
     expect(card.excerpt).toBe('ATP synthase A rotary motor in the inner membrane. A B 1 2');
     expect(card.video).toEqual({ songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null });
-    expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'id', 'likeCount', 'liked', 'madeWith', 'tags', 'title', 'topic', 'video', 'views']);
+    expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'headline', 'id', 'likeCount', 'liked', 'madeWith', 'tags', 'title', 'topic', 'video', 'views']);
     expect(card.views).toEqual({ song: 12, lesson: 0 });
     expect(serializeDropletCard({ ...row, views: null })).not.toHaveProperty('views'); // not read: left out, not zeros
     expect(card.tags).toEqual({ song: ['atpsynthase', 'apbio', 'kpop'], lesson: ['atpsynthase', 'apbio'] });

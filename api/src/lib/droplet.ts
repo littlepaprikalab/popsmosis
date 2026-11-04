@@ -195,12 +195,17 @@ export function excerptOf(markdown: string, max = EXCERPT_LENGTH): string {
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 }
 
-/** "AP Biology: the light reactions", from the bundle; never the learner's own words. */
-export function dropletTitle(bundle: unknown): { title: string; course: string; topic: string } {
-  const course = isObject(bundle) && typeof bundle.course === 'string' ? bundle.course.trim() : '';
-  const topic = isObject(bundle) && typeof bundle.topic === 'string' ? bundle.topic.trim() : '';
+/**
+ * "AP Biology: the light reactions", from the bundle; never the learner's own words. With the headline the pages
+ * head it with, one line in the learner's terms ("How do plants turn sunlight into energy?"), written and fact-checked
+ * by the studio; "" for a droplet made before Nov 4, which the pages head with its topic.
+ */
+export function dropletTitle(bundle: unknown): { title: string; course: string; topic: string; headline: string } {
+  const text = (key: string) => (isObject(bundle) && typeof bundle[key] === 'string' ? (bundle[key] as string).trim() : '');
+  const course = text('course');
+  const topic = text('topic');
   const title = course && topic ? `${course}: ${topic}` : topic || course || 'A droplet';
-  return { title, course, topic };
+  return { title, course, topic, headline: text('headline') };
 }
 
 function publicVideo(a: PublicDropletRow) {
