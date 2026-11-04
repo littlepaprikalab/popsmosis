@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Locator, type Page, type Route } from '@playwright/test';
 import { seed, signIn, apiUrl, sessionToken } from './helpers';
 
 // Play counts (web/src/lib/plays.ts, api/src/routes/plays.ts): what the players send, and the owner's page.
@@ -230,6 +230,34 @@ test.describe('views', () => {
     await expect(views.locator('..')).toContainText(' · ');
     await card.getByTestId('card-play').click();
     await expect(views).toHaveText(viewsText(song + 1));
+  });
+
+  test('with no views from the API (one older than them, or a read that failed), the videos show and play as before', async ({ page }) => {
+    // The API's answers with `views` taken out, as an API from before them sends them.
+    const withoutViews = async (route: Route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const res = await route.fetch();
+      const body = await res.json();
+      for (const d of Array.isArray(body.data) ? body.data : [body]) delete d.views;
+      await route.fulfill({ response: res, json: body });
+    };
+    await page.route(/\/api\/droplets(\?[^/]*)?$/, withoutViews);
+    await page.route(/\/api\/droplets\/[^/?]+$/, withoutViews);
+    const counts = watchCounts(page);
+
+    await page.goto(`/droplets/${S.droplet}`);
+    await expect(page.getByTestId('player-song').getByText('SONG')).toBeVisible();
+    await expect(page.getByTestId('player-lesson').getByText('LESSON')).toBeVisible();
+    await playTo(page.getByLabel('song video'), 1);
+    await expect.poll(() => counts.sent).toContain('song started'); // still counted
+    await settle(page);
+    await expect(page.getByTestId('view-count')).toHaveCount(0); // and no number made up for it
+
+    await page.goto('/droplets');
+    const card = page.getByTestId('droplet-card').filter({ has: page.locator(`a[href="/droplets/${S.droplet}"]`) });
+    await expect(card.getByText(/ ago$/)).toBeVisible();
+    await expect(card.getByTestId('view-count')).toHaveCount(0);
+    await expect(card.getByText(/ ago$/)).not.toContainText('·');
   });
 
   test("a learner sees their own droplet's views on /learn", async ({ page, context, request }) => {

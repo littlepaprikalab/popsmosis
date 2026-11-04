@@ -434,7 +434,7 @@ A lesson's `answer` also carries `video` (`null` for a text-only droplet): its s
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
 `endToEnd`, how long it took from the request ([End to end](#end-to-end)); `awaitingVideos`, true while the page holds the text back for the videos (below);
 `hidden`, true when an admin took it off the Droplets tab; `awaitingReview`, true while it waits for an admin to
-approve it; `views`, `{ song, lesson }`, as the tab shows them ([Views](#views)); and `likeCount` and `commentCount`,
+approve it; `views`, `{ song, lesson }`, as the tab shows them, once its videos are READY ([Views](#views)); and `likeCount` and `commentCount`,
 its thumbs-up and comments on the tab, which the delete dialog names since deleting the topic with everything takes
 them too. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
@@ -795,14 +795,28 @@ feed and the hook tile's Share and Download:
 
 Each video's `started` count is also public, as its **views**, shown the way YouTube and TikTok
 show them: "1.2K views" beside the song and the lesson on a droplet's page and on `/learn`, and
-"1.2K views · 3 days ago" under a card on the tab, for the video the card plays. The droplet
-routes and a question's `answer` carry `views: { song, lesson }` (0 for a video with no plays),
-read from `droplet_plays` in the same request (`api/src/lib/plays.ts`, `viewsOf`). Only the
+"1.2K views · 3 days ago" under a card on the tab, for the video the card plays. Only the
 starts: how far the plays got stays on `/admin/plays`. The hook clip's starts are not a view of
 either, as it is a cut of the song. A count is what the bullets above say a start is, so a view
 is a page view's play, never an admin's. When the viewer's own start is counted, the number on
 the page goes up by one at once (`useViews` in `web/src/lib/plays.ts`), and a later read of the
 count replaces it rather than adding to it.
+
+The droplet routes carry `views: { song, lesson }` (0 for a video with no plays), and so does a
+question's `answer` on the learner's own reads (`GET /api/questions`, with `?ids=`, and
+`/api/questions/:id`) once its videos are READY. How they are read:
+
+- **The list** reads them in its one statement, a probe of the `(answerId, video)` key for each
+  card on the page, after the sort and the limit, so a tag that matches 100,000 droplets still
+  probes 24 (about 0.2 ms a page, measured at 300,000 droplets).
+- **One droplet and a learner's topics** read them in one query for the page
+  (`api/src/lib/views.ts`), beside the droplet's like and comments; a topic still being made,
+  as most of those the Learn page polls are, reads none. They are extra: when they cannot be read, the
+  droplet goes out without `views`, and the page leaves them out, as it does for an API older
+  than them.
+- **The teacher's reads** (the queues, the claim) never read or carry them.
+- **Nothing is written** for them: no column on `answers`, so a play never writes to a
+  droplet's row, and reading them never waits on a count being written.
 
 `/admin/plays` opens with **where plays drop off**: one line each for the song, the lesson and
 the hook clip, the share of all their plays still going at the start, 25%, 50%, 75% and the end,

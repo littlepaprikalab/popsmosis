@@ -320,6 +320,61 @@ d('play counts', () => {
       expect((await get(`/api/questions/${questionId}`, learner.cookie)).json().answer.views).toEqual(views);
       expect((await get('/api/questions', learner.cookie)).json().data.map((q: { answer: { views: unknown } }) => q.answer.views))
         .toEqual(expect.arrayContaining([views, { song: 0, lesson: 0 }]));
+      // The page's poll of the cards waiting on the teacher brings them too, so a swapped card keeps them.
+      expect((await get(`/api/questions?ids=${questionId}`, learner.cookie)).json().data[0].answer.views).toEqual(views);
+    });
+
+    it('reads none for a droplet whose videos are not READY, and never for the teacher', async () => {
+      const rendering = await droplet('Diffusion', { ...VIDEOS, videoStatus: 'RENDERING' });
+      const watched = await droplet();
+      await play(watched, 'song', 0, fresh());
+      const { generateApiKey } = await import('../lib/apikey.js');
+      const key = generateApiKey();
+      await prisma.agent.update({ where: { id: agentId }, data: { apiKeyHash: key.hashed } });
+      const { questionId } = await prisma.answer.findUniqueOrThrow({ where: { id: rendering }, select: { questionId: true } });
+      const asked = await prisma.answer.findUniqueOrThrow({ where: { id: watched }, select: { questionId: true } });
+      await prisma.reply.create({ data: { answerId: watched, userId: learner.id, content: 'Why does it spin?' } });
+
+      const reads = vi.spyOn(prisma.dropletPlays, 'findMany');
+      try {
+        const card = (await get(`/api/questions/${questionId}`, learner.cookie)).json();
+        expect(card.answer.video.status).toBe('RENDERING');
+        expect(card.answer).not.toHaveProperty('views');
+        expect(reads).not.toHaveBeenCalled(); // a topic still being made, as most the page polls are, costs no read
+
+        const teacher = { authorization: `Bearer ${key.raw}` };
+        const threads = await app.inject({ method: 'GET', url: '/api/replies/queue', headers: { 'x-proxy-token': SECRET, ...teacher } });
+        expect(threads.json().data.map((t: { answer: { id: string } }) => t.answer.id)).toEqual([watched]);
+        const queue = await app.inject({ method: 'GET', url: '/api/questions/queue', headers: { 'x-proxy-token': SECRET, ...teacher } });
+        expect(queue.statusCode).toBe(200);
+        expect(JSON.stringify([threads.json(), queue.json()])).not.toContain('views');
+        expect(reads).not.toHaveBeenCalled();
+
+        expect((await get(`/api/questions/${asked.questionId}`, learner.cookie)).json().answer.views).toEqual({ song: 1, lesson: 0 });
+        expect(reads).toHaveBeenCalledTimes(1);
+      } finally {
+        reads.mockRestore();
+      }
+    });
+
+    it('goes out without them when they cannot be read, rather than not at all', async () => {
+      const id = await droplet();
+      await play(id, 'song', 0, fresh());
+      const { questionId } = await prisma.answer.findUniqueOrThrow({ where: { id }, select: { questionId: true } });
+      const reads = vi.spyOn(prisma.dropletPlays, 'findMany').mockRejectedValue(new Error('canceling statement due to statement timeout'));
+      try {
+        const page = await get(`/api/droplets/${id}`);
+        expect(page.statusCode).toBe(200);
+        expect(page.json()).not.toHaveProperty('views');
+        expect(page.json()).toMatchObject({ id, likeCount: 0, comments: { data: [] } });
+        const mine = await get(`/api/questions/${questionId}`, learner.cookie);
+        expect(mine.statusCode).toBe(200);
+        expect(mine.json().answer).not.toHaveProperty('views');
+        expect((await get('/api/questions', learner.cookie)).json().data[0].answer).not.toHaveProperty('views');
+      } finally {
+        reads.mockRestore();
+      }
+      expect((await get(`/api/droplets/${id}`)).json().views).toEqual({ song: 1, lesson: 0 });
     });
   });
 

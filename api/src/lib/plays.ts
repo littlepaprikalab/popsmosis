@@ -80,15 +80,12 @@ export const NO_PLAYS: PlayCounts = Object.fromEntries(PLAY_EVENTS.map((e) => [e
  */
 export type DropletViews = { song: number; lesson: number };
 
-// The rows the views are read from, as a Prisma select on an answer's `plays`.
-const VIEWED: DropletVideo[] = ['SONG', 'LESSON'];
-export const viewsSelect = {
-  where: { video: { in: VIEWED } },
-  select: { video: true, started: true },
-} satisfies Prisma.Answer$playsArgs;
+// The videos whose starts are views.
+export const VIEWED: DropletVideo[] = ['SONG', 'LESSON'];
 
-// The same rows from raw SQL, for the Droplets tab's list: a jsonb array of { video, started }, one probe of the
-// (answerId, video) key per card. For a query FROM answers, which it names.
+// The views' rows in the Droplets tab's list, as a column of its one statement: a jsonb array of { video, started },
+// one probe of the (answerId, video) key per card, for a query FROM answers, which it names. In the statement, not a
+// read after it, as the list is the busiest public read: no second round trip for every page of cards.
 export const viewsSql = Prisma.sql`(
   SELECT coalesce(jsonb_agg(jsonb_build_object('video', p.video, 'started', p.started)), '[]'::jsonb)
   FROM droplet_plays p WHERE p."answerId" = answers.id AND p.video IN ('SONG', 'LESSON')

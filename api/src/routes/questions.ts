@@ -5,7 +5,8 @@ import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/error
 import { requireUser, requireAgent, accountGone } from '../middleware/auth.js';
 import { validateString, containsPersonalInfo, parseLimit, secretError } from '../lib/validation.js';
 import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
-import { questionInclude, serializeQuestion, serializeQuestionForAgent } from '../lib/serialize.js';
+import { questionInclude, serializeQuestion, serializeQuestionForAgent, viewedAnswerIds, withViews } from '../lib/serialize.js';
+import { viewsFor } from '../lib/views.js';
 import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
 import { claimMinutes, questionMaxRuns } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
@@ -226,8 +227,11 @@ export default async function questionRoutes(app: FastifyInstance) {
       if (list.length === 0) return { data: [], nextCursor: null };
       const rows = await prisma.question.findMany({ where: { id: { in: list }, ...readableQuestions(viewer) }, include: questionInclude });
       const byId = new Map(rows.map((r) => [r.id, r]));
+      // Each READY droplet's views (lib/views.ts); a topic still being made, as most polled ones are, reads none.
+      const views = await viewsFor(viewedAnswerIds(rows), request.log);
       return {
-        data: list.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => !!r).map((r) => serializeQuestion(r, viewer.id)),
+        data: list.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => !!r)
+          .map((r) => withViews(serializeQuestion(r, viewer.id), views)),
         nextCursor: null,
       };
     }
@@ -244,8 +248,9 @@ export default async function questionRoutes(app: FastifyInstance) {
       take,
     });
 
+    const views = await viewsFor(viewedAnswerIds(questions), request.log);
     return {
-      data: questions.map((q) => serializeQuestion(q, viewer.id)),
+      data: questions.map((q) => withViews(serializeQuestion(q, viewer.id), views)),
       nextCursor: encodeCreatedAtIdCursor(questions, take),
     };
   });
@@ -255,7 +260,7 @@ export default async function questionRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const question = await prisma.question.findFirst({ where: { id, ...readableQuestions(request.viewer!) }, include: questionInclude });
     if (!question) return sendError(reply, 'NOT_FOUND', 'Question not found');
-    return serializeQuestion(question, request.viewer!.id);
+    return withViews(serializeQuestion(question, request.viewer!.id), await viewsFor(viewedAnswerIds([question]), request.log));
   });
 
   // DELETE /api/questions/:id — owner. One with no lesson yet (PENDING or FAILED) goes entirely. One with a lesson
