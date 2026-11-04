@@ -18,7 +18,7 @@ import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { clearSoon, queueFileDeletion } from '../lib/storage-delete.js';
 import { parseBrain } from '../lib/brains.js';
-import { studioForAgent } from '../lib/studio-settings.js';
+import { brainPicksOpen, studioForAgent } from '../lib/studio-settings.js';
 import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritten, topicAllowance } from '../lib/usage.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
@@ -100,6 +100,14 @@ export default async function questionRoutes(app: FastifyInstance) {
   // (lib/usage.ts): the Learn page shows it in the topic box. Admins have the same limit as everyone.
   app.get('/api/questions/allowance', { preHandler: [requireUser] }, async (request) => topicAllowance(request.viewer!.id));
 
+  // GET /api/questions/brains — anyone: { open }, whether a topic may be sent to a brain of its own (lib/brains.ts)
+  // now. Not while an admin has the default brain make every topic (lib/studio-settings.ts, defaultOnly): the Learn
+  // page then hides its picker. Signed out too, as the picker shows before sign-in.
+  app.get('/api/questions/brains', async (_request, reply) => {
+    reply.header('cache-control', 'no-store');
+    return { open: await brainPicksOpen() };
+  });
+
   // GET /api/questions/queue — agent: PENDING questions, oldest first, claimed
   // for this caller so an overlapping run is handed different ones. One whose
   // runs are used up (QUESTION_MAX_RUNS, lib/claim.ts) is given up instead.
@@ -156,7 +164,9 @@ export default async function questionRoutes(app: FastifyInstance) {
   // files sent with it (lib/attachments.ts), which is why the body may be
   // large — and why the caller is checked before it is read. The caller may
   // pick the `brain` that makes it (lib/brains.ts: Muse Wonder for admins
-  // only); left out, the default brain makes it.
+  // only); left out, the default brain makes it. While an admin has the
+  // default make every topic (defaultOnly), a pick is not kept: the topic is
+  // the default's, and stays so once the switch is off.
   // A caller already at a limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
   const topicOpen = async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.viewer) return; // requireUser replied
@@ -170,8 +180,9 @@ export default async function questionRoutes(app: FastifyInstance) {
     };
     const err = validateString(content, 'content', { required: true, minLength: QUESTION_MIN_LENGTH, maxLength: QUESTION_MAX_LENGTH });
     if (err) return sendError(reply, 'VALIDATION_ERROR', err);
-    const { brain, error: brainError, forbidden } = parseBrain(rawBrain, request.viewer!.role === 'ADMIN');
+    const { brain: picked, error: brainError, forbidden } = parseBrain(rawBrain, request.viewer!.role === 'ADMIN');
     if (brainError) return sendError(reply, forbidden ? 'FORBIDDEN' : 'VALIDATION_ERROR', brainError);
+    const brain = picked && (await brainPicksOpen()) ? picked : null;
     const { attachments, error: attachmentsError } = parseAttachments(rawAttachments);
     if (attachmentsError) return sendError(reply, 'VALIDATION_ERROR', attachmentsError);
     const text = (content as string).trim();

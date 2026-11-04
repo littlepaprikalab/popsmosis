@@ -261,6 +261,13 @@ def default_brain(studio: dict | None) -> tuple[str | None, str | None]:
     return settings.get("default") or None, settings.get("effort") or None
 
 
+def default_only(studio: dict | None) -> bool:
+    """Whether an admin has the default brain make every topic, whatever brain it was sent to (/admin/studio): the
+    switch for when a brain's account is over its quota."""
+    settings = (studio or {}).get("brain") if isinstance(studio, dict) else None
+    return isinstance(settings, dict) and settings.get("defaultOnly") is True
+
+
 def _brain_file(job: Path) -> dict:
     try:
         data = json.loads((job / BRAIN_FILE).read_text(encoding="utf-8"))
@@ -297,16 +304,20 @@ def use_brain(job: Path, question: dict, check: bool, keys: bool = True) -> None
     are that brain's whatever the default has become since. With check, a brain that cannot run here stops the run
     when it is the default, since every topic would fail the same way, and fails the step when it is the topic's
     own, so the topic is given up with the reason and the queue moves on. A lesson whose brain can no longer run
-    here goes on with the default."""
+    here goes on with the default. While an admin has the default make every topic (default_only()), it makes this
+    one from here on, whatever brain the topic was sent to or its lesson was begun on."""
     studio = question.get("studio")
     default, effort = default_brain(studio)
-    own = question.get("brain") or None
+    only = default_only(studio)
+    own = None if only else question.get("brain") or None
     if own and own not in brain.CHOICES:  # an API newer than this studio: not this topic's fault
         raise Stop(f"the studio's settings are wrong: this topic asks for the brain {own!r}, which this studio does "
                    f"not have ({', '.join(brain.CHOICES)}): update the studio")
-    begun = job_brain(job) if not own and (job / BRAIN_FILE).exists() and is_done(job, "bundle") else None
+    begun = (job_brain(job) if not own and not only and (job / BRAIN_FILE).exists() and is_done(job, "bundle")
+             else None)
     _put_brain(job, own or begun or default, effort, "picked for this topic" if own else
-               "the brain that began this lesson" if begun else "the default")
+               "the brain that began this lesson" if begun else
+               "the default, which makes every topic for now (/admin/studio)" if only else "the default")
     jobs.keep_studio_settings(job, studio)  # who paints, for `videos`
     if not check:
         return

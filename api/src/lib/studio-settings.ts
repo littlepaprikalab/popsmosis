@@ -5,7 +5,10 @@
  * video claim and the video queue), as `studio`.
  *
  * `brain`: the brain that writes and fact-checks a topic not sent to a brain of its own (lib/brains.ts), and
- * how hard Claude thinks when it is Claude's (studio/brain.py).
+ * how hard Claude thinks when it is Claude's (studio/brain.py). With `defaultOnly` on, the default brain makes every
+ * topic, whatever brain it was sent to: for when a brain's account is over its quota. The studio puts the default in
+ * force as it claims a topic, one sent to a brain before the switch or a lesson begun on another included
+ * (studio/run.py); a pick sent while it is on is not kept, and /learn hides the picker (GET /api/questions/brains).
  *
  * `song`: who makes the audio (studio/steps/audio.py), the song and the narration together, so one switch moves the
  * studio off a service whose quota has run out: ElevenLabs (Eleven Music and its text-to-speech), or Gemini (Lyria 3.5
@@ -44,7 +47,7 @@ export type Painter = (typeof PAINTERS)[number];
 export type ArtSettings = Record<Provider, Painter>;
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type Effort = (typeof EFFORTS)[number];
-export type BrainSettings = { default: Brain; effort: Effort };
+export type BrainSettings = { default: Brain; effort: Effort; defaultOnly: boolean };
 export const SONG_PROVIDERS = ['elevenlabs', 'gemini'] as const;
 export type SongProvider = (typeof SONG_PROVIDERS)[number];
 export type SongSettings = { provider: SongProvider };
@@ -60,7 +63,7 @@ export const ART_CHOICES: Record<Provider, readonly Painter[]> = {
   meta: ['muse', 'gemini'],
 };
 export const DEFAULT_ART: ArtSettings = { claude: 'gemini', meta: 'muse' };
-export const DEFAULT_BRAIN: BrainSettings = { default: 'claude', effort: 'high' };
+export const DEFAULT_BRAIN: BrainSettings = { default: 'claude', effort: 'high', defaultOnly: false };
 export const DEFAULT_SONG: SongSettings = { provider: 'gemini' };
 // Generous for the hackathon: about ten times the dearest topic so far, retries included. Lower it afterwards
 // ($5 is about two and a half times), here and in studio/ledger.py.
@@ -96,8 +99,14 @@ export function brainFrom(stored: unknown): BrainSettings {
   if (isObject(stored)) {
     if (oneOf(BRAINS, stored.default)) brain.default = stored.default;
     if (oneOf(EFFORTS, stored.effort)) brain.effort = stored.effort;
+    if (typeof stored.defaultOnly === 'boolean') brain.defaultOnly = stored.defaultOnly;
   }
   return brain;
+}
+
+/** Whether a topic may be sent to a brain of its own now: not while the default brain makes every topic. One row. */
+export async function brainPicksOpen(db: Pick<typeof prisma, 'setting'> = prisma): Promise<boolean> {
+  return !brainFrom((await db.setting.findUnique({ where: { key: BRAIN_KEY } }))?.value).defaultOnly;
 }
 
 /** The stored song settings over the defaults, as artFrom(). */
@@ -166,7 +175,7 @@ export function parseArt(value: unknown): { art?: Partial<ArtSettings>; error?: 
   return { art };
 }
 
-/** An admin's change to the brain, `{ default?, effort? }`, or why it cannot be taken. */
+/** An admin's change to the brain, `{ default?, effort?, defaultOnly? }`, or why it cannot be taken. */
 export function parseBrainSettings(value: unknown): { brain?: Partial<BrainSettings>; error?: string } {
   if (!isObject(value)) return { error: 'brain must be an object' };
   const brain: Partial<BrainSettings> = {};
@@ -177,8 +186,11 @@ export function parseBrainSettings(value: unknown): { brain?: Partial<BrainSetti
     } else if (key === 'effort') {
       if (!oneOf(EFFORTS, setting)) return { error: `brain.effort must be one of ${EFFORTS.join(', ')}` };
       brain.effort = setting;
+    } else if (key === 'defaultOnly') {
+      if (typeof setting !== 'boolean') return { error: 'brain.defaultOnly must be true or false' };
+      brain.defaultOnly = setting;
     } else {
-      return { error: `brain takes default and effort, not ${key}` };
+      return { error: `brain takes default, effort and defaultOnly, not ${key}` };
     }
   }
   if (Object.keys(brain).length === 0) return { error: 'brain names nothing to change' };

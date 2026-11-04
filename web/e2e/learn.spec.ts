@@ -836,7 +836,7 @@ test.describe('studio settings', () => {
     await request.put(apiUrl('/api/studio/settings'), {
       headers: asAda(),
       data: {
-        brain: { default: 'claude', effort: 'high' }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
+        brain: { default: 'claude', effort: 'high', defaultOnly: false }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
         spend: { topicUsd: 20 },
       },
     });
@@ -859,7 +859,7 @@ test.describe('studio settings', () => {
     const asked = await request.post(apiUrl('/api/questions'), { headers: asAda(), data: { content: text } });
     const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
     expect((await claimed.json()).studio).toEqual({
-      brain: { default: 'claude', effort: 'high' }, song: { provider: 'gemini' }, art: { claude: 'muse', meta: 'muse' }, knobs: {},
+      brain: { default: 'claude', effort: 'high', defaultOnly: false }, song: { provider: 'gemini' }, art: { claude: 'muse', meta: 'muse' }, knobs: {},
       spend: { topicUsd: 20 },
     });
     expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
@@ -867,7 +867,7 @@ test.describe('studio settings', () => {
   });
 
   test('an admin sets the default brain and Claude\'s effort, and the teacher reads them with its key', async ({ page, context, request }) => {
-    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high' } } });
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high', defaultOnly: false } } });
     await signIn(context, S.users.ada);
     await page.goto('/admin/studio');
     const brains = page.getByTestId('brain-default');
@@ -878,13 +878,64 @@ test.describe('studio settings', () => {
     await expect(page.getByTestId('brain-effort').getByRole('radio', { name: 'medium' })).toHaveAttribute('aria-checked', 'true');
 
     const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
-    expect((await teacher.json()).brain).toEqual({ default: 'muse-spark', effort: 'medium' });
+    expect((await teacher.json()).brain).toEqual({ default: 'muse-spark', effort: 'medium', defaultOnly: false });
 
     // The LEARN page's Default button says which brain it is now.
     await page.goto('/learn');
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
     await expect(page.getByTestId('brain-note')).toContainText('Now: Muse Spark 1.3.');
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high' } } });
+  });
+
+  test('an admin has the default brain make every topic: the LEARN page hides the picker, and a pick is not kept', async ({ page, context, browser, request }) => {
+    const settings = (brain: object) => request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain } });
+    await settings({ default: 'claude', effort: 'high', defaultOnly: false });
+    try {
+      await signIn(context, S.users.ada);
+      await page.goto('/admin/studio');
+      const picks = page.getByTestId('brain-default-only');
+      await expect(picks.getByRole('radio', { name: /^Each topic goes to the brain picked for it/ })).toHaveAttribute('aria-checked', 'true');
+      await picks.getByRole('radio', { name: /^The default brain makes every topic/ }).click();
+      await expect(picks.getByRole('radio', { name: /^The default brain makes every topic/ })).toHaveAttribute('aria-checked', 'true');
+      await expect(page.getByText('The default brain makes every topic from the next run.', { exact: false })).toBeVisible();
+      const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+      expect((await teacher.json()).brain).toEqual({ default: 'claude', effort: 'high', defaultOnly: true });
+
+      // An admin's LEARN page says why the picker is gone.
+      await page.goto('/learn');
+      await expect(page.getByTestId('brain-picks-off')).toContainText('every topic goes to the default brain, Claude Opus 5.5');
+      await expect(page.getByTestId('brain-picker')).toHaveCount(0);
+
+      // A learner's has no picker and says nothing of it, and the pick remembered on their browser is not sent.
+      const ben = await browser.newContext();
+      await signIn(ben, S.users.ben);
+      const learner = await ben.newPage();
+      await learner.addInitScript(() => window.localStorage.setItem('popsmosis.brain', 'muse-spark'));
+      await learner.goto('/learn');
+      const box = learner.getByPlaceholder('A topic, e.g. ATP synthesis');
+      await expect(box).toBeVisible();
+      await expect(learner.getByTestId('brain-picker')).toHaveCount(0);
+      await expect(learner.getByTestId('brain-picks-off')).toHaveCount(0);
+      const text = `E2E ${Date.now()}: osmosis, while the default makes every topic`;
+      await box.fill(text);
+      await learner.getByRole('button', { name: 'SUBMIT' }).click();
+      const card = learner.getByTestId('question-card').filter({ hasText: text }).first();
+      await expect(card).toBeVisible();
+      await expect(card.getByTestId('topic-brain')).toHaveCount(0);
+      const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+      const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
+      const sent = own.data.find((q: { content: string }) => q.content === text);
+      expect(sent.brain).toBeNull();
+      expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asBen })).status()).toBe(204);
+
+      // Off again, the picker is back, with the learner's remembered pick.
+      await settings({ defaultOnly: false });
+      await learner.reload();
+      await expect(learner.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
+      await ben.close();
+    } finally {
+      await settings({ defaultOnly: false });
+    }
   });
 
   test('an admin picks who makes the song and the narration, and the teacher reads it with its key', async ({ page, context, request }) => {

@@ -437,8 +437,9 @@ export interface Question {
 export type Painter = 'gemini' | 'muse' | 'svg';
 export type ArtSettings = { claude: Painter; meta: Painter };
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-// The brain that writes a topic not sent to a brain of its own, and Claude's effort when it is Claude's.
-export type BrainSettings = { default: Brain; effort: Effort };
+// The brain that writes a topic not sent to a brain of its own, and Claude's effort when it is Claude's. defaultOnly:
+// the default makes every topic, whatever brain it was sent to, and /learn hides its picker. Absent from an older API.
+export type BrainSettings = { default: Brain; effort: Effort; defaultOnly?: boolean };
 // Who makes the audio, the song and the narration together: ElevenLabs (Eleven Music and its voices) or Gemini (Lyria and
 // Gemini's text-to-speech). Named `song` from before the narration followed it.
 export type SongProvider = 'elevenlabs' | 'gemini';
@@ -641,6 +642,9 @@ export const api = {
   deleteQuestion: (id: string, everything = false, expectNoLesson = false) =>
     request<void>(`/questions/${id}${everything ? '/everything' : expectNoLesson ? '?expect=no-lesson' : ''}`, { method: 'DELETE' }),
   getTopicAllowance: () => request<TopicAllowanceAnswer>('/questions/allowance').then(allowanceClock),
+  // Whether a topic may be sent to a brain of its own now: not while an admin has the default make every topic.
+  // Anyone may ask, signed out too.
+  getBrainPicks: () => request<{ open: boolean }>('/questions/brains'),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh
   // that changes nothing. since is the caller's watermark: the server then only

@@ -166,7 +166,16 @@ export default function AdminStudioPage() {
   };
   const pickBrain = (brain: Brain) => {
     if (settings?.brain.default === brain) return;
-    save('brain', { brain: { default: brain } }, `${brainOf(brain).label} writes the next topics sent on Default.`);
+    save('brain', { brain: { default: brain } }, settings?.brain.defaultOnly
+      ? `${brainOf(brain).label} writes every topic from the next run.`
+      : `${brainOf(brain).label} writes the next topics sent on Default.`);
+  };
+  // The switch for when a brain's account is over its quota: the default makes every topic, whatever was picked.
+  const pickDefaultOnly = (defaultOnly: boolean) => {
+    if (settings?.brain.defaultOnly === defaultOnly) return;
+    save('defaultOnly', { brain: { defaultOnly } }, defaultOnly
+      ? 'The default brain makes every topic from the next run. The LEARN page no longer shows the brain picker.'
+      : 'Topics go to the brain picked for them again. The LEARN page shows the brain picker.');
   };
   const pickSinger = (provider: SongProvider) => {
     if (settings?.song.provider === provider) return;
@@ -245,8 +254,9 @@ export default function AdminStudioPage() {
           data-testid="brain-default">
           <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>Default brain</h3>
           <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
-            Writes and fact-checks every topic sent on Default, learners&rsquo; included. An admin can still send one topic
-            to another brain on the LEARN page.
+            {settings.brain.defaultOnly
+              ? 'Writes and fact-checks every topic, whatever brain it was sent to: picks on the LEARN page are off, below.'
+              : 'Writes and fact-checks every topic sent on Default, learners’ included. An admin can still send one topic to another brain on the LEARN page.'}
           </p>
           <div className="space-y-2" role="radiogroup" aria-label="Default brain">
             {settings.choices.brain.default.map((brain) => (
@@ -255,6 +265,21 @@ export default function AdminStudioPage() {
                 onClick={() => pickBrain(brain)} />
             ))}
           </div>
+          {typeof settings.brain.defaultOnly === 'boolean' && (
+            <div className="mt-4" data-testid="brain-default-only">
+              <h4 className="text-[10px] uppercase tracking-wider font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
+                Brains picked on the LEARN page
+              </h4>
+              <div className="space-y-2" role="radiogroup" aria-label="Brains picked on the LEARN page">
+                <Choice on={!settings.brain.defaultOnly} disabled={saving !== null} label="Each topic goes to the brain picked for it"
+                  note="Learners pick Claude or Muse Spark under the topic box, admins Muse Wonder too. Default goes to the brain above."
+                  isDefault={settings.defaults.brain.defaultOnly === false} onClick={() => pickDefaultOnly(false)} />
+                <Choice on={settings.brain.defaultOnly} disabled={saving !== null} label="The default brain makes every topic"
+                  note="For when a brain’s account is over its quota. The LEARN page hides the picker, and topics already waiting on another brain are made on the default from the next run, one it had begun included. Videos of a lesson already written still follow the brain that wrote it."
+                  isDefault={settings.defaults.brain.defaultOnly === true} onClick={() => pickDefaultOnly(true)} />
+              </div>
+            </div>
+          )}
           <div className="mt-4" data-testid="brain-effort">
             <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="The brain's effort">
               <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Brain&rsquo;s effort:</span>
