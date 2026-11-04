@@ -806,7 +806,8 @@ feed and the hook tile's Share and Download:
 
 Each video's `started` count is also public, as its **views**, shown the way YouTube and TikTok
 show them: "1.2K views" beside the song and the lesson on a droplet's page and on `/learn`, and
-"1.2K views · 3 days ago" under a card on the tab, for the video the card plays. Only the
+"1.2K views · 3 days ago" under a card on the tab, for the video the card shows (the song, or the
+lesson once it is swiped or tabbed to). Only the
 starts: how far the plays got stays on `/admin/plays`. The hook clip's starts are not a view of
 either, as it is a cut of the song. A count is what the bullets above say a start is, so a view
 is a page view's play, never an admin's. When the viewer's own start is counted, the number on

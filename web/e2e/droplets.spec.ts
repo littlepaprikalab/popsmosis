@@ -113,14 +113,113 @@ test.describe('the Droplets tab, signed out', () => {
   test('one card plays at a time: starting another pauses the first', async ({ page }) => {
     await page.goto('/droplets');
     const cards = page.getByTestId('droplet-card');
-    const [first, second] = [cards.nth(0).locator('video'), cards.nth(1).locator('video')];
+    const [first, second] = [cards.nth(0).getByLabel(/: song video$/), cards.nth(1).getByLabel(/: song video$/)];
     await expect(second).toBeVisible();
-    await cards.nth(0).getByTestId('card-play').click();
+    await cards.nth(0).getByTestId('card-song').getByTestId('card-play').click();
     await expect.poll(() => playedTo(first)).toBeGreaterThan(0);
-    await cards.nth(1).getByTestId('card-play').click();
+    await cards.nth(1).getByTestId('card-song').getByTestId('card-play').click();
     await expect.poll(() => playedTo(second)).toBeGreaterThan(0);
     expect(await paused(first)).toBe(true);
     expect(await paused(second)).toBe(false);
+  });
+
+  test('a card goes from its song to its lesson by a tab, the arrow keys or a swipe, and the one left pauses', async ({ page, request }) => {
+    const { views } = await (await request.get(apiUrl(`/api/droplets/${S.droplet}`))).json();
+    await page.goto('/droplets');
+    const card = page.getByTestId('droplet-card').filter({ has: page.locator(`a[href="/droplets/${S.droplet}"]`) });
+    const tabs = card.getByRole('tablist', { name: 'ATP synthesis: videos' });
+    const [songTab, lessonTab] = [tabs.getByRole('tab', { name: 'Song' }), tabs.getByRole('tab', { name: 'Lesson' })];
+    const [song, lesson] = [card.getByLabel('ATP synthesis: song video'), card.getByLabel('ATP synthesis: lesson video')];
+    const row = card.getByTestId('card-videos');
+    // The video is in view, and the row has come to rest on it.
+    const showing = async (kind: 'song' | 'lesson') => {
+      await expect(card.getByTestId(`card-${kind}`)).toBeInViewport({ ratio: 0.9 });
+      await expect.poll(() => row.evaluate((el) => Math.round((el.scrollLeft / el.clientWidth) * 100))).toBe(kind === 'song' ? 0 : 100);
+    };
+    const viewCount = card.getByTestId('view-count');
+
+    // It opens on the song, and says so; the lesson waits beside it.
+    await expect(songTab).toHaveAttribute('aria-selected', 'true');
+    await expect(lessonTab).toHaveAttribute('aria-selected', 'false');
+    await showing('song');
+    await expect(card.getByTestId('card-lesson')).not.toBeInViewport();
+    await card.getByTestId('card-song').getByTestId('card-play').click();
+    await expect.poll(() => playedTo(song)).toBeGreaterThan(0);
+
+    // The Lesson tab slides the lesson in, pauses the song, and shows the lesson's views.
+    await lessonTab.click();
+    await expect(lessonTab).toHaveAttribute('aria-selected', 'true');
+    await showing('lesson');
+    expect(await paused(song)).toBe(true);
+    await expect(viewCount).toHaveText(`${views.lesson} ${views.lesson === 1 ? 'view' : 'views'}`);
+    await expect(page).toHaveURL(/\/droplets$/);
+    await card.getByRole('button', { name: 'Play the lesson video: ATP synthesis' }).click();
+    await expect.poll(() => playedTo(lesson)).toBeGreaterThan(0);
+
+    // The arrow keys move between the tabs, as tabs do; the song comes back where it was left.
+    const left = await playedTo(song);
+    await lessonTab.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(songTab).toBeFocused();
+    await expect(songTab).toHaveAttribute('aria-selected', 'true');
+    await showing('song');
+    expect(await paused(lesson)).toBe(true);
+    expect(await playedTo(song)).toBe(left);
+    await expect(song).toHaveAttribute('controls', '');
+
+    // Two fingers on a trackpad swipe it along too.
+    const box = (await row.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(box.width, 0);
+    await expect(lessonTab).toHaveAttribute('aria-selected', 'true');
+    await showing('lesson');
+    await page.mouse.wheel(-box.width, 0);
+    await expect(songTab).toHaveAttribute('aria-selected', 'true');
+    await showing('song');
+  });
+
+  test.describe('on a phone', () => {
+    test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+    test('a finger swipes a card from its song to its lesson and back', async ({ page }) => {
+      await page.goto('/droplets');
+      const card = page.getByTestId('droplet-card').filter({ has: page.locator(`a[href="/droplets/${S.droplet}"]`) });
+      const lessonTab = card.getByRole('tab', { name: 'Lesson' });
+      const row = card.getByTestId('card-videos');
+      await row.scrollIntoViewIfNeeded();
+      const box = (await row.boundingBox())!;
+      // A finger dragged across the video, from one side towards the other, halfway down it unless told.
+      const cdp = await page.context().newCDPSession(page);
+      const swipe = async (from: number, to: number, down = 0.5) => {
+        const at = (share: number) => [{ x: box.x + box.width * share, y: box.y + box.height * down }];
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(from) });
+        for (let i = 1; i <= 10; i++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(from + (to - from) * i / 10) });
+          await page.waitForTimeout(16);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      };
+
+      await expect(lessonTab).toHaveAttribute('aria-selected', 'false');
+      await swipe(0.85, 0.15);
+      await expect(lessonTab).toHaveAttribute('aria-selected', 'true');
+      await expect(card.getByTestId('card-lesson')).toBeInViewport({ ratio: 0.9 });
+      await swipe(0.15, 0.85);
+      await expect(card.getByRole('tab', { name: 'Song' })).toHaveAttribute('aria-selected', 'true');
+      await expect(card.getByTestId('card-song')).toBeInViewport({ ratio: 0.9 });
+
+      // Once it plays, a drag back along its timeline rewinds it, and leaves the card on the song.
+      await card.getByTestId('card-song').getByTestId('card-play').click();
+      const song = card.getByLabel('ATP synthesis: song video');
+      await song.evaluate((v: HTMLVideoElement) => { v.muted = true; });
+      await expect.poll(() => playedTo(song)).toBeGreaterThan(2);
+      const before = await playedTo(song);
+      await swipe(0.8, 0.2, 0.95); // the timeline, along the foot of the player
+      await expect.poll(() => playedTo(song)).toBeLessThan(before);
+      await page.waitForTimeout(500);
+      await expect(lessonTab).toHaveAttribute('aria-selected', 'false');
+      expect(await paused(song)).toBe(false);
+    });
   });
 
   test('tags the droplet, and finds droplets by a tag', async ({ page }) => {

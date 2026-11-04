@@ -78,7 +78,7 @@ test.describe('play counts', () => {
     const counts = watchCounts(page);
     await page.goto('/droplets');
     const card = page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' }).first();
-    await card.getByTestId('card-play').click();
+    await card.getByTestId('card-song').getByTestId('card-play').click();
     const video = card.getByLabel('ATP synthesis: song video');
     await video.evaluate(async (v: HTMLVideoElement) => {
       v.muted = true;
@@ -178,7 +178,7 @@ test.describe('play counts', () => {
     await page.getByRole('link', { name: '← All droplets' }).click();
     await expect(page).toHaveURL(/\/droplets$/);
     const card = page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' }).first();
-    await card.getByTestId('card-play').click();
+    await card.getByTestId('card-song').getByTestId('card-play').click();
     await expect.poll(() => card.getByLabel('ATP synthesis: song video').evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(0.5);
     await settle(page);
     expect(counts.sent).toEqual(['song started', 'lesson started']);
@@ -228,7 +228,7 @@ test.describe('views', () => {
     const views = card.getByTestId('view-count');
     await expect(views).toHaveText(viewsText(song));
     await expect(views.locator('..')).toContainText(' · ');
-    await card.getByTestId('card-play').click();
+    await card.getByTestId('card-song').getByTestId('card-play').click();
     await expect(views).toHaveText(viewsText(song + 1));
   });
 
