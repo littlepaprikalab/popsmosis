@@ -39,7 +39,7 @@ async function fetchExample(): Promise<DropletExample | null> {
   const d = await get<Droplet>(`/api/droplets/${encodeURIComponent(pick.id)}`);
   // Only what the card draws: the comments and likes that came with it differ by viewer, and are not shown.
   return {
-    id: d.id, title: d.title, course: d.course, topic: d.topic, excerpt: d.excerpt, content: d.content,
+    id: d.id, title: d.title, course: d.course, topic: d.topic, headline: d.headline, excerpt: d.excerpt, content: d.content,
     video: d.video, tags: d.tags, views: d.views, createdAt: d.createdAt,
   };
 }

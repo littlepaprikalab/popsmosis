@@ -821,11 +821,11 @@ def style_problems(bundle: Bundle, asked: str) -> list[Problem]:
 
 def repair_once(bundle: Bundle, study_guide: str = "") -> tuple[Bundle, list[Problem]]:
     """What the writer is no longer asked to get right, set once by the bundle step before its last code checks: every
-    chorus sung as the first, a head count said as a common answer, and only quotes the study guide holds. Not part of
+    chorus sung as the first, a headline of one short line, a head count said as a common answer, and only quotes the study guide holds. Not part of
     review(), which runs again after the fact-check: these change words, and a word changed after the check would go
     out unchecked. The same bundle when nothing changes."""
     data = bundle.model_dump()
-    problems = _same_choruses(data)
+    problems = _same_choruses(data) + _one_line_headline(data)
     for line in data["narration"]:
         if (text := _counted(line["text"])) != line["text"]:
             problems.append(Problem(line_id=line["id"], rule="head-count", repaired=True,
@@ -840,6 +840,22 @@ def repair_once(bundle: Bundle, study_guide: str = "") -> tuple[Bundle, list[Pro
     data["facts"] = [fact.model_dump() for fact in facts]
     settled = Bundle.model_validate(data)
     return (bundle if settled == bundle else settled), problems + unquoted
+
+
+HEADLINE_MAX_CHARS = 80  # a heading on a phone, in two lines at most
+
+
+def _one_line_headline(data: dict) -> list[Problem]:
+    """The headline as one line, its spaces collapsed; one past HEADLINE_MAX_CHARS is cleared rather than cut mid-
+    phrase, and the pages head the droplet with its topic instead (api/src/lib/droplet.ts)."""
+    headline = " ".join(data["headline"].split())
+    if len(headline) > HEADLINE_MAX_CHARS:
+        data["headline"] = ""
+        return [Problem(line_id="headline", rule="headline", repaired=True,
+                        detail=f"the headline is {len(headline)} characters, past {HEADLINE_MAX_CHARS}; the topic "
+                               "heads the droplet instead")]
+    data["headline"] = headline
+    return []
 
 
 def _same_choruses(data: dict) -> list[Problem]:

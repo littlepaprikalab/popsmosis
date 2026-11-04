@@ -302,6 +302,11 @@ class Tags(Strict):
 class Bundle(Strict):
     course: str
     topic: str
+    # The droplet's heading on the site, one line in the learner's terms: the topic is a textbook's name for it ("noise
+    # cancellation"), this what they wanted to know ("How do noise-cancelling headphones work?"). "" in a bundle
+    # written before Nov 4, or cleared by checks.repair_once: the pages then head it with the topic.
+    headline: str = Field(description="The droplet's heading: one short line, at most 80 characters, saying what "
+                                      "it teaches as the learner would ask it")
     audience: str = Field(description='Who the droplet is written for: "high school" unless the request names someone else')
     core_idea: str
     # Why the core idea holds, a link a line, and the only terms the learner must come away with. A bundle written
@@ -362,6 +367,9 @@ class Bundle(Strict):
         # A bundle written before `audience` existed was pitched to high school.
         if "audience" not in data:
             data = {**data, "audience": "high school"}
+        # The headline was added on Nov 4: before, the pages headed a droplet with its topic, as they still do for "".
+        if "headline" not in data:
+            data = {**data, "headline": ""}
         # The exam question (`frq`) left both videos on Oct 28; a bundle written before still has one.
         data = {k: v for k, v in data.items() if k != "frq"}
         # What the particles carry, and what lights up, were added on Oct 28: before, nothing did.
@@ -534,7 +542,8 @@ class Problem(Strict):
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
                   "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy",
-                  "chorus", "head-count", "source-quote", "crowded", "colours", "alias", "part-tags", "case-on-hook"]
+                  "chorus", "head-count", "source-quote", "crowded", "colours", "alias", "part-tags", "case-on-hook",
+                  "headline"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -618,7 +627,7 @@ class CheckedLine(Strict):
     # painted from) and the song's "style" are judged only as fit to go out.
     # "frq" is a line of the exam question, in a fact-check made before it left the videos on Oct 28.
     kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion", "keyline", "caption", "title", "scene",
-                  "style", "avoid"]
+                  "style", "avoid", "headline"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
@@ -630,7 +639,7 @@ class CheckedLine(Strict):
 class Correction(Strict):
     round: int
     kind: Literal["lyric", "narration", "lesson", "frq", "keyline", "caption", "title", "scene",
-                  "style"]  # "frq": as for CheckedLine
+                  "style", "headline"]  # "frq": as for CheckedLine
     ids: list[str]
     before: str  # a couplet's lines joined by "\n"
     after: str

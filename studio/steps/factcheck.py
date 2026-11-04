@@ -72,6 +72,7 @@ MAX_ROUNDS = 3
 LYRIC = "lyric"  # a couplet of the song, its lines joined by "\n"
 KEY = "keyline"  # a key line, or the core idea: written on screen in both videos
 TITLE = "title"  # "course: topic", the droplet's public title
+HEADLINE = "headline"  # the one line that heads the droplet on the site; the pages fall back to the topic without it
 SCENE = "scene"  # what a picture is painted from
 STYLE = "style"  # the song's style, free-form words, often the learner's own
 AVOID = "avoid"  # one thing the song must not sound like
@@ -105,6 +106,7 @@ RULES = {
     "caption": Rule(FACTS, FIX_OR_FAIL, in_order=True),
     KEY: Rule(FACTS, FIX_OR_REMOVE, in_order=True),
     TITLE: Rule(NOTHING, FIX_OR_FAIL),
+    HEADLINE: Rule(NOTHING, FIX_OR_REMOVE),  # cleared rather than failing the droplet: the topic heads it instead
     SCENE: Rule(NOTHING, FIX_OR_FAIL),
     STYLE: Rule(NOTHING, FIX_OR_FAIL),
     AVOID: Rule(NOTHING, REMOVE),
@@ -198,9 +200,10 @@ def title_text(bundle: Bundle) -> str:
 
 
 def public_lines(bundle: Bundle) -> list[Line]:
-    """What goes out with the droplet besides its lines: the title, each picture's description, the song's style and
+    """What goes out with the droplet besides its lines: the title and the headline, each picture's description, the song's style and
     what it must avoid."""
     return ([Line(TITLE, "title", title_text(bundle))]
+            + ([Line(HEADLINE, "headline", bundle.headline)] if bundle.headline.strip() else [])
             + [Line(SCENE, scene.id, scene.described()) for scene in bundle.scenes]
             + [Line(STYLE, str(i), style) for i, style in enumerate(bundle.music.positive_styles, 1)]
             + [Line(AVOID, str(i), style, at=("negative_styles", i - 1))
@@ -472,7 +475,7 @@ def check_bundle(
             if not after and line.kind == LYRIC and to_songwriter.get(line.id, line.text) != line.text:
                 after = to_songwriter[line.id]  # the songwriter's rewrite failed with no fix: the checker's first
             if not after and RULES[line.kind].if_wrong == FIX_OR_REMOVE:
-                after = ""  # taken out: a key line is a help, never worth failing the droplet
+                after = ""  # taken out: a key line or the headline is a help, never worth failing the droplet
             elif not after:
                 reason = f"{line.kind} {_shown(line.id)} is unsupported and has no correction: {check.problem}"
                 break
@@ -587,6 +590,8 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     if title:
         course, sep, topic = title.partition(":")
         data["course"], data["topic"] = (course.strip(), topic.strip()) if sep and topic.strip() else ("", title.strip())
+    if data["headline"].strip():
+        data["headline"] = fixes.get((HEADLINE, data["headline"]), data["headline"])
     for key in data["key_lines"]:
         key["text"] = fixes.get((KEY, key["text"]), key["text"])
     data["key_lines"] = [key for key in data["key_lines"] if key["text"].strip()]

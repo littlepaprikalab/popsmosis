@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { api, isUnreachable, ApiError, Droplet } from '@/lib/api';
+import { api, dropletHeading, isUnreachable, ApiError, Droplet } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import PageContainer from '@/components/PageContainer';
 import Markdown from '@/components/Markdown';
@@ -116,7 +116,7 @@ export default function DropletPage() {
             <p className="text-xs uppercase tracking-wider font-bold mb-1" style={{ color: 'var(--accent-purple)' }}>{droplet.course}</p>
           )}
           <h1 className="text-2xl font-bold tracking-wide" style={{ color: 'var(--text-primary)' }}>
-            {droplet.course && droplet.topic ? droplet.topic : droplet.title}
+            {dropletHeading(droplet)}
           </h1>
         </div>
         {user?.role === 'ADMIN' && (

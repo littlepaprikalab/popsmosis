@@ -51,7 +51,7 @@ d('learner privacy', () => {
   async function lesson(learner: { cookie: string }, words = WORDS) {
     const asked = await app.inject({
       method: 'POST', url: '/api/questions', headers: asUser(learner.cookie),
-      payload: { content: words, attachments: [{ name: 'class-notes.txt', data: b64('my notes') }] },
+      payload: { content: words, songStyle: 'lo-fi with soft rapped verses', attachments: [{ name: 'class-notes.txt', data: b64('my notes') }] },
     });
     expect(asked.statusCode).toBe(201);
     const questionId = asked.json().id as string;
@@ -150,6 +150,7 @@ d('learner privacy', () => {
     const row = await prisma.question.findUniqueOrThrow({ where: { id: questionId } });
     expect(row.userId).toBeNull();
     expect(row.content).toBe('');
+    expect(row.songStyle).toBeNull(); // their words too
     expect(await prisma.attachment.count()).toBe(0); // the request's file and the follow-up's
     expect(await prisma.reply.count({ where: { answerId } })).toBe(0); // hers and the teacher's
     for (const url of [questionFile, replyFile]) {

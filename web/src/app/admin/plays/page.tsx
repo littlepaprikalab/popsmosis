@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { api, PlayCounts, PlayRanking, PlayVideo } from '@/lib/api';
+import { api, dropletHeading, PlayCounts, PlayRanking, PlayVideo } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import PageContainer from '@/components/PageContainer';
 import { LoadingMessage } from '@/components/LoadingMessage';
@@ -150,7 +150,7 @@ export default function AdminPlaysPage() {
             <tbody>
               {ranking.data.map((d, i) => {
                 const p = d.plays;
-                const heading = d.course && d.topic ? d.topic : d.title;
+                const heading = dropletHeading(d);
                 return (
                   <tr key={d.id} data-testid="plays-row" style={i < ranking.data.length - 1 ? { borderBottom: '1px solid var(--border)' } : undefined}>
                     <td className={`${cell} tabular-nums`} style={{ color: 'var(--text-muted)' }}>{String(i + 1).padStart(2, '0')}</td>

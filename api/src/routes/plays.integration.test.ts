@@ -402,7 +402,7 @@ d('play counts', () => {
       expect(body).toMatchObject({ video: 'song', min: 2, fewer: 1 });
       expect(body.data.map((r: { topic: string }) => r.topic)).toEqual(['Osmosis', 'Mitosis', 'ATP synthase']);
       expect(body.data[0]).toEqual({
-        id: osmosis, title: 'AP Biology: Osmosis', course: 'AP Biology', topic: 'Osmosis', hidden: false, createdAt: expect.any(String),
+        id: osmosis, title: 'AP Biology: Osmosis', course: 'AP Biology', topic: 'Osmosis', headline: '', hidden: false, createdAt: expect.any(String),
         plays: { started: 4, reached25: 4, reached50: 4, reached75: 4, finished: 3, shared: 0, downloaded: 0, finishRate: 0.75 },
       });
       expect(body.data[1]).toMatchObject({ hidden: true, plays: { started: 6, finished: 3, finishRate: 0.5 } });

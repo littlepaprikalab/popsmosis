@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { DropletExample } from '@/lib/api';
+import { dropletHeading, type DropletExample } from '@/lib/api';
 import { timeAgo } from '@/lib/time';
 import Markdown from '@/components/Markdown';
 import { AgentAvatar } from '@/components/UserAvatar';
@@ -32,7 +32,7 @@ export function ExampleDroplet() {
 
   if (!droplet) return null;
   const d = droplet;
-  const topic = d.course && d.topic ? d.topic : d.title;
+  const topic = dropletHeading(d);
 
   return (
     <div data-testid="example-droplet">

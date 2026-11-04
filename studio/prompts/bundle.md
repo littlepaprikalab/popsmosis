@@ -111,6 +111,9 @@ Then:
 - `topic`: the topic as a textbook names it ("the light reactions"). With the course it is
   the droplet's public title: nothing about the learner (no name, school, teacher, class or
   test date).
+- `headline`: the droplet's heading, one line of at most 80 characters: what it teaches, as
+  the learner would ask it ("How do noise-cancelling headphones work?"). However long the
+  request, boil it down to its one question. Nothing about the learner, as for the topic.
 - `core_idea`: the one sentence the learner should still be able to say a week later. At
   most 20 words, plain, with at most two `key_terms`. The chorus sings it, the narration ends
   on it, the lesson opens toward it and checks it, and both videos keep it written across the

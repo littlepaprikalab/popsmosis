@@ -131,6 +131,10 @@ model Question {
   // from the claim.
   brain String?
 
+  // The song style the learner asked for on /learn, in their own words ("K-pop with rapped verses"), up to 200 chars.
+  // Null: none asked, and the studio's rotation picks one. Erased with the content when the request is taken back.
+  songStyle String?
+
   user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers     Answer[]
   attachments Attachment[]

@@ -23,6 +23,7 @@ import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritt
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
+export const SONG_STYLE_MAX_LENGTH = 200; // a style is a phrase: "K-pop with rapped verses, 110 bpm"
 export const ANSWER_MAX_LENGTH = 5000;
 
 // Why a topic whose runs are used up was given up (lib/claim.ts), on its card: written by the queue's sweep, and by
@@ -166,7 +167,8 @@ export default async function questionRoutes(app: FastifyInstance) {
   // pick the `brain` that makes it (lib/brains.ts); left out, the default
   // brain makes it. While an admin has the default make every topic
   // (defaultOnly), a pick is not kept: the topic is the default's, and stays
-  // so once the switch is off.
+  // so once the switch is off. `songStyle` is the style the learner wants the
+  // song in, in their words; left out or blank, the studio's rotation picks one.
   // A caller already at a limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
   const topicOpen = async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.viewer) return; // requireUser replied
@@ -175,18 +177,22 @@ export default async function questionRoutes(app: FastifyInstance) {
     if (refusal) return sendError(reply, refusal.code, refusal.message, refusal.extra);
   };
   app.post('/api/questions', { onRequest: [requireUser, topicOpen], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
-    const { content, attachments: rawAttachments, brain: rawBrain } = (request.body ?? {}) as {
-      content?: unknown; attachments?: unknown; brain?: unknown;
+    const { content, attachments: rawAttachments, brain: rawBrain, songStyle: rawStyle } = (request.body ?? {}) as {
+      content?: unknown; attachments?: unknown; brain?: unknown; songStyle?: unknown;
     };
     const err = validateString(content, 'content', { required: true, minLength: QUESTION_MIN_LENGTH, maxLength: QUESTION_MAX_LENGTH });
     if (err) return sendError(reply, 'VALIDATION_ERROR', err);
+    const styleErr = validateString(rawStyle, 'songStyle', { maxLength: SONG_STYLE_MAX_LENGTH });
+    if (styleErr) return sendError(reply, 'VALIDATION_ERROR', styleErr);
+    // One line, its spaces collapsed: it ends up inside the studio's prompts. Blank is none.
+    const songStyle = typeof rawStyle === 'string' ? rawStyle.split(/\s+/).join(' ').trim() || null : null;
     const { brain: picked, error: brainError } = parseBrain(rawBrain);
     if (brainError) return sendError(reply, 'VALIDATION_ERROR', brainError);
     const brain = picked && (await brainPicksOpen()) ? picked : null;
     const { attachments, error: attachmentsError } = parseAttachments(rawAttachments);
     if (attachmentsError) return sendError(reply, 'VALIDATION_ERROR', attachmentsError);
     const text = (content as string).trim();
-    if (containsPersonalInfo(text)) {
+    if (containsPersonalInfo(text) || (songStyle && containsPersonalInfo(songStyle))) {
       return sendError(reply, 'VALIDATION_ERROR', 'Please do not include email addresses or phone numbers in a question');
     }
 
@@ -204,7 +210,7 @@ export default async function questionRoutes(app: FastifyInstance) {
     let question;
     try {
       question = await prisma.question.create({
-        data: { userId: request.viewer!.id, content: text, brain, attachments: attachmentsCreate(attachments) },
+        data: { userId: request.viewer!.id, content: text, brain, songStyle, attachments: attachmentsCreate(attachments) },
         include: questionInclude,
       });
     } catch (err) {

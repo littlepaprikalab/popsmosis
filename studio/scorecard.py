@@ -193,7 +193,8 @@ def judge(job: Path, ask) -> Judgement:
 def droplet_text(bundle: Bundle, request: Request) -> str:
     """The droplet as the judge reads it: what it is for, its essence, and the lesson, song and narration whole."""
     lines = {line.id: line.text for line in [*bundle.lyrics, *bundle.narration]}
-    parts = [f"Topic: {bundle.topic}", f"Course: {bundle.course}", f"Audience: {bundle.audience}"]
+    parts = [f"Topic: {bundle.topic}", f"Headline: {bundle.headline or '(none)'}", f"Course: {bundle.course}",
+             f"Audience: {bundle.audience}"]
     if request.request:
         parts.append(f"The learner's request, in their words: {request.request}")
     parts += ["", "## Core idea", bundle.core_idea, "", "## Why chain",

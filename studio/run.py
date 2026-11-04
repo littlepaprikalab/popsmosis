@@ -676,9 +676,12 @@ def make_request(job: Path, api: Api, question: dict, ask) -> str:
               f"{STUDY_GUIDE_MAX_CHARS:,}", file=sys.stderr)
         study_guide = study_guide[:STUDY_GUIDE_MAX_CHARS]
     topic, style = split_style(question["content"])
-    request = Request(topic=topic, song_style=style, study_guide=study_guide, images=images)
+    # The style field on /learn, when the learner filled it in, is what they asked for; a "Style:" line typed into
+    # the topic is the fallback, for a request sent without the field (or before it existed).
+    asked = " ".join(str(question.get("songStyle") or "").split())
+    request = Request(topic=topic, song_style=asked or style, study_guide=study_guide, images=images)
     jobs.write(job / "request.json", request)
-    return f"{len(images)} image(s), {len(guides)} text file(s)" + (", a song style" if style else "")
+    return f"{len(images)} image(s), {len(guides)} text file(s)" + (", a song style" if asked or style else "")
 
 
 def split_style(content: str) -> tuple[str, str]:

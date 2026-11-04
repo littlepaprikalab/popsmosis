@@ -41,6 +41,16 @@ const POLL_MS = 10_000;
 const ARMED_POLL_MS = 15_000;
 const QUESTION_MIN = 3; // a topic can be one short word: "DNA"
 const QUESTION_MAX = 2000;
+const SONG_STYLE_MAX = 200; // the API's SONG_STYLE_MAX_LENGTH
+// Tap-to-fill styles for the song, from the studio's own rotation (studio/styles.py), which the music model sings
+// well. Each fills the field, where the learner can still change it; Surprise me empties it, and the rotation picks.
+const STYLE_CHIPS: { label: string; style: string }[] = [
+  { label: 'K-pop', style: 'K-pop with rapped verses and a big sung chorus' },
+  { label: 'R&B', style: 'laid-back R&B with smooth rapped verses' },
+  { label: 'Indie pop', style: 'bright indie-pop with rapped verses and acoustic guitar' },
+  { label: 'Latin pop', style: 'Latin pop with a light dembow groove and rapped verses' },
+  { label: 'Dance pop', style: 'dance-pop with a four-on-the-floor beat and rapped verses' },
+];
 // The videos start rendering a few minutes after the lesson is posted (docs/PLAN.md,
 // section 5), so a lesson this new with no videos yet is watched for them too.
 const VIDEO_WATCH_MS = 15 * 60_000;
@@ -350,6 +360,11 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
               The learner took this request back. Their words, files and follow-ups are deleted; the lesson stays.
             </p>
           )}
+          {q.user && q.songStyle && (
+            <p className="mt-1.5 text-[10px] uppercase tracking-wider break-words" style={{ color: 'var(--text-muted)' }} data-testid="request-style">
+              Song style: <span className="normal-case">{q.songStyle}</span>
+            </p>
+          )}
           {/* On a line of its own: the header row is full on a phone. */}
           {brain && (
             <p className="mt-1.5 text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
@@ -506,6 +521,8 @@ function LearnContent() {
   const [hasNew, setHasNew] = useState(false);
   const [agentLastSeenAt, setAgentLastSeenAt] = useState<string | null | undefined>(undefined);
   const [newQuestion, setNewQuestion] = useState('');
+  // The song style for the next topic, in the learner's words; empty: the studio's rotation picks one.
+  const [songStyle, setSongStyle] = useState('');
   // The pick of the brain for the next topic (lib/brains.ts), remembered on this browser; null: the default.
   const [brain, setBrain] = useState<Brain | null>(null);
   const [defaultBrain, setDefaultBrain] = useState<Brain | null>(null); // the Studio page's, for the Default button
@@ -698,6 +715,8 @@ function LearnContent() {
   useEffect(() => {
     const saved = topicDraft.read();
     if (saved) setNewQuestion((current) => current || saved);
+    const savedStyle = topicDraft.readStyle();
+    if (savedStyle) setSongStyle((current) => current || savedStyle);
   }, []);
   useEffect(() => {
     if (!user || !topicDraft.takeSignIn() || !topicDraft.read()) return;
@@ -709,6 +728,7 @@ function LearnContent() {
   useEffect(() => {
     if (signedIn.current && !user) {
       setNewQuestion('');
+      setSongStyle('');
       setAskSignIn(false);
       setAskSorry(false); // and the brain is read again for whoever is here now (above)
     }
@@ -718,6 +738,10 @@ function LearnContent() {
   const changeQuestion = (value: string) => {
     setNewQuestion(value);
     topicDraft.write(value);
+  };
+  const changeStyle = (value: string) => {
+    setSongStyle(value);
+    topicDraft.writeStyle(value);
   };
 
   // Hand the keyboard to the sign-in link the moment it shows.
@@ -730,11 +754,12 @@ function LearnContent() {
     try {
       await guard(async () => {
         const picked = picksOpen === false ? null : chosen?.value ?? null;
-        const q = await api.askQuestion(content, picked);
+        const q = await api.askQuestion(content, picked, songStyle.trim() || null);
         const sentTo = q.brain === undefined ? picked : q.brain; // the API's word: a pick is dropped while picks are off
         setQuestions((prev) => [q, ...prev]);
         if (!latestSeenRef.current || q.createdAt > latestSeenRef.current) latestSeenRef.current = q.createdAt;
         changeQuestion('');
+        changeStyle('');
         // Too long to read in a few seconds, so it stays until the learner closes it; so does a refusal below. Each
         // Submit's word replaces the last one's.
         const sorry = sentTo === 'muse-wonder' && !isAdmin ? ' Apology accepted.' : '';
@@ -915,6 +940,46 @@ function LearnContent() {
           >
             {submitting ? '...' : 'SUBMIT'}
           </button>
+        </div>
+        <div className="mt-3" data-testid="style-picker">
+          <label htmlFor="song-style" className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>
+            Song style <span className="normal-case font-normal">(optional)</span>
+          </label>
+          <input
+            id="song-style"
+            type="text"
+            value={songStyle}
+            maxLength={SONG_STYLE_MAX}
+            onChange={(e) => changeStyle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAsk(); } }}
+            placeholder="e.g. K-pop with rapped verses"
+            className="mt-1 w-full text-sm outline-none px-3 py-1.5 rounded"
+            style={{ border: '1px solid var(--border)', color: 'var(--text-primary)', background: 'var(--bg-tertiary)' }}
+          />
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            {STYLE_CHIPS.map((chip) => {
+              const on = songStyle.trim() === chip.style;
+              return (
+                <button key={chip.label} type="button" aria-pressed={on} onClick={() => changeStyle(chip.style)}
+                  className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-full border ${
+                    on ? 'text-[var(--btn-filled-text)] border-transparent' : 'text-[var(--accent-purple)] border-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/10'
+                  }`}
+                  style={on ? { background: 'var(--accent-purple)' } : {}}>
+                  {chip.label}
+                </button>
+              );
+            })}
+            <button type="button" aria-pressed={!songStyle.trim()} onClick={() => changeStyle('')}
+              className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-full border ${
+                !songStyle.trim() ? 'text-[var(--btn-filled-text)] border-transparent' : 'text-[var(--accent-purple)] border-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/10'
+              }`}
+              style={!songStyle.trim() ? { background: 'var(--accent-purple)' } : {}}>
+              Surprise me
+            </button>
+          </div>
+          <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="style-note">
+            {songStyle.trim() ? 'The song is written in this style.' : 'Left empty, the studio picks a style for the song.'}
+          </p>
         </div>
         {picksOpen === false ? isAdmin && (
           <p className="text-[10px] mt-3" style={{ color: 'var(--text-muted)' }} data-testid="brain-picks-off">

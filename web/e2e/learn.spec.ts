@@ -116,8 +116,8 @@ test.describe('signed out', () => {
     expect(res.status()).toBe(200);
     expect(res.headers()['cache-control']).toBe('public, max-age=60');
     const { droplet } = await res.json();
-    // The views are the same for every viewer; likes and comments are not (whether you liked it, which are yours).
-    const allowed = ['id', 'title', 'course', 'topic', 'excerpt', 'content', 'video', 'tags', 'views', 'createdAt'];
+    // The views and the headline are the same for every viewer; likes and comments are not (whether you liked it, which are yours).
+    const allowed = ['id', 'title', 'course', 'topic', 'headline', 'excerpt', 'content', 'video', 'tags', 'views', 'createdAt'];
     expect(Object.keys(droplet).filter((k) => !allowed.includes(k))).toEqual([]);
     expect(droplet.content.length).toBeGreaterThan(0);
     expect(droplet.video.songVideoUrl).toBeTruthy(); // the song is the hook
@@ -518,6 +518,38 @@ test.describe('signed in', () => {
     await expect(card.getByText('From pyruvate, made by glycolysis')).toBeVisible({ timeout: 25_000 });
     await expect(card.getByTestId('awaiting-agent')).toHaveCount(0);
     await expect(card.locator('.badge-agent')).toHaveCount(2);
+  });
+
+  test('a learner picks the song style in its own field: a chip fills it, the card shows it, and the teacher\'s claim carries it', async ({ page, context, request }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const field = page.getByLabel('Song style (optional)');
+    await expect(field).toHaveValue('');
+    await expect(field).toHaveAttribute('placeholder', 'e.g. K-pop with rapped verses');
+    const styles = page.getByTestId('style-picker');
+    await expect(styles.getByRole('button', { name: 'Surprise me' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('style-note')).toContainText('the studio picks a style');
+
+    await styles.getByRole('button', { name: 'K-pop' }).click();
+    await expect(field).toHaveValue('K-pop with rapped verses and a big sung chorus');
+    await expect(styles.getByRole('button', { name: 'K-pop' })).toHaveAttribute('aria-pressed', 'true');
+    await field.fill('K-pop with rapped verses, 120 bpm'); // still the learner's to change
+    await expect(styles.getByRole('button', { name: 'K-pop' })).toHaveAttribute('aria-pressed', 'false');
+
+    const text = `E2E ${Date.now()}: how noise cancelling headphones work`;
+    await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('request-style')).toContainText('K-pop with rapped verses, 120 bpm');
+    await expect(field).toHaveValue(''); // sent, so the next topic starts with none
+
+    // The studio reads the style from the claim (studio/run.py), never from the topic's words.
+    const asBen = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asBen })).json();
+    const sent = own.data.find((q: { content: string }) => q.content === text);
+    expect(sent.songStyle).toBe('K-pop with rapped verses, 120 bpm');
+    const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim(sent.id);
+    expect((await claimed.json()).songStyle).toBe('K-pop with rapped verses, 120 bpm');
   });
 
   test('an admin sends a topic to a brain of their own: the card and the teacher\'s claim say which, and the pick is remembered', async ({ page, context, request }) => {

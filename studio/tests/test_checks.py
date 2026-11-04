@@ -1090,3 +1090,19 @@ def test_a_pictures_words_get_each_part_tagged_after_the_first_words_naming_it()
         "its thylakoid lumen [[Thylakoid lumen]] inside and the Moon [[Moon]] behind.")
     # The longest name first, a plural too, never after a possessive, a part tagged already left as it is, and one
     # the words never name (the stroma) left untagged.
+
+
+def test_a_headline_is_one_line_and_one_too_long_is_cleared_for_the_topic_to_head_the_droplet():
+    data = bundle_data()
+    data["headline"] = "  How do plants turn\n sunlight   into energy? "
+    bundle, problems = checks.repair_once(Bundle.model_validate(data))
+    assert bundle.headline == "How do plants turn sunlight into energy?" and problems == []
+    data["headline"] = "Why " + "really " * 20 + "does light matter?"
+    bundle, problems = checks.repair_once(Bundle.model_validate(data))
+    assert bundle.headline == "" and [p.rule for p in problems] == ["headline"]
+
+
+def test_a_bundle_written_before_the_headline_reads_back_with_none():
+    data = bundle_data()
+    del data["headline"]
+    assert Bundle.model_validate(data).headline == ""

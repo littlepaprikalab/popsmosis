@@ -52,6 +52,7 @@ def bundle_data() -> dict:
     return copy.deepcopy({
         "course": "AP Biology",
         "topic": "the light reactions",
+        "headline": "How do plants turn sunlight into chemical energy?",
         "audience": "high school",
         "core_idea": "Light energy pumps protons, and their flow back makes ATP.",
         "facts": FACTS,
