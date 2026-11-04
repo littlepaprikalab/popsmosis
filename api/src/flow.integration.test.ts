@@ -252,7 +252,7 @@ d('question / answer / reply flow', () => {
   });
 
   it('keeps the song style the sender asked for, in its own field, and hands it to the studio with the claim', async () => {
-    const tooLong = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} style too long`, songStyle: 'k'.repeat(201) } });
+    const tooLong = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} style too long`, songStyle: 'k'.repeat(401) } });
     expect(tooLong.statusCode).toBe(400);
     const notText = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} style not text`, songStyle: 7 } });
     expect(notText.statusCode).toBe(400);

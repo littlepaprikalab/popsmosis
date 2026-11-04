@@ -41,15 +41,36 @@ const POLL_MS = 10_000;
 const ARMED_POLL_MS = 15_000;
 const QUESTION_MIN = 3; // a topic can be one short word: "DNA"
 const QUESTION_MAX = 2000;
-const SONG_STYLE_MAX = 200; // the API's SONG_STYLE_MAX_LENGTH
-// Tap-to-fill styles for the song, from the studio's own rotation (studio/styles.py), which the music model sings
-// well. Each fills the field, where the learner can still change it; Surprise me empties it, and the rotation picks.
+const SONG_STYLE_MAX = 400; // the API's SONG_STYLE_MAX_LENGTH
+// Tap-to-fill styles for the song. Pop, K-pop, R&B pop and Hip-hop pop are the owner's own, written out whole; the rest
+// are short forms of the studio's rotation (studio/styles.py), which the music model sings well. Each fills the field,
+// where the learner can still change it; Surprise me empties it, and the rotation picks.
 const STYLE_CHIPS: { label: string; style: string }[] = [
-  { label: 'K-pop', style: 'K-pop with rapped verses and a big sung chorus' },
-  { label: 'R&B', style: 'laid-back R&B with smooth rapped verses' },
+  {
+    label: 'Pop',
+    style: 'upbeat pop with hip-hop verses, rapped verses, catchy sung chorus, clear female vocal, warm synths, finger '
+      + 'snaps, 100 bpm',
+  },
+  {
+    label: 'K-pop',
+    style: 'K-pop hip-hop, moderate 94 BPM bounce; female vocals with crisp, clearly articulated rap verses and a bright, '
+      + 'catchy sung chorus, singing from the first beat; plucky synths, punchy kick, finger snaps, tight rhythmic bass; '
+      + 'upfront vocal mix with clean diction and sharp verse-to-chorus transitions',
+  },
+  {
+    label: 'R&B pop',
+    style: 'R&B pop with hip-hop verses, vocals start immediately, no instrumental intro, vocals upfront in the mix, '
+      + 'female vocals, smooth clear rapped verses, catchy sung chorus, moderate tempo 92 bpm, finger snaps, plucked '
+      + 'bass, glossy synth pads, educational, clear diction',
+  },
   { label: 'Indie pop', style: 'bright indie-pop with rapped verses and acoustic guitar' },
   { label: 'Latin pop', style: 'Latin pop with a light dembow groove and rapped verses' },
   { label: 'Dance pop', style: 'dance-pop with a four-on-the-floor beat and rapped verses' },
+  {
+    label: 'Hip-hop pop',
+    style: 'Hip-hop pop, upbeat 100 bpm groove, confident female rap verses with a catchy sung chorus, punchy 808s and bright '
+      + 'synth hook, tight quantized drum programming with crisp kick-snare hits and precise vocal layering',
+  },
 ];
 // The videos start rendering a few minutes after the lesson is posted (docs/PLAN.md,
 // section 5), so a lesson this new with no videos yet is watched for them too.
