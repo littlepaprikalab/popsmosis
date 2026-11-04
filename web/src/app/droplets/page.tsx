@@ -15,6 +15,7 @@ import { TagList } from '@/components/TagList';
 import { MadeWith } from '@/components/MadeWith';
 import { ClipFeed } from '@/components/ClipFeed';
 import { DropletComments } from '@/components/DropletComments';
+import { SongMissing } from '@/components/DropletPlayers';
 import { ChatBubbleLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { AcademicCapIcon, MusicalNoteIcon, PlayIcon } from '@heroicons/react/24/solid';
 import { countPlays, useViews } from '@/lib/plays';
@@ -299,6 +300,7 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
           {timeAgo(d.createdAt)}
         </p>
       </Link>
+      {!d.video.songVideoUrl && d.video.note && <SongMissing note={d.video.note} className="px-4 pb-3 -mt-1" />}
       <TagList tags={allTags(d.tags)} max={CARD_TAGS} className="px-4 pb-3 -mt-1" />
       <MadeWith makers={d.madeWith} compact className="px-4 pb-3 -mt-1" />
       <div className="px-4 pb-3 flex items-center gap-3">

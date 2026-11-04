@@ -35,14 +35,19 @@ export function DropletPlayers({ dropletId, video, tags, title, views, note }: {
         <Player key={p.label} dropletId={dropletId} {...p} views={views?.[p.kind]} />
       ))}
     </div>
-    {missing && (
-      <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="videos-missing">
-        <MissingNote text={missing} /> The lesson video still teaches all of it.
-      </p>
-    )}
+    {missing && <SongMissing note={missing} className="mt-1.5" />}
     <TagList tags={allTags(tags)} className="mt-1.5" />
     {video.hookVideoUrl && <HookClip dropletId={dropletId} src={video.hookVideoUrl} title={title} />}
     </>
+  );
+}
+
+/** Why the droplet has no song, under its videos here and on its card on the Droplets tab. */
+export function SongMissing({ note, className = '' }: { note: string; className?: string }) {
+  return (
+    <p className={`text-xs ${className}`} style={{ color: 'var(--text-muted)' }} data-testid="videos-missing">
+      <MissingNote text={note} /> The lesson video still teaches all of it.
+    </p>
   );
 }
 
