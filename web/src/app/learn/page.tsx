@@ -273,17 +273,27 @@ function ApologyPrompt({ typed, onType, onDone }: { typed: string; onType: (type
  */
 /**
  * How many topics the learner may still ask for, and when the next comes back, in their own time zone. Each topic's
- * place comes back 24 hours after it was sent (api/src/lib/usage.ts), so there is no midnight to count to.
+ * place comes back 24 hours after it was sent (api/src/lib/usage.ts), so there is no midnight to count to. Said as
+ * what the learner can do ("You can send 3 more of your 5 topics"), not as a count ("3 of 5 topics left").
  */
 function AllowanceNote({ allowance }: { allowance: TopicAllowance }) {
   const { perDay, left, nextAt, siteFull, siteOpensAt } = allowance;
   const when = (at: number | null) => (at ? clockLabel(at) : 'soon');
+  const topics = (n: number) => `${n} topic${n === 1 ? '' : 's'}`;
   let text: string;
   if (siteFull) text = `Popsmosis has made all the droplets it can for now. It takes topics again ${when(siteOpensAt)}.`;
+  // An admin is not held to the learners' limit (api/src/lib/usage.ts), and is told what learners are held to.
+  else if (left === null) {
+    text = `As an admin, you have no topic limit. ${perDay === 0
+      ? 'New topics are paused for learners.' : `Learners can send ${topics(perDay)} in any 24 hours.`}`;
+  }
   else if (perDay === 0) text = 'New topics are paused for now.';
-  else if (left === 0) text = `0 of ${perDay} topics left. You can send another ${when(nextAt)}.`;
-  else if (!nextAt) text = `${left} of ${perDay} topics left. Each comes back 24 hours after you send it.`;
-  else text = `${left} of ${perDay} topics left. You get one more ${clockLabel(nextAt)}.`;
+  else if (left === 0) {
+    text = `You have used ${perDay === 1 ? 'your topic' : `all ${perDay} of your topics`}. You can send another ${when(nextAt)}.`;
+  }
+  // None sent in the last 24 hours, so all of them are there. "In any 24 hours": the window rolls, no midnight reset.
+  else if (!nextAt) text = `You can send ${topics(perDay)} in any 24 hours.`;
+  else text = `You can send ${left} more of your ${topics(perDay)}. Another comes back ${clockLabel(nextAt)}.`;
   const none = siteFull || left === 0;
   return (
     <p className="text-xs mt-1" aria-live="polite" data-testid="topic-allowance"
@@ -611,22 +621,43 @@ function LearnContent() {
   };
 
   // What the learner has left of their topics, shown in the box: read on sign-in, after each send, and again when
-  // the next place comes back (or the site takes topics again), so it never goes on saying none are left.
+  // the next place comes back (or the site takes topics again), so it never goes on saying none are left. A count
+  // that cannot be read is dropped, not kept: an old one saying none are left would hold Submit grey after a place
+  // came back. Without one the box says nothing of it, and the API judges the send, as it always does.
   const [allowance, setAllowance] = useState<TopicAllowance | null>(null);
-  const readAllowance = useCallback(() => {
-    api.getTopicAllowance().then(setAllowance).catch(() => {}); // without it the box just says nothing of it
-  }, []);
+  const readAllowance = useCallback(
+    () => api.getTopicAllowance().then(setAllowance).catch(() => setAllowance(null)),
+    [],
+  );
   useEffect(() => {
     if (authLoading) return;
     if (!user) { setAllowance(null); return; }
     readAllowance();
   }, [authLoading, user, readAllowance]);
   const opensAt = allowance && (allowance.siteFull ? allowance.siteOpensAt : allowance.nextAt);
+  // None left, by the learner's own limit or the site's: Submit stays grey, as the box says. The API refuses such a
+  // topic anyway; this is so the button does not look as if it would send. An admin has no limit of their own.
+  const outOfTopics = !!allowance && (allowance.siteFull || allowance.left === 0);
+  // The time it names is watched by the clock every few seconds, not by one long timer: a timer runs late by as long
+  // as the computer slept, and the count it holds would keep Submit grey all that while. One read at a time.
   useEffect(() => {
     if (!opensAt) return;
-    const timer = setTimeout(readAllowance, Math.max(0, opensAt - Date.now()) + 1000);
-    return () => clearTimeout(timer);
+    let reading = false;
+    const timer = setInterval(() => {
+      if (reading || Date.now() < opensAt + 1000) return;
+      reading = true;
+      readAllowance().finally(() => { reading = false; });
+    }, 5_000);
+    return () => clearInterval(timer);
   }, [opensAt, readAllowance]);
+  // And whenever the page is shown again: a topic sent from another tab, or a limit changed on the Studio page,
+  // moves the count without this page hearing of it.
+  useEffect(() => {
+    if (!user) return;
+    const onShow = () => { if (document.visibilityState === 'visible') readAllowance(); };
+    document.addEventListener('visibilitychange', onShow);
+    return () => document.removeEventListener('visibilitychange', onShow);
+  }, [user, readAllowance]);
 
   // Ask the cheap status endpoint; when something newer exists, show the banner.
   // Localized refresh: only the topics that are waiting on the teacher.
@@ -749,7 +780,7 @@ function LearnContent() {
 
   const handleAsk = async () => {
     const content = newQuestion.trim();
-    if (content.length < QUESTION_MIN) return;
+    if (content.length < QUESTION_MIN || outOfTopics) return;
     if (!user) { setAskSignIn(true); return; }
     try {
       await guard(async () => {
@@ -849,7 +880,7 @@ function LearnContent() {
 
   if (unreachable) return <ServerUnavailable onRetry={retry} />;
 
-  const canAsk = newQuestion.trim().length >= QUESTION_MIN && !submitting;
+  const canAsk = newQuestion.trim().length >= QUESTION_MIN && !submitting && !outOfTopics;
 
   return (
     <PageContainer className="py-6">

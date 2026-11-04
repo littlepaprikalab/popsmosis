@@ -127,6 +127,34 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await app.inject({ method: 'GET', url: '/api/questions/allowance' })).statusCode).toBe(401);
   });
 
+  it('an admin has no topic limit of their own, but counts toward the site\'s and is held by it', async () => {
+    process.env.QUESTIONS_PER_USER_PER_DAY = '1';
+    process.env.TOPICS_PER_DAY = '3';
+    const ola = await learner('ola');
+    await prisma.user.update({ where: { id: ola.id }, data: { role: 'ADMIN' } });
+    const allowance = async () =>
+      (await app.inject({ method: 'GET', url: '/api/questions/allowance', headers: asUser(ola.cookie) })).json();
+
+    expect(await allowance()).toEqual({ perDay: 1, left: null, nextInSeconds: null, siteFull: false, siteOpensInSeconds: null });
+    expect((await ask(ola.cookie)).statusCode).toBe(201);
+    expect((await ask(ola.cookie)).statusCode).toBe(201); // past the learners' 1
+    expect(await allowance()).toMatchObject({ left: null, siteFull: false });
+
+    // Their topics are the site's too: a learner's makes three, and then nobody may ask, the admin neither.
+    const pia = await learner('pia');
+    expect((await ask(pia.cookie)).statusCode).toBe(201);
+    const refused = await ask(ola.cookie);
+    expect(refused.statusCode).toBe(429);
+    expect(refused.json().error.message).toMatch(/all the droplets it can/);
+    expect(await allowance()).toMatchObject({ left: null, siteFull: true });
+
+    // The role taken away, the learners' limit holds them from the next request.
+    process.env.TOPICS_PER_DAY = '0';
+    await prisma.user.update({ where: { id: ola.id }, data: { role: 'USER' } });
+    expect((await ask(ola.cookie)).statusCode).toBe(429);
+    expect(await allowance()).toMatchObject({ perDay: 1, left: 0 });
+  });
+
   it('requests sent all at once cannot all pass the same count', async () => {
     process.env.QUESTIONS_PER_USER_PER_DAY = '3';
     const ben = await learner('ben');

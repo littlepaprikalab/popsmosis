@@ -704,13 +704,20 @@ test.describe('signed in', () => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
     const note = page.getByTestId('topic-allowance');
-    await expect(note).toContainText(`${before.left} of ${before.perDay} topics left.`);
+    const canSend = (left: number, used: boolean) => (used
+      ? `You can send ${left} more of your ${before.perDay} topics.`
+      : `You can send ${left} topic${left === 1 ? '' : 's'} in any 24 hours.`);
+    await expect(note).toContainText(canSend(before.left, before.left < before.perDay));
 
     await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(`E2E ${Date.now()}: why the sky is blue`);
     await page.getByRole('button', { name: 'SUBMIT' }).click();
     // Its place comes back 24 hours from now: tomorrow, by this browser's clock, a minute later at most.
-    await expect(note).toContainText(`${before.left - 1} of ${before.perDay} topics left.`);
-    await expect(note).toContainText(/You get one more (at|tomorrow at) \d/);
+    if (before.left > 1) {
+      await expect(note).toContainText(canSend(before.left - 1, true));
+      await expect(note).toContainText(/Another comes back (at|tomorrow at) \d/);
+    } else {
+      await expect(note).toContainText(`You have used all ${before.perDay} of your topics. You can send another`);
+    }
   });
 
   test('the box says when the next topic comes back once none are left, and when the site is full', async ({ page, context }) => {
@@ -729,12 +736,53 @@ test.describe('signed in', () => {
       return `(at|tomorrow at) (${labels.map(escape).join('|')})`;
     };
     await expect(note).toBeVisible();
-    await expect(note).toHaveText(new RegExp(`^0 of 10 topics left\\. You can send another ${await threeHoursOn()}\\.$`));
+    await expect(note).toHaveText(new RegExp(`^You have used all 10 of your topics\\. You can send another ${await threeHoursOn()}\\.$`));
+    // None left, Submit stays grey with a topic typed, and Ctrl+Enter sends nothing either.
+    let sent = 0;
+    await page.route('**/api/questions', (route) => {
+      if (route.request().method() === 'POST') sent += 1;
+      return route.continue();
+    });
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    await box.fill('Why the sky is blue');
+    const submit = page.getByRole('button', { name: 'SUBMIT' });
+    await expect(submit).toBeDisabled();
+    await box.press('Control+Enter');
+
+    // Shown again (back from another tab, or on a computer that slept), the page reads the count again.
+    answer = { ...answer, left: 3 };
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(note).toHaveText(new RegExp(`^You can send 3 more of your 10 topics\\. Another comes back ${await threeHoursOn()}\\.$`));
+    await expect(submit).toBeEnabled();
+    expect(sent).toBe(0);
+    await box.fill('');
 
     answer = { ...answer, left: 7, siteFull: true, siteOpensInSeconds: 3 * 3600 };
     await page.reload();
     await expect(note).toContainText('Popsmosis has made all the droplets it can');
     await expect(note).toHaveText(new RegExp(`^Popsmosis has made all the droplets it can for now\\. It takes topics again ${await threeHoursOn()}\\.$`));
+  });
+
+  test('a count past its time is read again, and one that cannot be read does not keep Submit grey', async ({ page, context }) => {
+    let up = true;
+    await page.route('**/api/questions/allowance', (route) => (up
+      ? route.fulfill({ json: { perDay: 10, left: 0, nextInSeconds: 2, siteFull: false, siteOpensInSeconds: null } })
+      : route.fulfill({ status: 500, json: { error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } } })));
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const note = page.getByTestId('topic-allowance');
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    const submit = page.getByRole('button', { name: 'SUBMIT' });
+    await expect(note).toContainText('You have used all 10 of your topics.');
+    await box.fill('Why the sky is blue');
+    await expect(submit).toBeDisabled();
+
+    // Its time come, the page reads the count again by the clock, and finds the API down: the old count goes, and
+    // Submit is the API's to judge.
+    up = false;
+    await expect(note).toHaveCount(0, { timeout: 15_000 });
+    await expect(submit).toBeEnabled();
+    await box.fill('');
   });
 
   test('a learner picks the brain too, and is not told whose key pays', async ({ page, context }) => {
@@ -933,6 +981,16 @@ test.describe('signed in', () => {
 });
 
 test.describe('admin', () => {
+  test('an admin is told they have no topic limit, and what learners are held to', async ({ page, context, request }) => {
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const allowance = await (await request.get(apiUrl('/api/questions/allowance'), { headers: asAda })).json();
+    expect(allowance).toMatchObject({ left: null, nextInSeconds: null });
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+    await expect(page.getByTestId('topic-allowance'))
+      .toHaveText(`As an admin, you have no topic limit. Learners can send ${allowance.perDay} topics in any 24 hours.`);
+  });
+
   test('lists agents, creates one with a key shown once, and can disable it', async ({ page, context, request }) => {
     await signIn(context, S.users.ada);
     await page.goto('/admin/agents');
